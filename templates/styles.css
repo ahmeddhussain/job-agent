@@ -1,24 +1,27 @@
-/* Single-column, real-text, ATS-friendly (PLAN 8.3). No tables, icons, images or columns. */
-@page { size: A4; margin: 11mm 13mm 11mm 13mm; }
+/* Layout of Ahmed's own CV (Ahmed-Khater-CV.pdf, LibreOffice/Carlito): name, bold headline,
+   contact line with links, underlined section headings separated by grey rules, bold
+   entry heads with italic stack/dates, bold bullet labels. Single column, real text. */
+@page { size: A4; margin: 10.5mm 13mm 9mm 13mm; }
 * { box-sizing: border-box; }
-html { font-family: 'Noto Sans', 'Liberation Sans', 'DejaVu Sans', sans-serif; font-size: 10.2pt; line-height: 1.32; color: #111; }
+html { font-family: Carlito, 'Liberation Sans', sans-serif; font-size: var(--fs, 10pt); line-height: 1.18; color: #000; }
 body { margin: 0; }
-h1 { font-size: 17pt; margin: 0 0 1pt 0; font-weight: 700; letter-spacing: 0.2pt; }
-.headline { font-size: 10.8pt; font-weight: 600; margin: 0 0 2pt 0; }
-.contact { font-size: 9.2pt; margin: 0 0 3pt 0; }
-.contact a { color: #111; text-decoration: none; }
-h2 { font-size: 11pt; font-weight: 700; margin: 6pt 0 2pt 0; padding-bottom: 1pt; border-bottom: 0.6pt solid #888; }
-p { margin: 0 0 2pt 0; }
-ul { margin: 1pt 0 3pt 0; padding-left: 13pt; }
-li { margin: 0 0 1pt 0; }
-.entry-head { margin: 3pt 0 0 0; }
-.entry-head .title { font-weight: 700; }
-.entry-head .meta { font-style: italic; }
-.stack { font-size: 9.2pt; font-style: italic; margin: 0; }
-.skills p { margin: 0 0 1pt 0; }
-.skills .cat { font-weight: 700; }
+a { color: #1155cc; text-decoration: underline; }
+h1 { font-size: 2em; font-weight: 700; margin: 0 0 0.15em 0; line-height: 1.1; }
+.headline { font-size: 1.12em; font-weight: 700; margin: 0 0 0.15em 0; }
+.contact { margin: 0; }
+/* A contact item never breaks inside (a wrapped URL is unreadable to a parser). */
+.contact .item, .contact a { white-space: nowrap; }
+section { border-top: 0.75pt solid #9a9a9a; margin-top: 0.4em; padding-top: 0.25em; }
+h2 { font-size: 1.2em; font-weight: 700; text-decoration: underline; margin: 0 0 0.15em 0; }
+p { margin: 0 0 0.15em 0; }
+ul { margin: 0.05em 0 0.25em 0; padding-left: 1.6em; }
+li { margin: 0 0 0.08em 0; }
+.head { margin: 0.25em 0 0 0; }
+.head b { font-weight: 700; }
+.head i, .dates { font-style: italic; }
+.label { font-weight: 700; }
 /* cover letter */
-.letter { font-size: 10.8pt; line-height: 1.45; }
-.letter .date { margin: 14pt 0 10pt 0; }
-.letter p { margin: 0 0 9pt 0; }
-.letter .sign { margin-top: 14pt; }
+.letter { --fs: 11pt; line-height: 1.4; }
+.letter .date { margin: 1.2em 0 0.9em 0; }
+.letter p { margin: 0 0 0.8em 0; }
+.letter .sign { margin-top: 1.2em; }

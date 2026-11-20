@@ -5,6 +5,11 @@ import { z } from 'zod';
 
 const BulletPick = z.strictObject({
   id: z.string().max(60),
+  label: z
+    .string()
+    .max(60)
+    .optional()
+    .describe('Bold lead-in; keep the source label if it has one'),
   text: z.string().min(10).max(400).describe('The bullet, rephrased for this job or copied as is'),
 });
 
@@ -16,9 +21,15 @@ const EntryPick = z.strictObject({
 export const TailorOutputSchema = z.strictObject({
   headline: z.string().min(5).max(110),
   summary: z.string().min(80).max(650),
-  skills: z.array(z.string().max(60)).min(8).max(22).describe('Skill ids, most relevant first'),
+  skills: z
+    .array(z.string().max(60))
+    .min(15)
+    .max(95)
+    .describe(
+      'Skill ids ranked by relevance to this job, most relevant first; the CV lists every skill, this only orders them',
+    ),
   experience: z.array(EntryPick).max(4),
-  projects: z.array(EntryPick).min(2).max(5).describe('Most relevant first'),
+  projects: z.array(EntryPick).min(4).max(6).describe('At least 4, most relevant first'),
   courses: z.array(z.string().max(60)).max(6).describe('Course ids worth listing for this job'),
   cover_letter: z.strictObject({
     greeting: z.string().max(80),

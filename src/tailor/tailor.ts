@@ -64,7 +64,7 @@ function applyFallbacks(
   const fallbacks: string[] = [];
   const source = new Map(
     [...profile.experience, ...profile.projects].flatMap((e) =>
-      e.bullets.map((b) => [b.id, b.text]),
+      e.bullets.map((b) => [b.id, b] as const),
     ),
   );
   const fix = (picks: TailorOutput['projects']) =>
@@ -73,7 +73,8 @@ function applyFallbacks(
       bullets: p.bullets.map((b) => {
         if (!failedBullets.has(b.id)) return b;
         fallbacks.push(`bullet ${b.id}`);
-        return { ...b, text: source.get(b.id) ?? b.text };
+        const src = source.get(b.id);
+        return src ? { id: b.id, text: src.text, ...(src.label ? { label: src.label } : {}) } : b;
       }),
     }));
   const output: TailorOutput = {

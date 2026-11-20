@@ -51,6 +51,30 @@ describe('one-page CV + ATS check', () => {
     60_000,
   );
 
+  it("follows Ahmed's CV: real hyperlinks, at least 4 projects, Carlito, his section order", async () => {
+    const path = join(dir, 'layout.pdf');
+    const r = await renderOnePageCv(renderer, profile, recording('01-devops-email-en'), cfg, path);
+    expect(r.output.projects.length).toBeGreaterThanOrEqual(cfg.cv.min_projects);
+    const bytes = readFileSync(path).toString('latin1');
+    // Chrome normalizes a bare host to end in '/'; compare without the trailing slash.
+    const uris = new Set(
+      [...bytes.matchAll(/\/URI\s*\(([^)]*)\)/g)].map((m) => (m[1] ?? '').replace(/\/$/, '')),
+    );
+    for (const url of Object.values(profile.candidate.links))
+      expect(uris).toContain(url.replace(/\/$/, ''));
+    expect(uris).toContain(`mailto:${profile.candidate.email}`);
+    for (const pick of r.output.projects) {
+      const link = profile.projects.find((x) => x.id === pick.id)?.link;
+      if (link) expect(uris).toContain(link);
+    }
+    const { stdout } = await import('node:child_process').then((cp) =>
+      import('node:util').then((u) => u.promisify(cp.execFile)('pdffonts', [path])),
+    );
+    expect(stdout).toMatch(/Carlito-Regular/);
+    const ats = await atsCheck(path, cfg, profile, vocab, []);
+    expect(ats.headingsFound).toEqual(cfg.ats_check.required_headings);
+  }, 60_000);
+
   it('fails a two-page CV', async () => {
     const o = recording('01-devops-email-en');
     // Every bullet of every project, untrimmed: far more than one page.
@@ -96,9 +120,8 @@ describe('one-page CV + ATS check', () => {
     const path = join(dir, 'keywords.pdf');
     await renderOnePageCv(renderer, profile, recording('12-network-backoffice'), cfg, path);
     const ats = await atsCheck(path, cfg, profile, vocab, [
-      'Kafka streaming',
-      'Cosign signing',
-      'Backstage portal',
+      'Azure DevOps pipelines',
+      'GCP and Azure AKS',
     ]);
     expect(ats.keywordsMissing.length).toBeGreaterThan(0);
     expect(ats.failures.join()).toMatch(/keyword coverage/);

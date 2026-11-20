@@ -219,3 +219,21 @@ The tag existed, but the word never appears in the profile's text, so the check 
 **Fix.** The vocabulary is built from skill names (split on commas and parentheses)
 plus the general tool list, not from tags. Verified: "documentation, troubleshooting,
 reliability" are no longer terms; "Azure" still is.
+
+---
+
+## 11. LinkedIn URL wrapped across two lines in the contact line
+
+**Symptom.** After switching to Ahmed's layout, the ATS check failed on all 3 CVs:
+
+```
+FAIL 01-devops-email-en [devops] pages=1 fill=99% ... ats=fail (linkedin link not found)
+```
+
+**Diagnosis.** The longer contact line (two phones plus three links) wrapped at the
+hyphen inside `linkedin.com/in/ahmed-khater2611`. `pdftotext` then gives
+`linkedin.com/in/ahmed-` and `khater2611` on separate lines, which is also how a parser
+would read it. The check was right.
+
+**Fix.** Contact items are `white-space: nowrap`, so the line breaks only between items.
+The ATS check passes on all 3.

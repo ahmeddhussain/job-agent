@@ -1,9 +1,9 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><title>{{name}} - Cover Letter</title><style>{{{css}}}</style></head>
+<head><meta charset="utf-8"><title>{{name}} - Cover Letter</title><style>{{{fontFaces}}}{{{css}}}</style></head>
 <body class="letter">
 <h1>{{name}}</h1>
-<p class="contact">{{#each contact}}{{#if @index}} | {{/if}}{{this}}{{/each}}</p>
+<p class="contact">{{#each contact}}{{#if @index}} | {{/if}}{{#if href}}<a href="{{href}}">{{text}}</a>{{else}}<span class="item">{{text}}</span>{{/if}}{{/each}}</p>
 <p class="date">{{date}}</p>
 {{#if recipient}}<p>{{recipient}}</p>{{/if}}
 <p>{{greeting}}</p>

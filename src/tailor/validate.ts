@@ -83,11 +83,14 @@ export function validateTailor(
           continue;
         }
         // Numbers and technologies in the rephrase must come from this bullet.
-        const srcNums = numbersIn(src.text);
-        for (const n of numbersIn(b.text))
+        // Label + text of the rephrase vs label + text of the source.
+        const srcFull = `${src.label ?? ''} ${src.text}`;
+        const outFull = `${b.label ?? ''} ${b.text}`;
+        const srcNums = numbersIn(srcFull);
+        for (const n of numbersIn(outFull))
           if (!srcNums.has(n)) addBullet(b.id, `number ${n} is not in the source bullet`);
-        const srcTerms = vocab.find(src.text);
-        for (const t of vocab.find(b.text))
+        const srcTerms = vocab.find(srcFull);
+        for (const t of vocab.find(outFull))
           if (!srcTerms.has(t)) addBullet(b.id, `"${t}" is not in the source bullet`);
         if (
           (src.status === 'in_progress' ||
@@ -97,7 +100,7 @@ export function validateTailor(
           addBullet(b.id, 'in-progress work must be described as in progress');
         }
         for (const n of notHeld)
-          if (b.text.toLowerCase().includes(n)) addBullet(b.id, `mentions "${n}" (not held)`);
+          if (outFull.toLowerCase().includes(n)) addBullet(b.id, `mentions "${n}" (not held)`);
       }
     }
   };

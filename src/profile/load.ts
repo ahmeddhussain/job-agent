@@ -10,6 +10,8 @@ const status = z.enum(['done', 'in_progress']);
 
 const Bullet = z.strictObject({
   id,
+  /** Bold lead-in, as in Ahmed's own CV ("Platform & Security: ..."). */
+  label: z.string().max(60).optional(),
   text: z.string().min(10),
   tags: z.array(z.string()).default([]),
   status: status.optional(),
@@ -20,6 +22,8 @@ const Entry = z.strictObject({
   name: z.string().optional(),
   title: z.string().optional(),
   company: z.string().optional(),
+  /** Overrides the default "Company — Title" line on the CV. */
+  heading: z.string().optional(),
   dates: z.string().optional(),
   link: z.url().optional(),
   stack: z.string().optional(),
@@ -165,7 +169,9 @@ export function profileForPrompt(p: Profile): string {
   lines.push('', 'FACTS (id: text):');
   for (const e of [...p.experience, ...p.projects]) {
     lines.push(`# ${e.id}: ${e.title ? `${e.title}, ${e.company ?? ''}` : (e.name ?? '')} (${e.status})`);
-    for (const b of e.bullets) lines.push(`- ${b.id}: ${b.text}${b.status === 'in_progress' ? ' (in progress)' : ''}`);
+    for (const b of e.bullets)
+      lines.push(
+        `- ${b.id}: ${b.label ? `[${b.label}] ` : ''}${b.text}${b.status === 'in_progress' ? ' (in progress)' : ''}`);
   }
   lines.push('# stories');
   for (const s of p.stories) lines.push(`- ${s.id}: ${s.text}`);

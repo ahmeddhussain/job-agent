@@ -105,6 +105,13 @@ export const ConfigSchema = z.strictObject({
   cv: z.strictObject({
     max_pages: z.literal(1), // R14: an applied CV is exactly one page; not configurable upward
     min_fill: ratio,
+    min_projects: z.number().int().min(1).max(8),
+    max_skills_dropped: z.number().int().min(0).max(30),
+    font_pt: z.strictObject({
+      max: z.number().min(8).max(12),
+      min: z.number().min(8).max(12),
+      step: z.number().positive(),
+    }),
     max_trim_rounds: positiveInt,
   }),
   ats_check: z.strictObject({

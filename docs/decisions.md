@@ -145,3 +145,15 @@ D1 to D10 come from `PLAN.md` section 3 (full reasoning there); new decisions ar
 - **Choice:** trim in this order until one page: extra experience bullets (keep the best one per entry) → the lowest-ranked project bullets down to 2 per project → the last project (never fewer than 2) → down to 1 bullet per project → courses → the tail of the skills list. Then fill back with unused bullets of the chosen projects if the page is under `min_fill`. Project stack lines are capped at about one printed line.
 - **Alternatives:** trim the last project's bullets first (the first version: it cut Nexora's strongest bullets and kept a generic "completed training" line); shrink the font (hurts readability and ATS parsing below about 10 pt).
 - **Why:** projects are the evidence for a junior candidate; experience entries need one strong line each. Measured on the 3 gate CVs: one page each, 96–100% full, no LLM call needed to re-fit.
+
+## D24: The CV follows Ahmed's own CV, on one page
+
+- **Choice:** the template reproduces `Ahmed-Khater-CV.pdf`:
+  - **Look:** Carlito (OFL, embedded in `templates/fonts/`), name, bold headline, a contact line where email, GitHub, LinkedIn and portfolio are real hyperlinks showing the address text, underlined section headings separated by grey rules.
+  - **Sections in his order:** Profile, Education, Certifications, Experience, Projects, Skills, Languages.
+  - **Projects:** linked titles with the italic stack, and his bold-labelled bullets ("Platform & Security: …").
+  - **Skills:** every skill in his 16 categories plus Soft Skills.
+  - **Profile changes:** his titles, stacks and labelled bullets, with the corrections he confirmed (five FastAPI services + NGINX; no "double-entry"; the DR drill as he states it). The NTI Final Project was added. The DevOps summary is his own Profile paragraph.
+- **Fitting to one page, cheapest loss first:** font 10 → 9.5 → 9 pt, extra experience bullets, project bullets beyond 2, projects beyond `min_projects` (4), shorter stack lines, up to `max_skills_dropped` (6) least relevant skills, bullets beyond 1, then more skills. Spacing was tightened slightly (line height 1.18) so the top projects keep both labelled bullets.
+- **Alternatives:** the generic template from P3 (rejected by Ahmed: "the first CV I gave you was my best one"); his CV unchanged on two pages (R14 says one); font below 9 pt (too small to read comfortably).
+- **Result on the 3 gate jobs:** one page, 97–100% full, 4 projects each. The DevOps CV keeps both Nexora and both lab bullets and drops 3 of 91 skills; the Support and Networking CVs keep all skills. 8 working links per PDF (verified in the PDF's `/URI` annotations); the ATS check passes.

@@ -87,11 +87,14 @@ apply:
 
 cv:
   max_pages: 1                     # R14: every applied CV is exactly one page
-  min_fill: 0.85                   # add the next-ranked bullet if the page is less full than this
+  min_fill: 0.93                   # grow back (more bullets) if the page is less full than this
+  min_projects: 4                  # Ahmed: at least 4 projects on every CV
+  max_skills_dropped: 6            # least relevant skills that may go before a top project's 2nd bullet (0 = keep all)
+  font_pt: { max: 10, min: 9, step: 0.5 }   # his CV is 10 pt Carlito; shrink before cutting content
   max_trim_rounds: 20             # each round re-renders locally (~1 s), no model call
 
 ats_check:                         # R15 / PLAN 8.6: always runs before every application; blocks on failure
-  required_headings: [Summary, Skills, Experience, Projects, Education, Certifications]
+  required_headings: [Profile, Education, Certifications, Experience, Projects, Skills, Languages]   # his CV's order
   min_keyword_coverage: 0.70       # share of profile-backed job requirements that must appear in the CV
 
 digest:

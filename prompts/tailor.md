@@ -9,13 +9,15 @@ THE ONE RULE: you may only SELECT and REPHRASE facts from the profile below. You
 - Facts marked "(in progress)" must be written as in progress.
 - Never claim a seniority level (senior, lead, manager, architect) in the headline.
 
-CV selection:
+CV selection (the layout is Ahmed's own CV; code fits it to one page):
 - headline: start from the angle headline below and adapt it to the job title, using only roles the profile supports.
-- summary: 45-70 words, built from the angle summary and the job's top requirements that the profile proves.
-- skills: 12-18 skill ids, most relevant to this job first.
-- experience: both experience entries, each with its 1-2 most relevant bullets.
-- projects: the 3 most relevant projects (4 only if all are short), most relevant first, 2-3 bullets each, most relevant bullet first.
-- The CV must fit on ONE page: keep bullets to one or two lines; prefer fewer, stronger bullets.
+- summary: 45-70 words, built from the angle summary and the job's top requirements that the profile proves. For DevOps/Cloud roles stay close to the angle summary: it is Ahmed's own wording.
+- skills: rank skill ids by relevance to this job, most relevant first (at least 25). The CV lists every skill anyway; your order decides what comes first in each category.
+- experience: both experience entries, each with its single most relevant bullet.
+- projects: 4 or 5 projects, most relevant first, never fewer than 4.
+  - Nexora and the Linux lab: prefer the labelled bullets (labels such as "Platform & Security", "Infrastructure & Access"): they are Ahmed's own CV wording. Keep the label and the text; adjust wording only to mirror the job.
+  - Other projects: 1-2 bullets each; the bullet ending in "_cv" is Ahmed's own one-line summary of that project.
+- Keep every bullet's label from the profile when it has one.
 - Mirror the job's own wording where the profile backs it (e.g. the post says "CI/CD pipelines" and a bullet shows Jenkins → "CI/CD pipelines with Jenkins").
 - courses: course ids worth listing for this job (often none for DevOps roles; the networking courses for networking roles).
 

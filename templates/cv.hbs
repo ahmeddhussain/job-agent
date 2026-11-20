@@ -1,46 +1,54 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><title>{{name}} - CV</title><style>{{{css}}}</style></head>
+<head><meta charset="utf-8"><title>{{name}} - CV</title><style>{{{fontFaces}}}{{{css}}}html{--fs:{{fontPt}}pt}</style></head>
 <body>
 <h1>{{name}}</h1>
 <p class="headline">{{headline}}</p>
-<p class="contact">{{#each contact}}{{#if @index}} | {{/if}}{{this}}{{/each}}</p>
+<p class="contact">{{#each contact}}{{#if @index}} | {{/if}}{{#if href}}<a href="{{href}}">{{text}}</a>{{else}}<span class="item">{{text}}</span>{{/if}}{{/each}}</p>
 
-<h2>Summary</h2>
+<section>
+<h2>Profile</h2>
 <p>{{summary}}</p>
+</section>
 
-<h2>Skills</h2>
-<div class="skills">
-{{#each skills}}<p><span class="cat">{{label}}:</span> {{items}}</p>
-{{/each}}
-</div>
-
-<h2>Experience</h2>
-{{#each experience}}
-<p class="entry-head"><span class="title">{{title}}</span>, {{company}} <span class="meta">({{dates}})</span></p>
-<ul>{{#each bullets}}<li>{{this}}</li>{{/each}}</ul>
-{{/each}}
-
-<h2>Projects</h2>
-{{#each projects}}
-<p class="entry-head"><span class="title">{{name}}</span>{{#if link}} | {{link}}{{/if}}{{#if inProgress}} <span class="meta">(in progress)</span>{{/if}}</p>
-{{#if stack}}<p class="stack">{{stack}}</p>{{/if}}
-<ul>{{#each bullets}}<li>{{this}}</li>{{/each}}</ul>
-{{/each}}
-
+<section>
 <h2>Education</h2>
 {{#each education}}
-<p class="entry-head"><span class="title">{{degree}}</span>, {{school}} <span class="meta">({{dates}}{{#if gpa}}, GPA {{gpa}}{{/if}})</span></p>
+<p class="head"><b>{{degree}}, {{school}}</b>{{#if gpa}} ({{gpa}} GPA){{/if}}</p>
+<p>{{dates}}</p>
 {{/each}}
+</section>
 
+<section>
 <h2>Certifications</h2>
 <ul>{{#each certifications}}<li>{{this}}</li>{{/each}}</ul>
-{{#if courses.length}}
-<h2>Courses</h2>
-<ul>{{#each courses}}<li>{{this}}</li>{{/each}}</ul>
-{{/if}}
+{{#if courses.length}}<p class="head"><b>Courses:</b> {{#each courses}}{{#if @index}}; {{/if}}{{this}}{{/each}}</p>{{/if}}
+</section>
 
+<section>
+<h2>Experience</h2>
+{{#each experience}}
+<p class="head"><b>{{heading}}</b> <span class="dates">({{dates}})</span></p>
+<ul>{{#each bullets}}<li>{{#if label}}<span class="label">{{label}}:</span> {{/if}}{{text}}</li>{{/each}}</ul>
+{{/each}}
+</section>
+
+<section>
+<h2>Projects</h2>
+{{#each projects}}
+<p class="head">{{#if link}}<a href="{{link}}"><b>{{name}}</b></a>{{else}}<b>{{name}}</b>{{/if}}{{#if stack}} — <i>{{stack}}</i>{{/if}}</p>
+<ul>{{#each bullets}}<li>{{#if label}}<span class="label">{{label}}:</span> {{/if}}{{text}}</li>{{/each}}</ul>
+{{/each}}
+</section>
+
+<section>
+<h2>Skills</h2>
+<ul>{{#each skills}}<li><span class="label">{{label}}:</span> {{items}}</li>{{/each}}</ul>
+</section>
+
+<section>
 <h2>Languages</h2>
 <p>{{languages}}</p>
+</section>
 </body>
 </html>

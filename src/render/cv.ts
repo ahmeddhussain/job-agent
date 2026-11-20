@@ -1,6 +1,6 @@
-// Assembles the CV from the profile + the validated selection, renders it, and trims or
-// fills it until it is exactly one page (R14, D13). Contact data, education and
-// certifications come from the profile only; the model never writes them.
+// Assembles the CV in the layout of Ahmed's own CV from the profile + the validated
+// selection, and fits it to exactly one page (R14, D13, D24). Contact data, education
+// and certifications come from the profile only; the model never writes them.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import type { Config } from '../config.js';
 import type { Profile } from '../profile/load.js';
@@ -8,21 +8,50 @@ import type { TailorOutput } from '../tailor/schema.js';
 import { lastTextY, pdfInfo } from './poppler.js';
 import { renderTemplate, type Renderer } from './renderer.js';
 
+/** Section names exactly as on Ahmed's CV. */
 const CATEGORY_LABELS: Record<string, string> = {
   linux: 'Linux',
   networking: 'Networking',
   cloud: 'Cloud',
-  iac_config: 'IaC & Configuration',
+  iac_config: 'Infrastructure as Code & Configuration',
   containers: 'Containers & Orchestration',
+  service_mesh: 'Service Mesh & Traffic',
   cicd_gitops: 'CI/CD & GitOps',
-  security: 'DevSecOps',
+  devsecops: 'DevSecOps',
+  secrets: 'Secrets Management',
+  messaging: 'Messaging',
+  databases: 'Databases',
   observability: 'Monitoring & Observability',
-  data_messaging: 'Databases & Messaging',
+  reliability: 'Reliability & Scaling',
   programming: 'Programming & Scripting',
-  other: 'Other',
+  testing: 'Testing',
+  devplatform: 'Developer Platform & Version Control',
 };
 
-/** First `max` top-level items of a stack line (commas inside parentheses don't split). */
+const display = (url: string) =>
+  url
+    .replace(/^https?:\/\//, '')
+    .replace(/^www\./, '')
+    .replace(/\/$/, '');
+
+export interface Link {
+  text: string;
+  href: string | null;
+}
+
+/** Location | email | phones | GitHub | LinkedIn | portfolio, with real hyperlinks. */
+export function contactLine(p: Profile): Link[] {
+  const c = p.candidate;
+  return [
+    { text: c.location, href: null },
+    { text: c.email, href: `mailto:${c.email}` },
+    { text: c.phone, href: null },
+    ...(c.phone_alt ? [{ text: c.phone_alt, href: null }] : []),
+    ...Object.values(c.links).map((u) => ({ text: display(u), href: u })),
+  ];
+}
+
+/** First `max` top-level items of a stack line, within about one printed line. */
 export function shortStack(stack: string, max = 8, maxChars = 105): string {
   const items: string[] = [];
   let depth = 0;
@@ -44,60 +73,56 @@ export function shortStack(stack: string, max = 8, maxChars = 105): string {
   return out.join(', ');
 }
 
-const display = (url: string) => url.replace(/^https?:\/\//, '').replace(/\/$/, '');
-
-export function contactLine(p: Profile): string[] {
-  const c = p.candidate;
-  return [
-    c.location,
-    c.email,
-    c.phone,
-    ...(c.phone_alt ? [c.phone_alt] : []),
-    ...Object.values(c.links).map(display),
-  ];
+export interface Layout {
+  fontPt: number;
+  shortStacks: boolean;
+  /** Skills dropped from the least relevant end of the ordered list (last resort). */
+  skillsDropped: number;
 }
 
-export function buildCvModel(p: Profile, out: TailorOutput): Record<string, unknown> {
-  const skillById = new Map(
-    Object.entries(p.skills).flatMap(([cat, list]) =>
-      list.map((s) => [s.id, { cat, name: s.name }] as const),
-    ),
+/** Every profile skill, grouped in Ahmed's categories; the model's ranking decides what comes first. */
+export function orderedSkills(p: Profile, ranked: string[], dropped = 0) {
+  const all = Object.entries(p.skills).flatMap(([cat, list]) => list.map((s) => ({ cat, ...s })));
+  const rank = new Map(ranked.map((id, i) => [id, i]));
+  const score = (s: (typeof all)[number]) => rank.get(s.id) ?? 1e6 + all.indexOf(s);
+  const sorted = [...all].sort((a, b) => score(a) - score(b));
+  const kept = sorted.slice(0, Math.max(0, sorted.length - dropped));
+  const cats: string[] = [];
+  for (const s of kept) if (!cats.includes(s.cat)) cats.push(s.cat);
+  return cats.map((cat) => ({
+    label: CATEGORY_LABELS[cat] ?? cat,
+    items: kept
+      .filter((s) => s.cat === cat)
+      .map((s) => s.name)
+      .join(', '),
+  }));
+}
+
+export function buildCvModel(
+  p: Profile,
+  out: TailorOutput,
+  layout: Layout = { fontPt: 10, shortStacks: false, skillsDropped: 0 },
+): Record<string, unknown> {
+  const labelOf = new Map(
+    [...p.experience, ...p.projects].flatMap((e) => e.bullets.map((b) => [b.id, b.label] as const)),
   );
-  const groups = new Map<string, string[]>();
-  for (const id of out.skills) {
-    const s = skillById.get(id);
-    if (!s) continue;
-    groups.set(s.cat, [...(groups.get(s.cat) ?? []), s.name]);
-  }
-  const entry = (pool: Profile['projects'], id: string) => pool.find((e) => e.id === id);
+  const bullets = (picks: { id: string; text: string; label?: string | undefined }[]) =>
+    picks.map((b) => ({ label: b.label ?? labelOf.get(b.id) ?? null, text: b.text }));
+  // Experience in profile order (as on Ahmed's CV).
+  const experience = p.experience
+    .map((e) => ({ e, pick: out.experience.find((x) => x.id === e.id) }))
+    .filter((x) => x.pick)
+    .map(({ e, pick }) => ({
+      heading: e.heading ?? `${e.company ?? ''} — ${e.title ?? ''}`,
+      dates: e.dates ?? '',
+      bullets: bullets(pick?.bullets ?? []),
+    }));
   return {
+    fontPt: layout.fontPt,
     name: p.candidate.full_name,
     headline: out.headline,
     contact: contactLine(p),
     summary: out.summary,
-    skills: [...groups].map(([cat, items]) => ({
-      label: CATEGORY_LABELS[cat] ?? cat,
-      items: items.join(', '),
-    })),
-    experience: out.experience.map((x) => {
-      const e = entry(p.experience, x.id);
-      return {
-        title: e?.title ?? '',
-        company: e?.company ?? '',
-        dates: e?.dates ?? '',
-        bullets: x.bullets.map((b) => b.text),
-      };
-    }),
-    projects: out.projects.map((x) => {
-      const e = entry(p.projects, x.id);
-      return {
-        name: e?.name ?? x.id,
-        link: e?.link ? display(e.link) : null,
-        stack: e?.stack ? shortStack(e.stack) : null,
-        inProgress: e?.status === 'in_progress',
-        bullets: x.bullets.map((b) => b.text),
-      };
-    }),
     education: p.education.map((e) => ({
       degree: e.degree,
       school: e.school,
@@ -106,38 +131,51 @@ export function buildCvModel(p: Profile, out: TailorOutput): Record<string, unkn
     })),
     certifications: p.certifications.map((c) => c.name),
     courses: out.courses.map((id) => p.courses.find((c) => c.id === id)?.name).filter(Boolean),
+    experience,
+    projects: out.projects.map((x) => {
+      const e = p.projects.find((pr) => pr.id === x.id);
+      return {
+        name: e?.name ?? x.id,
+        link: e?.link ?? null,
+        stack: e?.stack ? (layout.shortStacks ? shortStack(e.stack) : e.stack) : null,
+        bullets: bullets(x.bullets),
+      };
+    }),
+    skills: [
+      ...orderedSkills(p, out.skills, layout.skillsDropped),
+      { label: 'Soft Skills', items: p.soft_skills.join(', ') },
+    ],
     languages: p.languages.map((l) => `${l.name} (${l.level})`).join(' | '),
   };
 }
 
+interface MdBullet {
+  label: string | null;
+  text: string;
+}
+
 export function cvMarkdown(m: Record<string, unknown>): string {
-  const md: string[] = [];
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters -- typed accessor for the template model
-  const get = <T>(k: string) => m[k] as T;
-  md.push(
-    `# ${get<string>('name')}`,
-    '',
-    `**${get<string>('headline')}**`,
-    '',
-    get<string[]>('contact').join(' | '),
-    '',
-  );
-  md.push('## Summary', '', get<string>('summary'), '', '## Skills', '');
-  for (const s of get<{ label: string; items: string }[]>('skills'))
-    md.push(`- **${s.label}:** ${s.items}`);
-  md.push('', '## Experience', '');
-  for (const e of get<{ title: string; company: string; dates: string; bullets: string[] }[]>(
-    'experience',
-  )) {
-    md.push(`**${e.title}**, ${e.company} (${e.dates})`, ...e.bullets.map((b) => `- ${b}`), '');
+  const li = (b: MdBullet) => `- ${b.label ? `**${b.label}:** ` : ''}${b.text}`;
+  const md: string[] = [`# ${String(m['name'])}`, '', `**${String(m['headline'])}**`, ''];
+  const contact = m['contact'] as Link[];
+  md.push(contact.map((c) => (c.href ? `[${c.text}](${c.href})` : c.text)).join(' | '), '');
+  md.push('## Profile', '', String(m['summary']), '', '## Experience', '');
+  for (const e of m['experience'] as { heading: string; dates: string; bullets: MdBullet[] }[]) {
+    md.push(`**${e.heading}** (${e.dates})`, ...e.bullets.map(li), '');
   }
   md.push('## Projects', '');
-  for (const pr of get<{ name: string; link: string | null; bullets: string[] }[]>('projects')) {
-    md.push(
-      `**${pr.name}**${pr.link ? ` | ${pr.link}` : ''}`,
-      ...pr.bullets.map((b) => `- ${b}`),
-      '',
-    );
+  for (const pr of m['projects'] as {
+    name: string;
+    link: string | null;
+    stack: string | null;
+    bullets: MdBullet[];
+  }[]) {
+    const title = pr.link ? `[${pr.name}](${pr.link})` : pr.name;
+    md.push(`**${title}**${pr.stack ? ` — *${pr.stack}*` : ''}`, ...pr.bullets.map(li), '');
+  }
+  md.push('## Skills', '');
+  for (const s of m['skills'] as { label: string; items: string }[]) {
+    md.push(`- **${s.label}:** ${s.items}`);
   }
   return `${md.join('\n')}\n`;
 }
@@ -146,95 +184,118 @@ export interface FitReport {
   pages: number;
   fill: number;
   rounds: number;
+  fontPt: number;
   trimmed: string[];
   added: string[];
 }
 
-/** One trim step, least relevant first. Returns a description, or null when nothing is left to cut. */
-function trimOnce(out: TailorOutput): string | null {
-  // 1. Experience keeps its single most relevant bullet first (projects carry the evidence).
-  for (const ex of out.experience)
+/**
+ * One step towards one page, cheapest loss first (D24): smaller font, then extra
+ * experience bullets, project bullets beyond 2, projects beyond `min_projects`, shorter
+ * stack lines, up to `max_skills_dropped` least relevant skills, bullets beyond 1, and only
+ * then more skills from the least relevant end.
+ */
+function shrinkOnce(out: TailorOutput, layout: Layout, cfg: Config): string {
+  if (layout.fontPt - cfg.cv.font_pt.step >= cfg.cv.font_pt.min - 1e-9) {
+    layout.fontPt = Math.round((layout.fontPt - cfg.cv.font_pt.step) * 10) / 10;
+    return `font ${String(layout.fontPt)}pt`;
+  }
+  for (const ex of out.experience) {
     if (ex.bullets.length > 1) return `bullet ${ex.bullets.pop()?.id ?? '?'}`;
-  // 2. Lowest-ranked project bullets, last project first, keeping 2 per project...
+  }
   for (let i = out.projects.length - 1; i >= 0; i--) {
     const pr = out.projects[i];
     if (pr && pr.bullets.length > 2) return `bullet ${pr.bullets.pop()?.id ?? '?'}`;
   }
-  // 3. ...then the last project (never below 2 projects)...
-  if (out.projects.length > 2) return `project ${out.projects.pop()?.id ?? '?'}`;
-  // 4. ...then down to 1 bullet per project, courses and the tail of the skills list.
+  if (out.projects.length > cfg.cv.min_projects) {
+    return `project ${out.projects.pop()?.id ?? '?'}`;
+  }
+  if (!layout.shortStacks) {
+    layout.shortStacks = true;
+    return 'shorter stack lines';
+  }
+  // A few of the least relevant skills go before a top project's second bullet (D24).
+  if (layout.skillsDropped < cfg.cv.max_skills_dropped) {
+    layout.skillsDropped += 3;
+    return 'three least relevant skills';
+  }
   for (let i = out.projects.length - 1; i >= 0; i--) {
     const pr = out.projects[i];
     if (pr && pr.bullets.length > 1) return `bullet ${pr.bullets.pop()?.id ?? '?'}`;
   }
   if (out.courses.length > 0) return `course ${out.courses.pop() ?? '?'}`;
-  if (out.skills.length > 10) {
-    out.skills.splice(-2);
-    return 'two skills';
-  }
-  return null;
+  layout.skillsDropped += 3;
+  return 'three least relevant skills';
 }
 
-/** One fill step: the next unused bullet of a selected project, in profile order (untouched text). */
-function fillOnce(out: TailorOutput, p: Profile): string | null {
+/** One step back towards a full page: the next unused bullet of a chosen project (untouched text). */
+function growOnce(out: TailorOutput, p: Profile): string | null {
   for (const pick of out.projects) {
     const e = p.projects.find((x) => x.id === pick.id);
     const next = e?.bullets.find(
       (b) => !pick.bullets.some((x) => x.id === b.id) && b.status !== 'in_progress',
     );
     if (next) {
-      pick.bullets.push({ id: next.id, text: next.text });
+      pick.bullets.push({
+        id: next.id,
+        text: next.text,
+        ...(next.label ? { label: next.label } : {}),
+      });
       return `bullet ${next.id}`;
     }
   }
   return null;
 }
 
-const BOTTOM_MARGIN_PT = (11 / 25.4) * 72;
+const BOTTOM_MARGIN_PT = (9 / 25.4) * 72;
 
-async function measure(renderer: Renderer, p: Profile, out: TailorOutput, path: string) {
-  writeFileSync(path, await renderer.pdf(renderTemplate('cv', buildCvModel(p, out))));
+async function measure(
+  renderer: Renderer,
+  p: Profile,
+  out: TailorOutput,
+  layout: Layout,
+  path: string,
+) {
+  writeFileSync(path, await renderer.pdf(renderTemplate('cv', buildCvModel(p, out, layout))));
   const { pages, heightPt } = await pdfInfo(path);
   const fill = pages === 1 ? (await lastTextY(path)) / (heightPt - BOTTOM_MARGIN_PT) : 1;
   return { pages, fill };
 }
 
-/** Renders `out` to `path`, trimming or filling until exactly one page (or giving up). */
+/** Renders `selection` to `path`, shrinking or growing until exactly one page. */
 export async function renderOnePageCv(
   renderer: Renderer,
   p: Profile,
   selection: TailorOutput,
   cfg: Config,
   path: string,
-): Promise<FitReport & { output: TailorOutput }> {
+): Promise<FitReport & { output: TailorOutput; layout: Layout }> {
   const out = structuredClone(selection);
+  const layout: Layout = { fontPt: cfg.cv.font_pt.max, shortStacks: false, skillsDropped: 0 };
   const trimmed: string[] = [];
   const added: string[] = [];
-  let { pages, fill } = await measure(renderer, p, out, path);
+  let { pages, fill } = await measure(renderer, p, out, layout, path);
   let rounds = 0;
   while (pages > 1 && rounds < cfg.cv.max_trim_rounds) {
-    const cut = trimOnce(out);
-    if (!cut) break;
-    trimmed.push(cut);
+    trimmed.push(shrinkOnce(out, layout, cfg));
     rounds++;
-    ({ pages, fill } = await measure(renderer, p, out, path));
+    ({ pages, fill } = await measure(renderer, p, out, layout, path));
   }
   while (pages === 1 && fill < cfg.cv.min_fill && rounds < cfg.cv.max_trim_rounds * 2) {
     const before = structuredClone(out);
-    const add = fillOnce(out, p);
-    if (!add) break;
+    const step = growOnce(out, p);
+    if (!step) break;
     rounds++;
-    const m = await measure(renderer, p, out, path);
+    const m = await measure(renderer, p, out, layout, path);
     if (m.pages > 1) {
-      // Too much: undo and re-render the last one-page version.
       Object.assign(out, before);
-      ({ pages, fill } = await measure(renderer, p, out, path));
+      ({ pages, fill } = await measure(renderer, p, out, layout, path));
       break;
     }
-    added.push(add);
+    added.push(step);
     ({ pages, fill } = m);
   }
-  return { pages, fill, rounds, trimmed, added, output: out };
+  return { pages, fill, rounds, fontPt: layout.fontPt, trimmed, added, output: out, layout };
 }
 
 /** `{First}_{Last}_CV_{Company}_{Role}.pdf`, sanitized, at most 80 characters. */
