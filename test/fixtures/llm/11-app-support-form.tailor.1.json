@@ -1,0 +1,112 @@
+{
+  "headline": "Application Support Engineer | Linux | SQL | AWS",
+  "summary": "Cloud and DevOps Engineer who troubleshoots from evidence: decoded a live GitHub OIDC token to fix an AWS trust-policy failure and traced an AWS AuthFailure to clock skew from blocked NTP. Operates an enterprise-style RHEL environment through tickets and runbooks, writes incident reports with root cause, and works with Linux, SQL, REST APIs and AWS.",
+  "skills": [
+    "linux",
+    "sql",
+    "rest_apis",
+    "mysql",
+    "incident_docs",
+    "bash",
+    "systemd",
+    "net_fundamentals",
+    "postgresql",
+    "python",
+    "aws",
+    "freeipa",
+    "loki",
+    "grafana",
+    "prometheus",
+    "docker",
+    "git"
+  ],
+  "experience": [
+    {
+      "id": "ivolve",
+      "bullets": [
+        {
+          "id": "ivolve_labs",
+          "text": "Completed 30 hands-on labs across build tools (Gradle, Maven), Docker, Jenkins, Kubernetes, ArgoCD and Ansible, each documented with its objective, steps and verification."
+        },
+        {
+          "id": "ivolve_projects",
+          "text": "Delivered two end-to-end pipelines for a 3-service application on EKS, one with Jenkins and Ansible and one with GitHub Actions (OIDC) and ArgoCD GitOps."
+        }
+      ]
+    },
+    {
+      "id": "nti",
+      "bullets": [
+        {
+          "id": "nti_training",
+          "text": "Completed intensive hands-on training in Linux administration, networking, CI/CD, containerization and cloud infrastructure."
+        },
+        {
+          "id": "nti_pipeline",
+          "text": "Built the final project, an end-to-end pipeline on AWS that provisions infrastructure with Terraform and Ansible, builds and scans images with Jenkins, SonarQube and Trivy, and deploys to EKS with Helm, monitored with Prometheus, Grafana and Loki."
+        }
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "id": "sysadmin_lab",
+      "bullets": [
+        {
+          "id": "lab_drills",
+          "text": "Ran restore drills from a versioned S3 bucket that measure RPO and RTO against targets, and incident drills for an identity outage, a full log disk and a package rollback, documented in 7 incident reports with root cause and actions."
+        },
+        {
+          "id": "lab_identity",
+          "text": "Centralized identity with FreeIPA, managing users, DNS, Kerberos, HBAC and sudo rules per team, with SSH keys stored in IPA."
+        },
+        {
+          "id": "lab_testing",
+          "text": "Wrote 160 automated checks in Bash that log in as each user and prove what is allowed and what is refused."
+        }
+      ]
+    },
+    {
+      "id": "nexora",
+      "bullets": [
+        {
+          "id": "nexora_tests",
+          "text": "Wrote Pytest async integration and concurrency tests for the transfer path."
+        },
+        {
+          "id": "nexora_observability",
+          "text": "Declared observability as code with 12 Prometheus alert rules each backed by a runbook, three Grafana dashboards, Fluent Bit shipping JSON logs with correlation IDs to Loki, and OpenTelemetry traces in Tempo."
+        },
+        {
+          "id": "nexora_perf",
+          "text": "Load-tested two concurrency profiles, measuring about 420 ms median and 3,660 ms p99 on a single-account hotspot, and ruled out row-lock contention and CPU saturation as the bottleneck on disjoint accounts."
+        }
+      ]
+    },
+    {
+      "id": "ivolve_gitops",
+      "bullets": [
+        {
+          "id": "ivg_oidc_fix",
+          "text": "Fixed a GitHub Actions OIDC trust-policy failure by decoding the live JWT, finding the immutable numeric IDs in its sub claim, and building the correct wildcard with Terraform replace()."
+        },
+        {
+          "id": "ivg_ssa_fix",
+          "text": "Resolved a kube-prometheus-stack ArgoCD sync failure caused by the Kubernetes 262144-byte annotation limit by enabling ServerSideApply."
+        }
+      ]
+    }
+  ],
+  "courses": [],
+  "cover_letter": {
+    "greeting": "Dear Hiring Team,",
+    "paragraphs": [
+      "I am applying for the Application Support Engineer role at Pyramid Pay. I solve infrastructure problems methodically and document them so they stay solved, which is the habit I would bring to supporting your applications and the people who rely on them.",
+      "Your post asks for Linux, REST APIs and log analysis. In my Linux system administration lab I run an enterprise-style RHEL environment with FreeIPA identity, and I ran incident drills for an identity outage, a full log disk and a package rollback, written up in 7 incident reports with root cause and actions. On the application side, I wrote Pytest async integration tests for a Python/FastAPI transfer path and used Prometheus alert rules with runbooks, Grafana dashboards and Loki logs with correlation IDs. I also work with SQL on MySQL, and I follow a ticket-based change process.",
+      "Troubleshooting is the part of the work I already do every day: reading logs, narrowing a cause with evidence, fixing it, and writing the runbook. For example, I traced a Terraform AWS AuthFailure to about 14 minutes of clock skew caused by blocked NTP, and decoded a live GitHub OIDC token to fix a trust-policy failure. A support role puts that skill directly in front of users and production systems. I would welcome a conversation about how I can help your team, and my CV is attached."
+    ],
+    "closing": "Best regards,"
+  },
+  "email_body": "Hello,\nI am applying for the Application Support Engineer role at Pyramid Pay in Cairo.\nMy CV and cover letter are attached.\nI would be glad to discuss how my Linux, SQL and troubleshooting experience fits the team.",
+  "why_this_role": "I already troubleshoot from evidence, such as tracing an AWS AuthFailure to clock skew from blocked NTP and writing 7 incident reports with root cause, and a support role applies that directly to live applications."
+}

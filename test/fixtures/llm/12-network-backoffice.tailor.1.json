@@ -1,0 +1,99 @@
+{
+  "headline": "Network & Cloud Engineer | Routing & Switching | AWS | Linux",
+  "summary": "Electronics and Communications Engineering graduate with networking fundamentals from the CCNA curriculum (studied, not certified) and the Huawei HCIA-Datacom course (completed, exam not taken). Familiar with VLAN, OSPF, BGP and MPLS, and designed a two-floor building network in Cisco Packet Tracer. Applies this on AWS and Linux: private subnets behind NAT, default-deny security groups, a WireGuard VPN and a Squid proxy.",
+  "skills": [
+    "net_fundamentals",
+    "net_routing_switching",
+    "mpls_vrf",
+    "cisco_pt",
+    "vpn",
+    "squid",
+    "tls",
+    "aws_networking",
+    "linux",
+    "firewalld",
+    "aws",
+    "terraform",
+    "netpol",
+    "istio",
+    "ansible",
+    "bash"
+  ],
+  "experience": [
+    {
+      "id": "nti",
+      "bullets": [
+        {
+          "id": "nti_training",
+          "text": "Completed intensive hands-on training in Linux administration, networking, CI/CD, containerization and cloud infrastructure."
+        }
+      ]
+    },
+    {
+      "id": "ivolve",
+      "bullets": [
+        {
+          "id": "ivolve_general",
+          "text": "Applied DevOps practices to production-style projects covering CI/CD, GitOps, containerization and infrastructure automation."
+        }
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "id": "packet_tracer",
+      "bullets": [
+        {
+          "id": "pt_design",
+          "text": "Designed the network for a two-floor building in Cisco Packet Tracer using routers, switches and end devices."
+        }
+      ]
+    },
+    {
+      "id": "sysadmin_lab",
+      "bullets": [
+        {
+          "id": "lab_vpn",
+          "text": "Made the network reachable only through a WireGuard VPN carried inside TLS on TCP 443 (wstunnel), with per-team VPN ranges that reach only what each team's policy allows."
+        },
+        {
+          "id": "lab_infra",
+          "text": "Built an enterprise-style RHEL 10 environment on AWS with modular Terraform, private subnets behind a NAT gateway, default-deny security groups per role and S3 remote state with native locking; the environment is destroyed after every session and rebuilt from Git."
+        },
+        {
+          "id": "lab_services",
+          "text": "Ran shared services on a utility server, including a Squid proxy (HTTPS only, per-team internet rules), NFSv4 home directories and team shares through automount with quotas and ACLs, and central logs shipped over TLS."
+        }
+      ]
+    },
+    {
+      "id": "nexora",
+      "bullets": [
+        {
+          "id": "nexora_security",
+          "text": "Secured the platform with Istio mTLS, default-deny Kubernetes NetworkPolicies with per-service allow rules, and secrets generated in AWS Secrets Manager and projected by External Secrets Operator through IRSA; services run non-root with a read-only root filesystem."
+        },
+        {
+          "id": "nexora_infra",
+          "text": "Provisioned the VPC, EKS and RDS MySQL from versioned Terraform modules, with environment definitions on Terraform 1.10+ native S3 state locking."
+        }
+      ]
+    }
+  ],
+  "courses": [
+    "ccna_curriculum",
+    "hcia_datacom",
+    "scu_netsec"
+  ],
+  "cover_letter": {
+    "greeting": "Dear Hiring Team,",
+    "paragraphs": [
+      "I am applying for the Network Back Office Engineer role at Orbitel Networks in Smart Village. I combine network fundamentals from my Electronics and Communications Engineering degree with hands-on cloud network design, and I would bring both to your network operations work.",
+      "Your requirements start with routing and switching, including OSPF and BGP, and MPLS basics. My grounding comes from the CCNA curriculum (studied, not certified) and the Huawei HCIA-Datacom course (completed, exam not taken), and I applied it by designing the network for a two-floor building in Cisco Packet Tracer with routers, switches and end devices. I am familiar with VLAN, STP/RSTP, OSPF, BGP, QoS, MPLS and VRF. I have also built networks that are segmented by design: a Linux lab on AWS reachable only through a WireGuard VPN carried inside TLS on TCP 443 with per-team VPN ranges, private subnets behind a NAT gateway, default-deny security groups per role, and a Squid proxy with per-team internet rules.",
+      "My degree and networking courses gave me the fundamentals; building VPNs, proxies and segmented VPCs on AWS showed me how much of reliability and security is decided in the network. A back office role, where that discipline is applied every day, is where I want to work. I would welcome a conversation about the role and how I can contribute."
+    ],
+    "closing": "Best regards,"
+  },
+  "email_body": "Dear Hiring Team,\nI am applying for the Network Back Office Engineer role at Orbitel Networks.\nMy CV and cover letter are attached.\nI would welcome the chance to discuss the role with you.",
+  "why_this_role": "This role builds on the Cisco Packet Tracer building network I designed and on the segmented AWS networks I built, with a WireGuard VPN, private subnets behind NAT and a Squid proxy."
+}

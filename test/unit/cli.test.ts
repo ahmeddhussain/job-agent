@@ -12,6 +12,7 @@ const COMMANDS = [
   'reprocess',
   'digest',
   'ats:detect',
+  'tailor:fixtures',
   'config:check',
   'db:migrate',
 ];

@@ -43,6 +43,7 @@ llm:
   max_jobs_per_run: null           # null = no cap: run until the subscription usage limit (R18)
   max_tailor_per_run: null         # null = no cap; best matches are tailored first
   timeout_seconds: 90
+  tailor_timeout_seconds: 300      # Sonnet writes a full CV + cover letter per call
   max_retries: 3
 
 filters:
@@ -87,7 +88,7 @@ apply:
 cv:
   max_pages: 1                     # R14: every applied CV is exactly one page
   min_fill: 0.85                   # add the next-ranked bullet if the page is less full than this
-  max_trim_rounds: 6
+  max_trim_rounds: 20             # each round re-renders locally (~1 s), no model call
 
 ats_check:                         # R15 / PLAN 8.6: always runs before every application; blocks on failure
   required_headings: [Summary, Skills, Experience, Projects, Education, Certifications]

@@ -58,6 +58,7 @@ export const ConfigSchema = z.strictObject({
     max_jobs_per_run: positiveInt.nullable(), // null = no cap (R18)
     max_tailor_per_run: positiveInt.nullable(),
     timeout_seconds: positiveInt,
+    tailor_timeout_seconds: positiveInt,
     max_retries: z.number().int().min(0).max(10),
   }),
   filters: z.strictObject({

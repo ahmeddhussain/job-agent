@@ -120,7 +120,7 @@ export class ClaudeCli implements Llm {
     ];
   }
 
-  private run(args: string[]): Promise<Spawned> {
+  private run(args: string[], timeoutMs = this.o.timeoutMs): Promise<Spawned> {
     return new Promise((resolve, reject) => {
       const child = spawn(this.o.binary, args, {
         cwd: this.o.workDir,
@@ -135,7 +135,7 @@ export class ClaudeCli implements Llm {
         timedOut = true;
         child.kill('SIGTERM');
         setTimeout(() => child.kill('SIGKILL'), 5000).unref();
-      }, this.o.timeoutMs);
+      }, timeoutMs);
       child.stdout.setEncoding('utf8').on('data', (d: string) => {
         bytes += d.length;
         if (bytes > MAX_OUTPUT_BYTES) child.kill('SIGKILL');
@@ -231,8 +231,12 @@ export class ClaudeCli implements Llm {
       const started = Date.now();
       let usage: LlmUsage | null = null;
       try {
-        const out = await this.run(args);
-        if (out.timedOut) throw new LlmError(`timed out after ${this.o.timeoutMs} ms`, true);
+        const out = await this.run(args, req.timeoutMs ?? this.o.timeoutMs);
+        if (out.timedOut)
+          throw new LlmError(
+            `timed out after ${String(req.timeoutMs ?? this.o.timeoutMs)} ms`,
+            true,
+          );
         let parsed: z.infer<typeof ResultSchema>;
         try {
           parsed = ResultSchema.parse(JSON.parse(out.stdout));

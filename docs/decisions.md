@@ -129,3 +129,19 @@ D1 to D10 come from `PLAN.md` section 3 (full reasoning there); new decisions ar
 - **Why:** Ahmed wants fresh and 0–2 year roles ranked higher for any role, combined with skills. Splitting the two makes each part testable and tunable in config, and the model can't double-count experience.
 - **Effect (live run, 28 fixtures):** Senior DevOps (7 years) → `over_experience`; Riyadh onsite → `location`; Alexandria IT Support (fresh) → 65/100 = 76, queued; fresh Technical Support → 42/100 = 59, queued (it was 78 under the old rubric, because skills are now scored without the experience points).
 - **Trade-off:** a "Senior" post with no years stated now gets experience 70 and is applied to when the skills fit. That was Ahmed's call.
+
+## D22: P3 rendering stack and accepted audit findings
+
+- **Choice:** Handlebars templates → headless Chrome PDF via `puppeteer` **24.38.0**, the exact version `whatsapp-web.js` 1.34.8 pins, so P4 reuses the same Chromium (one ~300 MB download, not two). Page count and fill from `pdfinfo` / `pdftotext -bbox` (poppler), which the ATS check uses anyway.
+- **Alternatives:** puppeteer 25 (fixes the audit findings below, but a second Chrome next to WhatsApp's); pdf-lib to count pages (another dependency for what poppler already does).
+- **Audit:** `npm audit --omit=dev` reported 10 high findings from three roots. `basic-ftp` is pinned to the fixed 6.2.6 with an `overrides` entry. Accepted, with reasons:
+  - `extract-zip` ≤ 2.0.1 (symlink path traversal): used only when the browser archive is unpacked at install time, from Google's download servers. Never sees untrusted archives.
+  - nested `zod@3` in `chromium-bidi` (memory exhaustion on oversized input): only on the WebDriver BiDi protocol path; puppeteer drives Chrome over CDP. Our own `zod` is 4.6.7, not affected.
+  - Revisit when `whatsapp-web.js` moves to puppeteer 25.
+- **Rendering security (A9):** JavaScript disabled, every request aborted, Handlebars escapes every value. A test proves a `<script>` doesn't run.
+
+## D23: One-page fitting order
+
+- **Choice:** trim in this order until one page: extra experience bullets (keep the best one per entry) → the lowest-ranked project bullets down to 2 per project → the last project (never fewer than 2) → down to 1 bullet per project → courses → the tail of the skills list. Then fill back with unused bullets of the chosen projects if the page is under `min_fill`. Project stack lines are capped at about one printed line.
+- **Alternatives:** trim the last project's bullets first (the first version: it cut Nexora's strongest bullets and kept a generic "completed training" line); shrink the font (hurts readability and ATS parsing below about 10 pt).
+- **Why:** projects are the evidence for a junior candidate; experience entries need one strong line each. Measured on the 3 gate CVs: one page each, 96–100% full, no LLM call needed to re-fit.

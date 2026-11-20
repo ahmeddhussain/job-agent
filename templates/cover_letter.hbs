@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>{{name}} - Cover Letter</title><style>{{{css}}}</style></head>
+<body class="letter">
+<h1>{{name}}</h1>
+<p class="contact">{{#each contact}}{{#if @index}} | {{/if}}{{this}}{{/each}}</p>
+<p class="date">{{date}}</p>
+{{#if recipient}}<p>{{recipient}}</p>{{/if}}
+<p>{{greeting}}</p>
+{{#each paragraphs}}<p>{{this}}</p>
+{{/each}}
+<p class="sign">{{closing}}<br>{{name}}</p>
+</body>
+</html>

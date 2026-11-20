@@ -181,3 +181,41 @@ requirement counted as missing even though the hard filter had already allowed i
 
 **Fix.** Rubric calibration in `prompts/score.md` (D19); same thresholds. Re-recorded:
 84 and 75.
+
+---
+
+## 9. Tailored CVs stayed at two pages
+
+**Symptom.** First live P3 gate run:
+
+```
+FAIL 01-devops-email-en [devops] pages=2 fill=100% ... ats=fail (pages: 2 (must be 1))
+      trimmed: bullet cicd_infra, bullet lab_compliance, bullet lab_ansible, bullet t3_delivery, bullet nexora_gitops, bullet nexora_dr
+```
+
+**Diagnosis.** Page 2 held 14 lines: about 7 lines of projects plus Education,
+Certifications and Languages. Each trim round removed about 2 lines and the limit
+was 6 rounds. Project stack lines took 2 lines each.
+
+**Fix.** `max_trim_rounds: 20` (each round is a local re-render), stack lines capped at
+about one line, and the tailor prompt asks for 3 projects with 2–3 bullets. Then the
+trim order was changed (D23) after reading the PDF: the first order cut Nexora's best
+bullets before a generic experience line.
+
+---
+
+## 10. Validator flagged the word "documentation" as a technology
+
+**Symptom.**
+
+```
+needs review: cover_letter: "documentation" is not in the profile
+```
+
+**Diagnosis.** The technology vocabulary included every bullet tag from the profile,
+and tags hold ordinary words (`documentation`, `troubleshooting`, `reliability`).
+The tag existed, but the word never appears in the profile's text, so the check fired.
+
+**Fix.** The vocabulary is built from skill names (split on commas and parentheses)
+plus the general tool list, not from tags. Verified: "documentation, troubleshooting,
+reliability" are no longer terms; "Azure" still is.

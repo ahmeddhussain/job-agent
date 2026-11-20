@@ -14,3 +14,5 @@ package-lock.json
 # Prompt text is sent verbatim; recordings are generated
 prompts/
 test/fixtures/
+# Whitespace in templates is part of the rendered output
+templates/

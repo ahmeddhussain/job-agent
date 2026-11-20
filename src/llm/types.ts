@@ -13,6 +13,8 @@ export interface LlmRequest<T> {
   /** Stable name for record/replay (e.g. "04-multi-job.extract"). */
   key?: string;
   jobId?: number | null;
+  /** Overrides the client's default timeout (tailoring takes longer). */
+  timeoutMs?: number;
 }
 
 export interface LlmUsage {

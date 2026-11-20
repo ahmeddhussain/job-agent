@@ -61,6 +61,26 @@ export function buildProgram(io: Io): Command {
     );
 
   program
+    .command('tailor:fixtures')
+    .description('tailor, render and ATS-check fixture jobs (P3 gate; default: 3 gate fixtures)')
+    .argument('[ids...]', 'fixture ids')
+    .option('--record', 'save the tailor outputs to test/fixtures/llm')
+    .option('--replay', 'use saved tailor outputs, no Claude calls')
+    .option('--out <dir>', 'output directory (default: <apply.output_dir>/fixtures)')
+    .option('--profile <path>', 'profile file (default: paths.profile)')
+    .action(
+      async (
+        ids: string[],
+        opts: { record?: boolean; replay?: boolean; out?: string; profile?: string },
+      ) => {
+        if (opts.record && opts.replay) throw new Error('--record and --replay are exclusive');
+        const { tailorFixturesCommand } = await import('./tailor-fixtures.js');
+        const code = await tailorFixturesCommand(loadConfig(configPath()), ids, opts, io);
+        if (code !== 0) process.exitCode = code;
+      },
+    );
+
+  program
     .command('wa:login')
     .description('link the WhatsApp number once (QR in the terminal)')
     .action(notYet('wa:login', 'P4'));

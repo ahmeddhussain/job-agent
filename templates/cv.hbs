@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>{{name}} - CV</title><style>{{{css}}}</style></head>
+<body>
+<h1>{{name}}</h1>
+<p class="headline">{{headline}}</p>
+<p class="contact">{{#each contact}}{{#if @index}} | {{/if}}{{this}}{{/each}}</p>
+
+<h2>Summary</h2>
+<p>{{summary}}</p>
+
+<h2>Skills</h2>
+<div class="skills">
+{{#each skills}}<p><span class="cat">{{label}}:</span> {{items}}</p>
+{{/each}}
+</div>
+
+<h2>Experience</h2>
+{{#each experience}}
+<p class="entry-head"><span class="title">{{title}}</span>, {{company}} <span class="meta">({{dates}})</span></p>
+<ul>{{#each bullets}}<li>{{this}}</li>{{/each}}</ul>
+{{/each}}
+
+<h2>Projects</h2>
+{{#each projects}}
+<p class="entry-head"><span class="title">{{name}}</span>{{#if link}} | {{link}}{{/if}}{{#if inProgress}} <span class="meta">(in progress)</span>{{/if}}</p>
+{{#if stack}}<p class="stack">{{stack}}</p>{{/if}}
+<ul>{{#each bullets}}<li>{{this}}</li>{{/each}}</ul>
+{{/each}}
+
+<h2>Education</h2>
+{{#each education}}
+<p class="entry-head"><span class="title">{{degree}}</span>, {{school}} <span class="meta">({{dates}}{{#if gpa}}, GPA {{gpa}}{{/if}})</span></p>
+{{/each}}
+
+<h2>Certifications</h2>
+<ul>{{#each certifications}}<li>{{this}}</li>{{/each}}</ul>
+{{#if courses.length}}
+<h2>Courses</h2>
+<ul>{{#each courses}}<li>{{this}}</li>{{/each}}</ul>
+{{/if}}
+
+<h2>Languages</h2>
+<p>{{languages}}</p>
+</body>
+</html>

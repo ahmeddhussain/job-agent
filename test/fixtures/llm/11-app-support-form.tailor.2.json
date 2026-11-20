@@ -1,0 +1,99 @@
+{
+  "headline": "Application Support Engineer | Linux | SQL | AWS",
+  "summary": "Cloud and DevOps Engineer who troubleshoots from evidence: decoded a live GitHub OIDC token to fix an AWS trust-policy failure and traced an AWS AuthFailure to clock skew from blocked NTP. Operates an enterprise-style RHEL environment through tickets and runbooks, writes incident reports with root cause and corrective actions, and works comfortably with Linux, SQL, REST APIs, containers and AWS.",
+  "skills": [
+    "linux",
+    "sql",
+    "rest_apis",
+    "mysql",
+    "incident_docs",
+    "bash",
+    "systemd",
+    "freeipa",
+    "net_fundamentals",
+    "aws",
+    "python",
+    "loki",
+    "grafana",
+    "prometheus",
+    "docker",
+    "postgresql"
+  ],
+  "experience": [
+    {
+      "id": "ivolve",
+      "bullets": [
+        {
+          "id": "ivolve_labs",
+          "text": "Completed 30 hands-on labs across build tools (Gradle, Maven), Docker, Jenkins, Kubernetes, ArgoCD and Ansible, each documented with its objective, steps and verification."
+        }
+      ]
+    },
+    {
+      "id": "nti",
+      "bullets": [
+        {
+          "id": "nti_training",
+          "text": "Completed intensive hands-on training in Linux administration, networking, CI/CD, containerization and cloud infrastructure."
+        }
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "id": "sysadmin_lab",
+      "bullets": [
+        {
+          "id": "lab_drills",
+          "text": "Ran restore drills from a versioned S3 bucket that measure RPO and RTO against targets, and incident drills for an identity outage and a full log disk, documented in 7 incident reports with root cause and actions."
+        },
+        {
+          "id": "lab_identity",
+          "text": "Centralized identity with FreeIPA, managing users, DNS, Kerberos, HBAC and sudo rules per team, with SSH keys stored in IPA."
+        },
+        {
+          "id": "lab_testing",
+          "text": "Wrote 160 automated checks in Bash that log in as each user and prove what is allowed and what is refused."
+        }
+      ]
+    },
+    {
+      "id": "nexora",
+      "bullets": [
+        {
+          "id": "nexora_observability",
+          "text": "Declared observability as code with 12 Prometheus alert rules each backed by a runbook, three Grafana dashboards, Fluent Bit shipping JSON logs with correlation IDs to Loki, and OpenTelemetry traces in Tempo."
+        },
+        {
+          "id": "nexora_tests",
+          "text": "Wrote Pytest async integration and concurrency tests for the transfer path."
+        }
+      ]
+    },
+    {
+      "id": "ivolve_gitops",
+      "bullets": [
+        {
+          "id": "ivg_oidc_fix",
+          "text": "Fixed a GitHub Actions OIDC trust-policy failure by decoding the live JWT, finding the immutable numeric IDs in its sub claim, and building the correct wildcard with Terraform replace()."
+        },
+        {
+          "id": "ivg_ssa_fix",
+          "text": "Resolved a kube-prometheus-stack ArgoCD sync failure caused by the Kubernetes 262144-byte annotation limit by enabling ServerSideApply."
+        }
+      ]
+    }
+  ],
+  "courses": [],
+  "cover_letter": {
+    "greeting": "Dear Hiring Team,",
+    "paragraphs": [
+      "I am applying for the Application Support Engineer role at Pyramid Pay in Cairo. I solve infrastructure problems methodically and document them so they stay solved, and I bring hands-on Linux, SQL and REST API experience to that work.",
+      "Two of your requirements map directly to what I have done. For Linux and log-based troubleshooting: in my RHEL 10 lab on AWS I ran incident drills for an identity outage and a full log disk, documented in 7 incident reports with root cause and actions. I also traced a Terraform AWS AuthFailure to about 14 minutes of clock skew on a machine where outbound UDP 123 (NTP) was blocked, and fixed it with HTTP-based sync. For SQL and REST APIs: I built a core-banking platform of five Python/FastAPI microservices backed by RDS MySQL, and wrote Pytest async integration tests for the transfer path.",
+      "Troubleshooting is the part of the work I already do every day: reading logs, narrowing a cause with evidence, fixing it, and writing the runbook. A support role puts that skill directly in front of users and production systems. My CV is attached, and I would welcome a conversation about how I can help your support team."
+    ],
+    "closing": "Best regards,"
+  },
+  "email_body": "Dear Hiring Team,\nI am applying for the Application Support Engineer role at Pyramid Pay in Cairo.\nMy CV and cover letter are attached.\nI would be glad to talk about how my Linux, SQL and troubleshooting experience fits your support team.",
+  "why_this_role": "Application support is the work I already do in my RHEL lab: reading logs, tracing a failure to its cause (like the NTP clock skew behind an AWS AuthFailure), fixing it and writing the incident report."
+}
