@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Job Tracker</title>
+<style>
+  .viz-root {
+    color-scheme: light;
+    --surface-0: #f4f3f0;
+    --surface-1: #fcfcfb;
+    --surface-2: #f0efec;
+    --border: #e2e1dc;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #7a7974;
+    --series-1: #2a78d6;
+    --accent: #2a78d6;
+    --good: #0ca30c;  --good-text: #006300;
+    --warning: #fab219; --warning-text: #7a5200;
+    --serious: #ec835a;
+    --critical: #d03b3b;
+    --chip-bg: #ecebe7;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --surface-0: #121211; --surface-1: #1a1a19; --surface-2: #232322; --border: #34332f;
+      --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
+      --series-1: #3987e5; --accent: #3987e5;
+      --good-text: #3fc43f; --warning-text: #fab219; --chip-bg: #2a2a28;
+    }
+  }
+  :root[data-theme="dark"] .viz-root {
+    color-scheme: dark;
+    --surface-0: #121211; --surface-1: #1a1a19; --surface-2: #232322; --border: #34332f;
+    --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
+    --series-1: #3987e5; --accent: #3987e5;
+    --good-text: #3fc43f; --warning-text: #fab219; --chip-bg: #2a2a28;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .viz-root { background: var(--surface-0); color: var(--text-primary); min-height: 100vh; padding: 20px clamp(12px, 3vw, 32px) 48px; }
+  .wrap { max-width: 1280px; margin: 0 auto; }
+
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+  header h1 { font-size: 20px; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+  header .sub { color: var(--text-secondary); font-size: 13px; }
+  header .spacer { flex: 1; }
+  .btn { font: inherit; font-size: 13px; border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary);
+         padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+  .btn:hover { border-color: var(--text-muted); }
+
+  .banner { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin-bottom: 16px;
+            color: var(--text-secondary); font-size: 13px; display: none; }
+  .banner.show { display: block; }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .tile .label { color: var(--text-secondary); font-size: 12px; }
+  .tile .value { font-size: 28px; font-weight: 650; line-height: 1.15; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .tile .hint { color: var(--text-muted); font-size: 12px; margin-top: 2px; }
+  .tile.run .value { font-size: 16px; margin-top: 8px; display: flex; align-items: center; gap: 6px; }
+
+  .panel { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
+  .panel h2 { font-size: 14px; margin: 0 0 2px; font-weight: 600; }
+  .panel .sub { color: var(--text-secondary); font-size: 12px; margin-bottom: 8px; }
+
+  .chart { position: relative; height: 150px; }
+  .chart svg { width: 100%; height: 100%; display: block; overflow: visible; }
+  .tooltip { position: absolute; pointer-events: none; background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px;
+             padding: 6px 10px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.12); white-space: nowrap; opacity: 0; transition: opacity .1s; }
+  .tooltip b { font-variant-numeric: tabular-nums; }
+
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+  .chip { font: inherit; font-size: 12.5px; border: 1px solid transparent; background: var(--chip-bg); color: var(--text-primary);
+          padding: 5px 10px; border-radius: 999px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+  .chip .n { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+  .chip[aria-pressed="true"] { border-color: var(--accent); background: var(--surface-1); }
+  select, input[type=search], textarea { font: inherit; font-size: 13px; background: var(--surface-1); color: var(--text-primary);
+          border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; }
+  input[type=search] { min-width: 220px; flex: 1; max-width: 340px; }
+  label.toggle { font-size: 12.5px; color: var(--text-secondary); display: inline-flex; gap: 6px; align-items: center; }
+
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-weight: 600; font-size: 12px; color: var(--text-secondary); padding: 8px 10px; border-bottom: 1px solid var(--border);
+       white-space: nowrap; cursor: pointer; user-select: none; }
+  th[data-sort]::after { content: ""; }
+  th.sorted-asc::after { content: " ↑"; } th.sorted-desc::after { content: " ↓"; }
+  td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr.row:hover td { background: var(--surface-2); }
+  tr.row { cursor: pointer; }
+  .role { font-weight: 600; }
+  .muted { color: var(--text-secondary); font-size: 12.5px; }
+  .num { font-variant-numeric: tabular-nums; }
+  .prio { display: inline-block; min-width: 26px; text-align: center; font-size: 11.5px; font-weight: 650; border-radius: 6px; padding: 1px 6px;
+          background: var(--chip-bg); color: var(--text-secondary); }
+  .prio.p1 { background: var(--accent); color: #fff; }
+  .fit { display: inline-flex; align-items: center; gap: 6px; }
+  .fitbar { width: 44px; height: 6px; background: var(--chip-bg); border-radius: 3px; overflow: hidden; }
+  .fitbar i { display: block; height: 100%; background: var(--series-1); border-radius: 3px; }
+  .flag { display: inline-block; font-size: 11px; padding: 1px 6px; border-radius: 6px; background: var(--chip-bg); color: var(--text-secondary); margin: 2px 4px 0 0; }
+  .flag.warn { color: var(--warning-text); }
+  .status-sel { padding: 3px 6px; font-size: 12.5px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+  .actions a { color: var(--accent); text-decoration: none; font-size: 12.5px; margin-right: 10px; white-space: nowrap; }
+  .actions a:hover { text-decoration: underline; }
+  .reply { font-size: 11px; font-weight: 650; color: var(--good-text); margin-left: 6px; }
+
+  tr.detail td { background: var(--surface-2); padding: 12px 14px 14px; cursor: default; }
+  .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px 24px; }
+  .detail-grid .k { color: var(--text-secondary); font-size: 12px; }
+  .detail textarea { width: 100%; min-height: 60px; margin-top: 4px; }
+  .empty { text-align: center; color: var(--text-secondary); padding: 32px; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  @media (max-width: 760px) {
+    .hide-sm { display: none; }
+    input[type=search] { max-width: none; }
+  }
+</style>
+</head>
+<body>
+<div class="viz-root">
+<div class="wrap">
+
+  <header>
+    <div>
+      <h1>Job Tracker</h1>
+      <div class="sub" id="subtitle">Loading…</div>
+    </div>
+    <div class="spacer"></div>
+    <button class="btn" id="refresh" type="button">Refresh</button>
+    <button class="btn" id="theme" type="button" aria-label="Toggle dark mode">Theme</button>
+  </header>
+
+  <div class="banner" id="banner"></div>
+
+  <section class="tiles" id="tiles" aria-label="Summary"></section>
+
+  <section class="panel">
+    <h2>Applications sent per day</h2>
+    <div class="sub">Last 14 days · includes drafts you sent and auto-sent emails</div>
+    <div class="chart" id="chart"></div>
+    <table class="sr-only" id="chart-table"><caption>Applications per day</caption><thead><tr><th>Date</th><th>Applications</th></tr></thead><tbody></tbody></table>
+  </section>
+
+  <section class="panel">
+    <div class="filters" id="status-chips" role="group" aria-label="Filter by status"></div>
+    <div class="filters">
+      <input type="search" id="q" placeholder="Search role, company, email…" aria-label="Search">
+      <select id="source" aria-label="Source">
+        <option value="">All sources</option>
+        <option value="whatsapp">WhatsApp</option>
+        <option value="alert_email">Alerts (LinkedIn / boards)</option>
+        <option value="ats">Company sites</option>
+      </select>
+      <select id="priority" aria-label="Priority">
+        <option value="">All priorities</option>
+        <option value="1">P1 — target titles</option>
+        <option value="2">P2 — adjacent</option>
+        <option value="3">P3 — other</option>
+      </select>
+      <label class="toggle"><input type="checkbox" id="show-skipped"> Show skipped</label>
+    </div>
+    <div style="overflow-x:auto">
+      <table aria-label="Jobs">
+        <thead>
+          <tr>
+            <th data-sort="priority">Pri</th>
+            <th data-sort="title">Role</th>
+            <th data-sort="source" class="hide-sm">Source</th>
+            <th data-sort="posted_at">Posted</th>
+            <th data-sort="fit_score">Fit</th>
+            <th data-sort="apply_channel" class="hide-sm">Apply via</th>
+            <th data-sort="status">Status</th>
+            <th>Files</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+</div>
+
+<div class="tooltip" id="tip" role="tooltip"></div>
+
+<script>
+(() => {
+  "use strict";
+
+  const STATUSES = [
+    { key: "new",          label: "New",          color: "var(--text-muted)" },
+    { key: "needs_review", label: "Needs review", color: "var(--warning)" },
+    { key: "ready",        label: "Ready",        color: "var(--series-1)" },
+    { key: "applied",      label: "Applied",      color: "var(--text-secondary)" },
+    { key: "interview",    label: "Interview",    color: "var(--good)" },
+    { key: "offer",        label: "Offer",        color: "var(--good)" },
+    { key: "rejected",     label: "Rejected",     color: "var(--critical)" },
+    { key: "skipped",      label: "Skipped",      color: "var(--border)" },
+  ];
+  const STATUS_BY_KEY = Object.fromEntries(STATUSES.map(s => [s.key, s]));
+  const SOURCE_LABEL = { whatsapp: "WhatsApp", alert_email: "Alert", ats: "Company site", html: "Company site", whatsapp_export: "WhatsApp" };
+  const CHANNEL_LABEL = { email: "Email", form: "Web form", whatsapp_dm: "WhatsApp DM", unknown: "Unknown" };
+
+  const state = {
+    jobs: [], stats: null, live: false,
+    status: "", source: "", priority: "", q: "", showSkipped: false,
+    sort: { key: "posted_at", dir: "desc" }, open: null,
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  // ---------- theme ----------
+  try { const t = localStorage.getItem("jt-theme"); if (t) document.documentElement.dataset.theme = t; } catch (_) {}
+  $("theme").addEventListener("click", () => {
+    const dark = document.documentElement.dataset.theme
+      ? document.documentElement.dataset.theme === "dark"
+      : matchMedia("(prefers-color-scheme: dark)").matches;
+    document.documentElement.dataset.theme = dark ? "light" : "dark";
+    try { localStorage.setItem("jt-theme", document.documentElement.dataset.theme); } catch (_) {}
+    renderChart();
+  });
+
+  // ---------- data ----------
+  async function load() {
+    try {
+      const [j, s] = await Promise.all([
+        fetch("/api/jobs?include_duplicates=false").then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
+        fetch("/api/stats").then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
+      ]);
+      state.jobs = j.jobs; state.stats = s; state.live = true;
+      $("banner").classList.remove("show");
+    } catch (_) {
+      const sample = sampleData();
+      state.jobs = sample.jobs; state.stats = sample.stats; state.live = false;
+      $("banner").textContent = "Showing sample data — the agent's API isn't reachable. Run the dashboard service (docker compose up -d dashboard) and open http://127.0.0.1:8080. Status changes here won't be saved.";
+      $("banner").classList.add("show");
+    }
+    render();
+  }
+
+  async function patchJob(id, body) {
+    const job = state.jobs.find(j => j.id === id);
+    const prev = { status: job.status, notes: job.notes };
+    Object.assign(job, body);
+    render();
+    if (!state.live) return;
+    try {
+      const r = await fetch(`/api/jobs/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      if (!r.ok) throw new Error(r.status);
+    } catch (e) {
+      Object.assign(job, prev);
+      render();
+      $("banner").textContent = `Couldn't save the change (${e.message}). Reverted.`;
+      $("banner").classList.add("show");
+    }
+  }
+
+  // ---------- helpers ----------
+  function relTime(iso) {
+    const d = new Date(iso), mins = (Date.now() - d) / 60000;
+    if (mins < 60) return `${Math.max(1, Math.round(mins))}m ago`;
+    if (mins < 1440) return `${Math.round(mins / 60)}h ago`;
+    const days = Math.round(mins / 1440);
+    return days < 7 ? `${days}d ago` : d.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+  }
+  const within = (iso, hours) => (Date.now() - new Date(iso)) / 3.6e6 <= hours;
+
+  function filtered() {
+    const q = state.q.trim().toLowerCase();
+    let rows = state.jobs.filter(j => {
+      if (state.status) { if (j.status !== state.status) return false; }
+      else if (!state.showSkipped && j.status === "skipped") return false;
+      if (state.source && j.source !== state.source && !(state.source === "ats" && j.source === "html")) return false;
+      if (state.priority && String(j.priority) !== state.priority) return false;
+      if (q) {
+        const hay = [j.title, j.company, j.location, j.apply_email, j.source_name, j.notes].join(" ").toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+    const { key, dir } = state.sort, m = dir === "asc" ? 1 : -1;
+    const order = Object.fromEntries(STATUSES.map((s, i) => [s.key, i]));
+    rows.sort((a, b) => {
+      let x = a[key], y = b[key];
+      if (key === "status") { x = order[x]; y = order[y]; }
+      if (x == null) return 1; if (y == null) return -1;
+      return (x > y ? 1 : x < y ? -1 : 0) * m;
+    });
+    return rows;
+  }
+
+  // ---------- render ----------
+  function render() { renderHeader(); renderTiles(); renderChips(); renderRows(); renderChart(); }
+
+  function renderHeader() {
+    const r = state.stats?.last_run;
+    $("subtitle").textContent = r
+      ? `Last run ${relTime(r.finished_at || r.started_at)} · ${state.jobs.length} jobs tracked`
+      : `${state.jobs.length} jobs tracked`;
+  }
+
+  function renderTiles() {
+    const J = state.jobs;
+    const count = (s) => J.filter(j => j.status === s).length;
+    const applied = J.filter(j => ["applied", "interview", "offer", "rejected"].includes(j.status));
+    const replies = applied.filter(j => j.has_reply || ["interview", "offer", "rejected"].includes(j.status)).length;
+    const found24 = J.filter(j => within(j.posted_at, 24) && j.status !== "skipped").length;
+    const r = state.stats?.last_run;
+    const staleH = state.stats?.stale_run_hours ?? 36;
+    const runOk = r && r.status === "success" && within(r.finished_at || r.started_at, staleH);
+    const runColor = !r ? "var(--text-muted)" : runOk ? "var(--good)" : r.status === "partial" ? "var(--warning)" : "var(--critical)";
+    const runText = !r ? "No runs yet" : runOk ? "Healthy" : r.status === "partial" ? "Partial" : (r.status === "success" ? "Stale" : "Failed");
+
+    const tiles = [
+      { label: "Matches, last 24h", value: found24, hint: "excluding skipped" },
+      { label: "Ready to send", value: count("ready"), hint: "drafts + form packages" },
+      { label: "Needs review", value: count("needs_review"), hint: "flags or unclear channel" },
+      { label: "Applied", value: applied.length, hint: "all time" },
+      { label: "Interviews", value: count("interview") + count("offer"), hint: "incl. offers" },
+      { label: "Response rate", value: applied.length ? Math.round(replies / applied.length * 100) + "%" : "—", hint: `${replies} of ${applied.length} replied` },
+    ];
+    $("tiles").innerHTML = tiles.map(t =>
+      `<div class="tile"><div class="label">${esc(t.label)}</div><div class="value">${esc(t.value)}</div><div class="hint">${esc(t.hint)}</div></div>`
+    ).join("") + `<div class="tile run"><div class="label">Last run</div>
+      <div class="value"><span class="dot" style="background:${runColor}"></span>${esc(runText)}</div>
+      <div class="hint">${r ? esc(relTime(r.finished_at || r.started_at)) + (r.error ? " · " + esc(r.error) : "") : "—"}</div></div>`;
+  }
+
+  function renderChips() {
+    const counts = {};
+    state.jobs.forEach(j => counts[j.status] = (counts[j.status] || 0) + 1);
+    const visibleAll = state.jobs.filter(j => state.showSkipped || j.status !== "skipped").length;
+    const chips = [{ key: "", label: "All", n: visibleAll }].concat(
+      STATUSES.map(s => ({ key: s.key, label: s.label, n: counts[s.key] || 0, color: s.color }))
+    );
+    $("status-chips").innerHTML = chips.map(c =>
+      `<button type="button" class="chip" data-status="${c.key}" aria-pressed="${state.status === c.key}">
+        ${c.color ? `<span class="dot" style="background:${c.color}"></span>` : ""}${esc(c.label)} <span class="n">${c.n}</span></button>`
+    ).join("");
+  }
+
+  function statusSelect(j) {
+    return `<select class="status-sel" data-id="${j.id}" aria-label="Status for ${esc(j.title)}">` +
+      STATUSES.map(s => `<option value="${s.key}" ${s.key === j.status ? "selected" : ""}>${s.label}</option>`).join("") +
+      `</select>`;
+  }
+
+  function renderRows() {
+    const rows = filtered();
+    document.querySelectorAll("th[data-sort]").forEach(th => {
+      th.classList.toggle("sorted-asc", th.dataset.sort === state.sort.key && state.sort.dir === "asc");
+      th.classList.toggle("sorted-desc", th.dataset.sort === state.sort.key && state.sort.dir === "desc");
+    });
+    if (!rows.length) { $("rows").innerHTML = `<tr><td colspan="8" class="empty">No jobs match these filters.</td></tr>`; return; }
+    $("rows").innerHTML = rows.map(j => {
+      const flags = (j.flags || []).map(f => `<span class="flag ${["suspicious","email_unverified","same_recruiter"].includes(f) ? "warn" : ""}">${esc(f.replace(/_/g, " "))}</span>`).join("");
+      const files = [
+        j.gmail_draft_url ? `<a href="${esc(j.gmail_draft_url)}" target="_blank" rel="noopener">Draft</a>` : "",
+        j.apply_url ? `<a href="${esc(j.apply_url)}" target="_blank" rel="noopener">Apply</a>` : "",
+        j.files?.cv ? `<a href="${esc(j.files.cv)}" target="_blank" rel="noopener">CV</a>` : "",
+        j.files?.cover ? `<a href="${esc(j.files.cover)}" target="_blank" rel="noopener">Cover</a>` : "",
+      ].join("") || `<span class="muted">—</span>`;
+      const fit = j.fit_score == null ? `<span class="muted">—</span>` :
+        `<span class="fit"><span class="fitbar" aria-hidden="true"><i style="width:${j.fit_score}%"></i></span><span class="num">${j.fit_score}</span></span>`;
+      const seen = j.seen_count > 1 ? ` · seen ${j.seen_count}×` : "";
+      const main = `<tr class="row" data-id="${j.id}">
+        <td><span class="prio ${j.priority === 1 ? "p1" : ""}">${j.priority ? "P" + j.priority : "—"}</span></td>
+        <td><div class="role">${esc(j.title)}${j.has_reply ? `<span class="reply">● reply</span>` : ""}</div>
+            <div class="muted">${esc(j.company || "Company not named")}${j.location ? " · " + esc(j.location) : ""}${j.work_mode && j.work_mode !== "unknown" && j.work_mode !== String(j.location || "").toLowerCase() ? " · " + esc(j.work_mode) : ""}</div>
+            ${flags}</td>
+        <td class="hide-sm"><div>${esc(SOURCE_LABEL[j.source] || j.source)}</div><div class="muted">${esc(j.source_name || "")}${seen}</div></td>
+        <td class="num muted" title="${esc(new Date(j.posted_at).toLocaleString())}">${relTime(j.posted_at)}</td>
+        <td>${fit}</td>
+        <td class="hide-sm">${esc(CHANNEL_LABEL[j.apply_channel] || j.apply_channel)}</td>
+        <td>${statusSelect(j)}</td>
+        <td class="actions">${files}</td>
+      </tr>`;
+      if (state.open !== j.id) return main;
+      return main + `<tr class="detail"><td colspan="8"><div class="detail-grid">
+          <div><div class="k">Fit summary</div>${esc(j.fit_summary || "—")}</div>
+          <div><div class="k">Apply to</div>${esc(j.apply_email || j.apply_url || "—")}</div>
+          <div><div class="k">Skip reason</div>${esc(j.skip_reason || "—")}</div>
+          <div><div class="k">Posted</div>${esc(new Date(j.posted_at).toLocaleString())}</div>
+        </div>
+        <div style="margin-top:10px"><label class="k" for="notes-${j.id}">Notes</label>
+          <textarea id="notes-${j.id}" data-notes="${j.id}" placeholder="Interview date, contact name, follow-up…">${esc(j.notes || "")}</textarea>
+          <button class="btn" type="button" data-save="${j.id}" style="margin-top:6px">Save notes</button></div>
+      </td></tr>`;
+    }).join("");
+  }
+
+  // ---------- chart: single-series bars, hover tooltip ----------
+  function renderChart() {
+    const data = state.stats?.applied_per_day || [];
+    const el = $("chart");
+    const tbody = $("chart-table").querySelector("tbody");
+    tbody.innerHTML = data.map(d => `<tr><td>${esc(d.date)}</td><td>${d.count}</td></tr>`).join("");
+    if (!data.length) { el.innerHTML = `<div class="empty">No applications yet.</div>`; return; }
+
+    const W = el.clientWidth || 800, H = el.clientHeight || 150;
+    const padL = 28, padB = 22, padT = 8;
+    const max = Math.max(4, ...data.map(d => d.count));
+    const step = Math.ceil(max / 4);
+    const top = step * 4;
+    const plotW = W - padL, plotH = H - padB - padT;
+    const slot = plotW / data.length;
+    const bw = Math.min(28, slot * 0.6);
+    const y = v => padT + plotH - (v / top) * plotH;
+
+    let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Applications sent per day, last 14 days">`;
+    for (let v = 0; v <= top; v += step) {
+      s += `<line x1="${padL}" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="var(--border)" stroke-width="1"/>`;
+      s += `<text x="${padL - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="var(--text-muted)">${v}</text>`;
+    }
+    data.forEach((d, i) => {
+      const cx = padL + slot * i + slot / 2, h = Math.max(0, y(0) - y(d.count));
+      const r = Math.min(4, bw / 2, h);
+      const x0 = cx - bw / 2, yTop = y(d.count), yBase = y(0);
+      if (h > 0) {
+        s += `<path d="M${x0},${yBase} V${yTop + r} Q${x0},${yTop} ${x0 + r},${yTop} H${x0 + bw - r} Q${x0 + bw},${yTop} ${x0 + bw},${yTop + r} V${yBase} Z" fill="var(--series-1)"/>`;
+      }
+      const showLabel = data.length <= 14 && (i % 2 === 0 || i === data.length - 1);
+      if (showLabel) {
+        const lab = new Date(d.date + "T00:00:00").toLocaleDateString(undefined, { day: "numeric", month: "short" });
+        s += `<text x="${cx}" y="${H - 6}" text-anchor="middle" font-size="11" fill="var(--text-muted)">${esc(lab)}</text>`;
+      }
+      s += `<rect class="hit" data-i="${i}" x="${padL + slot * i}" y="${padT}" width="${slot}" height="${plotH}" fill="transparent"/>`;
+    });
+    s += `</svg>`;
+    el.innerHTML = s;
+
+    const tip = $("tip");
+    el.querySelectorAll(".hit").forEach(rect => {
+      rect.addEventListener("mousemove", (ev) => {
+        const d = data[+rect.dataset.i];
+        const lab = new Date(d.date + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+        tip.innerHTML = `${esc(lab)}<br><b>${d.count}</b> application${d.count === 1 ? "" : "s"}`;
+        tip.style.left = Math.min(ev.pageX + 12, window.innerWidth - 160) + "px";
+        tip.style.top = (ev.pageY - 44) + "px";
+        tip.style.opacity = 1;
+      });
+      rect.addEventListener("mouseleave", () => { tip.style.opacity = 0; });
+    });
+  }
+
+  // ---------- events ----------
+  $("status-chips").addEventListener("click", e => {
+    const b = e.target.closest(".chip"); if (!b) return;
+    state.status = b.dataset.status; render();
+  });
+  $("q").addEventListener("input", e => { state.q = e.target.value; renderRows(); });
+  $("source").addEventListener("change", e => { state.source = e.target.value; renderRows(); });
+  $("priority").addEventListener("change", e => { state.priority = e.target.value; renderRows(); });
+  $("show-skipped").addEventListener("change", e => { state.showSkipped = e.target.checked; render(); });
+  $("refresh").addEventListener("click", load);
+  document.querySelector("thead").addEventListener("click", e => {
+    const th = e.target.closest("th[data-sort]"); if (!th) return;
+    const k = th.dataset.sort;
+    state.sort = { key: k, dir: state.sort.key === k && state.sort.dir === "desc" ? "asc" : "desc" };
+    renderRows();
+  });
+  $("rows").addEventListener("change", e => {
+    const sel = e.target.closest(".status-sel");
+    if (sel) patchJob(+sel.dataset.id, { status: sel.value });
+  });
+  $("rows").addEventListener("click", e => {
+    if (e.target.closest("select, a, textarea")) return;
+    const save = e.target.closest("[data-save]");
+    if (save) {
+      const id = +save.dataset.save;
+      patchJob(id, { notes: document.querySelector(`[data-notes="${id}"]`).value });
+      return;
+    }
+    if (e.target.closest("tr.detail")) return;
+    const tr = e.target.closest("tr.row"); if (!tr) return;
+    state.open = state.open === +tr.dataset.id ? null : +tr.dataset.id;
+    renderRows();
+  });
+  let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(renderChart, 120); });
+
+  // ---------- sample data (used only when the API is unreachable) ----------
+  function sampleData() {
+    const now = Date.now(), h = 3.6e6;
+    const ago = (hours) => new Date(now - hours * h).toISOString();
+    const J = (o) => Object.assign({ flags: [], has_reply: false, seen_count: 1, notes: "", files: {}, apply_url: null, apply_email: null, skip_reason: null, work_mode: "onsite" }, o);
+    const jobs = [
+      J({ id: 101, title: "DevOps Engineer", company: "Nilewave Fintech", location: "Cairo", work_mode: "hybrid", source: "whatsapp", source_name: "Egypt DevOps Jobs", seen_count: 4, posted_at: ago(3), priority: 1, fit_score: 86, apply_channel: "email", apply_email: "careers@nilewave.example", status: "ready", gmail_draft_url: "#", files: { cv: "#", cover: "#" }, fit_summary: "Strong on EKS, Terraform, ArgoCD and Jenkins; Azure is a nice-to-have he lacks." }),
+      J({ id: 102, title: "Cloud Engineer (AWS)", company: "Deltacloud Systems", location: "Remote", work_mode: "remote", source: "alert_email", source_name: "LinkedIn alert", posted_at: ago(6), priority: 1, fit_score: 79, apply_channel: "form", apply_url: "#", status: "ready", files: { cv: "#", cover: "#" }, fit_summary: "AWS, Terraform, IAM/OIDC match; asks for CloudFormation (gap)." }),
+      J({ id: 103, title: "Technical Support Engineer", company: "Sahel Software", location: "New Cairo", source: "whatsapp", source_name: "IT Jobs Egypt", seen_count: 2, posted_at: ago(9), priority: 1, fit_score: 71, apply_channel: "email", apply_email: "hr@sahel.example", status: "ready", gmail_draft_url: "#", files: { cv: "#", cover: "#" }, fit_summary: "Linux, SQL troubleshooting and APIs match; Windows Server is a gap." }),
+      J({ id: 104, title: "Platform Engineer", company: null, location: "Cairo", source: "whatsapp", source_name: "Egypt DevOps Jobs", posted_at: ago(11), priority: 1, fit_score: 74, apply_channel: "email", apply_email: "jobs.hiring2026@gmail.example", status: "needs_review", flags: ["same_recruiter"], fit_summary: "Kubernetes, GitOps, Backstage match. Same recruiter emailed yesterday for another role." }),
+      J({ id: 105, title: "Monitoring & Observability Engineer", company: "Orbit Banking Tech", location: "6th of October", source: "ats", source_name: "Workable feed", posted_at: ago(20), priority: 1, fit_score: 83, apply_channel: "form", apply_url: "#", status: "applied", has_reply: true, files: { cv: "#", cover: "#" }, fit_summary: "Prometheus, Grafana, Loki, canary gating — strong match." }),
+      J({ id: 106, title: "NOC Engineer", company: "Pyramid Telecom", location: "Giza", source: "whatsapp", source_name: "Telecom Careers", posted_at: ago(14), priority: 2, fit_score: 64, apply_channel: "email", apply_email: "noc.jobs@pyramid.example", status: "ready", gmail_draft_url: "#", files: { cv: "#", cover: "#" }, fit_summary: "Networking fundamentals and monitoring match; 24/7 shifts." }),
+      J({ id: 107, title: "Senior DevOps Engineer", company: "Lotus Cloud", location: "Cairo", source: "alert_email", source_name: "Wuzzuf alert", posted_at: ago(16), priority: 1, fit_score: null, apply_channel: "form", apply_url: "#", status: "skipped", skip_reason: "years_min 6 > 3", fit_summary: null }),
+      J({ id: 108, title: "IT Engineer", company: "Canal Logistics", location: "Ismailia", source: "whatsapp", source_name: "Ismailia Jobs", posted_at: ago(30), priority: 1, fit_score: 68, apply_channel: "email", apply_email: "it@canal-log.example", status: "applied", files: { cv: "#", cover: "#" }, fit_summary: "Linux, networking and scripting match; asks for Active Directory (gap)." }),
+      J({ id: 109, title: "Cloud Support Associate", company: "Skyline Hosting", location: "Remote", work_mode: "remote", source: "ats", source_name: "Greenhouse feed", posted_at: ago(52), priority: 1, fit_score: 77, apply_channel: "form", apply_url: "#", status: "interview", notes: "Technical interview Thu 2pm", files: { cv: "#", cover: "#" }, fit_summary: "AWS fundamentals, troubleshooting stories, Linux." }),
+      J({ id: 110, title: "Training + guaranteed job (DevOps)", company: null, location: null, work_mode: "unknown", source: "whatsapp", source_name: "IT Jobs Egypt", posted_at: ago(7), priority: 1, fit_score: null, apply_channel: "whatsapp_dm", status: "needs_review", flags: ["suspicious"], fit_summary: "Asks for a course fee before placement." }),
+      J({ id: 111, title: "Application Support Engineer", company: "Meridian Payments", location: "Cairo", work_mode: "hybrid", source: "alert_email", source_name: "LinkedIn alert", posted_at: ago(75), priority: 1, fit_score: 72, apply_channel: "form", apply_url: "#", status: "rejected", files: { cv: "#", cover: "#" }, fit_summary: "SQL, APIs, Linux; payments domain." }),
+      J({ id: 112, title: "System Administrator (Linux)", company: "Red Delta Data", location: "Cairo", source: "whatsapp", source_name: "Linux Admins EG", posted_at: ago(1.5), priority: 2, fit_score: 69, apply_channel: "email", apply_email: "talent@reddelta.example", status: "new", fit_summary: "RHEL, Ansible, patching match." }),
+      J({ id: 113, title: "Infrastructure Engineer", company: "Horus Analytics", location: "Remote", work_mode: "remote", source: "ats", source_name: "Lever feed", posted_at: ago(120), priority: 1, fit_score: 80, apply_channel: "form", apply_url: "#", status: "applied", files: { cv: "#", cover: "#" }, fit_summary: "Terraform, AWS networking, Kubernetes." }),
+      J({ id: 114, title: "Frontend Developer", company: "Nilewave Fintech", location: "Cairo", source: "whatsapp", source_name: "Egypt DevOps Jobs", posted_at: ago(3), priority: 3, fit_score: 18, apply_channel: "email", apply_email: "careers@nilewave.example", status: "skipped", skip_reason: "low_fit (18 < 75)" }),
+    ];
+    const perDay = [0, 2, 3, 1, 0, 4, 5, 2, 3, 0, 1, 4, 6, 3];
+    const applied_per_day = perDay.map((count, i) => {
+      const d = new Date(now - (13 - i) * 24 * h);
+      return { date: d.toISOString().slice(0, 10), count };
+    });
+    return { jobs, stats: { last_run: { status: "success", started_at: ago(2.2), finished_at: ago(2), error: null }, stale_run_hours: 36, applied_per_day } };
+  }
+
+  load();
+})();
+</script>
+</body>
+</html>

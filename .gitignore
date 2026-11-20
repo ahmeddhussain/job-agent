@@ -1,0 +1,27 @@
+# Personal data and secrets: never committed (CLAUDE.md hard rule 4)
+.env
+.env.*
+!.env.example
+secrets/
+data/
+output/
+backups/
+config/config.yaml
+config/companies.yaml
+
+# Everything in profile/ is personal except the fake example
+profile/*
+!profile/master_profile.example.yaml
+
+# Node / build
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+npm-debug.log*
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+*.swp

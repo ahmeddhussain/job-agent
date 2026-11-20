@@ -1,0 +1,91 @@
+# config.example.yaml: copy to config/config.yaml (gitignored) and edit.
+# Any value starting with TODO fails validation, so placeholders can't reach a run.
+
+timezone: Africa/Cairo
+
+paths:
+  db: data/agent.db
+  profile: profile/master_profile.yaml
+  media_dir: data/media
+
+run:
+  first_run_lookback_hours: 24     # R1: the first run covers the last 24 h
+  overlap_minutes: 15              # re-read a little before the watermark; dedupe makes it free
+  lock_file: data/run.lock
+
+whatsapp:
+  session_path: data/wa-session    # equivalent to a logged-in WhatsApp — keep private
+  groups: []                       # allowlist of group names or ids; fill from `agent wa:groups` (P4)
+  fetch_limit: 500                 # per group per run
+  settle_seconds: 20               # wait after `ready` for history sync
+  download_media: [image, document]
+  media_retention_days: 30
+
+alerts:
+  gmail_label: job-alerts          # Gmail filter puts LinkedIn/Wuzzuf/Bayt/Indeed alerts here
+  fetch_linkedin_public_page: true # logged-out, no cookies, ≤ 1 req / 5 s
+  linkedin_min_interval_seconds: 5
+
+ats:
+  companies_file: config/companies.yaml
+  min_interval_seconds: 1
+  user_agent: "job-agent/1.0 (personal job search)"
+
+llm:
+  provider: anthropic
+  extract_model: claude-haiku-5-5
+  score_model: claude-haiku-5-5
+  tailor_model: claude-sonnet-5-5
+  max_jobs_per_run: 80             # extraction cap
+  max_tailor_per_run: 25           # CV + cover letter cap
+  timeout_seconds: 90
+  max_retries: 3
+
+filters:
+  locations: [Cairo, Giza, "New Cairo", "6th of October", "New Administrative Capital", Remote]
+  allow_remote: true
+  max_years_required: 3
+  skip_seniority: [senior, lead]
+
+scoring:
+  thresholds:                      # minimum fit score to tailor, by priority tier
+    p1: 45
+    p2: 60
+    p3: 75
+
+dedupe:
+  content_window_days: 60
+  near_dup_window_days: 30
+  simhash_max_distance: 3
+  near_dup_similarity: 0.90
+  title_similarity: 0.85
+  cooldown_days: 60                # never re-apply to the same email + role within this window
+  same_recruiter_days: 14
+  check_gmail_sent: true
+
+apply:
+  mode: draft                      # draft | send   (stay on draft for the first 2 weeks)
+  auto_send_min_score: 80          # send mode only
+  auto_send_max_priority: 1        # send mode only: P1 jobs only
+  daily_send_cap: 15
+  min_seconds_between_sends: 60
+  output_dir: output
+  cv_language: en
+
+cv:
+  max_pages: 1                     # R14: every applied CV is exactly one page
+  min_fill: 0.85                   # add the next-ranked bullet if the page is less full than this
+  max_trim_rounds: 6
+
+ats_check:                         # R15 / PLAN 8.6: always runs before every application; blocks on failure
+  required_headings: [Summary, Skills, Experience, Projects, Education, Certifications]
+  min_keyword_coverage: 0.70       # share of profile-backed job requirements that must appear in the CV
+
+digest:
+  enabled: true
+  to: TODO@gmail.com
+
+dashboard:
+  host: 127.0.0.1
+  port: 8080
+  stale_run_hours: 36              # last-run tile turns red after this

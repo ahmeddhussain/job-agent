@@ -1,0 +1,55 @@
+# titles.yaml — title tiers (PLAN.md section 6). Regexes are case-insensitive,
+# matched against the normalized title (Arabic titles are translated by `extract`).
+
+p1:   # Ahmed's priority titles
+  - 'dev\s?ops'
+  - 'cloud\s+(engineer|devops|operations|support\s+engineer|infrastructure)'
+  - '\bit\s+engineer\b'
+  - 'infra(structure)?\s+engineer'
+  - 'technical\s+support'
+  - 'tech\s+support'
+  - 'app(lication)?\s+support'
+  - 'production\s+support'
+  - 'platform\s+engineer'
+  - 'monitoring'
+  - 'observability'
+
+p2:   # adjacent roles he's qualified for
+  - '\bsre\b'
+  - 'site\s+reliability'
+  - 'systems?\s+(administrator|admin|engineer)'
+  - 'sysadmin'
+  - 'linux\s+(admin|administrator|engineer)'
+  - '\bnoc\b'
+  - 'network\s+(engineer|operations|back.?office|support)'
+  - 'tech\s?ops'
+  - 'cloud\s+operations'
+  - 'build\s+(and|&)\s+release'
+  - 'release\s+engineer'
+  - 'ci\s?/?\s?cd'
+  - 'automation\s+engineer'
+  - '\bhpc\b'
+  - 'data\s?cent(er|re)\s+engineer'
+  - 'integration\s+engineer'
+  - '\bit\s+(support|specialist|administrator|technician)'
+  - 'help\s?desk'
+  - 'service\s+desk'
+
+exclude:   # never apply
+  - 'sales'
+  - 'marketing'
+  - 'account\s+manager'
+  - 'accountant'
+  - 'recruit(er|ment)'
+  - 'teacher|instructor|trainer'
+  - 'designer'
+
+seniority_exclude:   # excluded unless years_min <= max_years_required or the post says junior/entry
+  - '\b(senior|sr\.?|lead|principal|staff|head|manager|director)\b'
+
+angles:   # which profile summary to start from
+  devops:     ['dev\s?ops', 'cloud', 'platform', 'infra', '\bsre\b', 'site\s+reliability', 'ci\s?/?\s?cd', 'release', 'automation']
+  support:    ['support', '\bit\b', 'help\s?desk', 'service\s+desk', 'tech\s?ops', 'integration']
+  monitoring: ['monitoring', 'observability', '\bnoc\b']
+  networking: ['network']
+  systems:    ['system', 'sysadmin', 'linux', '\bhpc\b', 'data\s?cent']
