@@ -2,7 +2,7 @@
 
 A daily, read-only job-hunting agent for Ahmed: it collects job posts from WhatsApp groups, LinkedIn / job-board alerts and company career pages, removes duplicates, scores each job against his real profile, tailors a CV and cover letter per job, prepares the application (a Gmail draft for email jobs, a ready-to-submit package for form jobs), and tracks everything on a local dashboard.
 
-Stack: **TypeScript (Node 22) · whatsapp-web.js · Gmail API · Anthropic API (Claude) · SQLite · Puppeteer (PDF) · Fastify · Docker · systemd timer**.
+Stack: **TypeScript (Node 22) · whatsapp-web.js · Gmail API · Claude (headless Claude Code, `claude -p`, on Ahmed's subscription) · SQLite · Puppeteer (PDF) · Fastify · Docker · systemd timer**.
 
 > **For Claude Code:** read `CLAUDE.md` first. Build phase by phase (section 14). Each phase ends at a **gate**: run the listed checks, show Ahmed the results, and wait for his OK before the next phase. Explain every meaningful choice as **Choice → Alternatives → Why this one → What production would add**.
 
@@ -87,10 +87,10 @@ From Ahmed's brief (explicit + implied). Re-check every item before calling the 
 | `collect:whatsapp` | whatsapp-web.js (headless Chromium) | Read new messages from allowlisted groups since the watermark; download image/PDF media |
 | `collect:alerts` | Gmail API (`gmail.readonly`) | Read job-alert emails under the `job-alerts` label |
 | `collect:ats` | HTTPS + public ATS JSON feeds | Pull open roles from target companies |
-| `extract` | Anthropic API — `claude-haiku-5-5`, JSON-schema tool output | Turn raw text/images into structured jobs (one post can hold several jobs) |
+| `extract` | `claude -p` — `claude-haiku-5-5`, `--json-schema` structured output | Turn raw text/images into structured jobs (one post can hold several jobs) |
 | `dedupe` | SQLite + hashing + fuzzy match | Drop forwards, reposts and already-applied jobs |
 | `score` | Rules + Haiku fit rubric | Priority tier, fit score, hard filters, scam flags |
-| `tailor` | Anthropic API — `claude-sonnet-5-5` + validator | Per-job CV plan + cover letter, checked against the master profile |
+| `tailor` | `claude -p` — `claude-sonnet-5-5` + validator | Per-job CV plan + cover letter, checked against the master profile |
 | `render` | Handlebars HTML templates → Puppeteer PDF | ATS-friendly CV and cover-letter PDFs |
 | `apply` | Gmail API (`gmail.compose`) | Draft (default) or send email applications; build form-job packages |
 | `sync:gmail` | Gmail API | Detect sent drafts → `applied`; detect replies → `has_reply` |
@@ -135,10 +135,12 @@ From Ahmed's brief (explicit + implied). Re-check every item before calling the 
 - Careers pages without an ATS feed use type `html`: fetch the page, hash the main content, and run `extract` only when the hash changes.
 - Add an `ats:detect <careers-url>` helper that recognises the ATS from the URL/HTML and prints the `companies.yaml` entry.
 
-### D6 — Anthropic API with two model tiers
-- **Alternatives:** one model for everything; headless Claude Code (`claude -p`) on Ahmed's subscription; a local model.
-- **Why:** extraction and scoring are high-volume and simple → `claude-haiku-5-5`. CV and cover-letter writing are low-volume and quality-critical → `claude-sonnet-5-5`. Use **tool use with JSON schemas** for every call so outputs are machine-validated, and **prompt caching** on the master profile (it's sent on every call). `claude -p` is harder to constrain to strict schemas and shares his interactive usage limits.
-- **Cost control:** `llm.max_jobs_per_run`, `llm.max_tailor_per_run`; record tokens per call in `llm_calls` and show the run's total on the dashboard. Check current API pricing before setting caps.
+### D6 — Headless Claude Code (`claude -p`) on Ahmed's subscription, two model tiers
+*Revised 2026-11-20 (decision D17 in `docs/decisions.md`): Ahmed is on the Pro plan with no API credits.*
+- **Alternatives:** the Anthropic API with an API key (the original choice; needs paid API credits); the Agent SDK (same subscription auth, but a second runtime dependency); a local model (weak on structured extraction and CV writing).
+- **Why:** `claude -p` draws from the Pro subscription. Each call is `claude -p --model <id> --output-format json --json-schema <schema> --tools ""` with the job post in a delimited block; the CLI returns the result in `structured_output`, and the code validates it again with zod. `--tools ""` means an injected instruction in a job post has nothing to run. Extraction and scoring → `claude-haiku-5-5`; CV and cover letters → `claude-sonnet-5-5`.
+- **Auth guard:** never set `ANTHROPIC_API_KEY` on the machine (in `-p` mode an API key always wins over the subscription). Never use `--bare` (it never reads OAuth). Every run starts with a preflight call; if its `init` event's `apiKeySource` is anything but `none`, or the call fails, the run stops with a failure digest. The CLI version is pinned in the image.
+- **Usage limits:** Pro has a 5-hour session limit and a weekly limit shared with Ahmed's interactive use, so caps are low: `max_tailor_per_run: 8`, `max_jobs_per_run: 40`. Token usage per call is still recorded in `llm_calls`.
 - Model IDs live in config, never hardcoded.
 
 ### D7 — CV rendering: HTML template → PDF with Puppeteer
@@ -589,7 +591,7 @@ Logic first, accounts last: phases 1–3 run entirely on fixtures, so WhatsApp a
 3. **Gmail:** a Google Cloud project → OAuth client (Desktop app) → `secrets/gmail_client.json`; the consent screen set to *In production*; a Gmail filter putting alert emails under the label `job-alerts`.
 4. **Alerts:** saved searches with daily email alerts on LinkedIn (e.g. "DevOps Engineer — Egypt", "Cloud Engineer — Remote", "Technical Support — Cairo"), Wuzzuf and Bayt.
 5. **Companies:** a list of target companies' careers URLs (run `agent ats:detect <url>` on each).
-6. **Anthropic API key** in `.env`.
+6. **Claude subscription token:** run `claude setup-token` once (one-year OAuth token) and put it in `.env` as `CLAUDE_CODE_OAUTH_TOKEN`. No `ANTHROPIC_API_KEY` anywhere.
 7. **Preferences in `config/config.yaml`:** locations he will work in (Ismailia / Cairo / Remote / …), the max years required, `apply.mode`, the send caps, answers to common screening questions (notice period, expected salary range, military status if relevant).
 
 ---

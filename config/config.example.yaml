@@ -33,12 +33,15 @@ ats:
   user_agent: "job-agent/1.0 (personal job search)"
 
 llm:
-  provider: anthropic
+  provider: claude_cli             # headless Claude Code on the Pro subscription (D17)
+  cli:
+    binary: claude
+    pinned_version: "2.1.317"      # tested version; a different version logs a warning
   extract_model: claude-haiku-5-5
   score_model: claude-haiku-5-5
   tailor_model: claude-sonnet-5-5
-  max_jobs_per_run: 80             # extraction cap
-  max_tailor_per_run: 25           # CV + cover letter cap
+  max_jobs_per_run: 40             # extraction cap (shares Pro usage limits)
+  max_tailor_per_run: 8            # CV + cover letter cap (shares Pro usage limits)
   timeout_seconds: 90
   max_retries: 3
 

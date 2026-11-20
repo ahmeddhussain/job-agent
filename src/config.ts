@@ -47,7 +47,11 @@ export const ConfigSchema = z.strictObject({
     user_agent: realString,
   }),
   llm: z.strictObject({
-    provider: z.literal('anthropic'),
+    provider: z.literal('claude_cli'), // D17: headless Claude Code on the subscription
+    cli: z.strictObject({
+      binary: realString,
+      pinned_version: z.string().regex(/^\d+\.\d+\.\d+$/),
+    }),
     extract_model: realString,
     score_model: realString,
     tailor_model: realString,

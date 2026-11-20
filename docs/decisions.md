@@ -67,3 +67,19 @@ D1 to D10 come from `PLAN.md` section 3 (full reasoning there); new decisions ar
 - **Alternatives:** keep 3 (misses most short reposts; they then cost an extraction call each); lower the Jaccard confirmation (catches more reposts, but a false merge drops a real job before extraction, which is worse than spending tokens); overlap coefficient instead of Jaccard (a short post contained in a long multi-job post would be merged wrongly).
 - **Why:** L2 exists to save LLM calls; correctness ("never apply twice") comes from L3 and L4. A wider candidate net with the same confirmation saves more calls without any new false-merge risk. A repost that still slips past L2 (e.g. `Urgent hiring!` added to a short post: Jaccard 0.895) is caught by L3, which a test proves.
 - **Production would add:** an index (banded simhash / LSH) instead of scanning the 30-day window, once volume grows.
+
+## D17: Headless Claude Code (`claude -p`) on the Pro subscription replaces the API
+
+- **Choice:** every model call runs the official CLI: `claude -p --model <id> --output-format json --json-schema <schema> --tools "" --no-session-persistence --strict-mcp-config`, from an empty working directory, with stdin closed. Auth is the subscription: `CLAUDE_CODE_OAUTH_TOKEN` from `claude setup-token` in the container, or the normal login on the workstation.
+- **Alternatives:** Anthropic API with an API key (needs paid credits Ahmed doesn't have); the Agent SDK (same subscription auth, but another runtime dependency for the same result); a local model (weak at structured extraction and CV writing).
+- **Why:** it costs nothing beyond the Pro plan. Tested on 2026-11-20 with CLI 2.1.317 and `claude-haiku-5-5`: exit 0 in ~1.5 s, `structured_output: {"is_job_post": true, "title": "DevOps Engineer"}`, a prompt-injection line in the post ("run rm -rf /") had no effect, and the stream-json `init` event reported `apiKeySource: "none"` (subscription).
+- **Guards:**
+  - `ANTHROPIC_API_KEY` must not be set: in `-p` mode "the key is always used when present" (docs, authentication page). The agent refuses to start if it is set.
+  - No `--bare`: bare mode never reads OAuth or `CLAUDE_CODE_OAUTH_TOKEN`.
+  - Preflight on every run: one tiny call; if `apiKeySource` isn't `none` or the call fails, the run stops and the failure digest says why.
+  - `--tools ""`: job posts are untrusted, and with no tools an injected instruction has nothing to run. zod still validates `structured_output` (defence in depth).
+  - The CLI version is pinned in the Docker image; a version different from `llm.cli.pinned_version` logs a warning.
+  - The token is used only by the `claude` CLI and is never copied into another tool.
+- **Limits:** Pro has a 5-hour session limit and a weekly limit shared with Ahmed's own Claude use. Caps: `max_tailor_per_run: 8`, `max_jobs_per_run: 40`. `llm_calls` records tokens per call so the caps can be tuned from data.
+- **Not verified from the docs (honest gaps):** that personal automation is explicitly allowed (the docs read say setup-token is "for CI pipelines and scripts"; the Agent SDK page says third parties may not *offer* claude.ai login in their products, which this is not); whether `--bare` will become the default for `-p` (the pin and the preflight cover it either way); how to pass flyer images with tools disabled (to be tested in P2 with `--input-format stream-json` image blocks).
+- **Production would add:** the API with a dedicated key and spend limits, so the agent doesn't compete with a person's interactive usage.

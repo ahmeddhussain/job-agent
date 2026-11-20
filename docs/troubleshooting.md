@@ -104,3 +104,19 @@ only when there was no query string, so `/jobs/1/?a=1` and `/jobs/1?a=1` produce
 different apply targets and would have defeated the L3 fingerprint.
 
 **Fix.** Trim trailing slashes from `url.pathname` before serializing.
+
+---
+
+## 5. `claude -p` waits 3 s for stdin and warns
+
+**Symptom.** First headless test call:
+
+```
+Warning: no stdin data received in 3s, proceeding without it. If piping from a slow command, redirect stdin explicitly: < /dev/null to skip, or wait longer.
+```
+
+**Diagnosis.** Run from a non-interactive shell, `claude -p` still waits for piped
+input. It's the same class of problem as `ssh` in the lab scripts needing a closed stdin.
+
+**Fix.** The LLM wrapper spawns the CLI with stdin closed (`stdio: ['ignore', 'pipe', 'pipe']`);
+by hand, add `< /dev/null`. The rerun printed no warning.
