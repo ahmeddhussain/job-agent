@@ -1,0 +1,13 @@
+# Hand-written kit files and data are not reformatted
+PLAN.md
+CLAUDE.md
+dashboard/
+docs/
+profile/
+config/
+data/
+output/
+backups/
+dist/
+coverage/
+package-lock.json
