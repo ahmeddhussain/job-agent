@@ -1,0 +1,28 @@
+{
+  "is_job_post": true,
+  "jobs": [
+    {
+      "title": "Technical Support Engineer",
+      "company": "Delta Ware",
+      "location": "Cairo",
+      "work_mode": "unknown",
+      "seniority": "junior",
+      "years_min": 0,
+      "requirements": [
+        "Experience from 0 to 2 years",
+        "Knowledge of Linux and Windows systems",
+        "Excellent communication skills"
+      ],
+      "nice_to_have": [],
+      "apply_channel": "email",
+      "apply_email": "jobs@deltaware.example",
+      "apply_url": null,
+      "apply_phone": null,
+      "subject_hint": null,
+      "deadline": null,
+      "language": "mixed",
+      "eligibility": [],
+      "scam_signals": []
+    }
+  ]
+}

@@ -1,0 +1,61 @@
+{
+  "fit_score": 84,
+  "matched": [
+    {
+      "requirement": "Linux administration (implied core skill for a DevOps role)",
+      "evidence": ["linux", "systemd", "selinux", "firewalld", "sysadmin_lab"]
+    },
+    {
+      "requirement": "Scripting for automation (Bash, Python)",
+      "evidence": ["bash", "python", "lab_testing"]
+    },
+    {
+      "requirement": "CI/CD pipelines (Jenkins, GitHub Actions, ArgoCD)",
+      "evidence": ["jenkins", "github_actions", "argocd", "cicd_pipeline", "ivolve_projects"]
+    },
+    {
+      "requirement": "Containerization (Docker, Docker Compose)",
+      "evidence": ["docker", "barq_stack", "ecs_fargate"]
+    },
+    {
+      "requirement": "Kubernetes / container orchestration",
+      "evidence": ["kubernetes", "nexora_gitops", "k8s_security_lab"]
+    },
+    {
+      "requirement": "Infrastructure as code (Terraform, Ansible)",
+      "evidence": ["terraform", "ansible", "nexora_infra", "lab_ansible"]
+    },
+    {
+      "requirement": "Cloud platform (AWS: EC2, VPC, EKS, RDS, IAM)",
+      "evidence": ["aws", "eks", "aws_networking", "rds", "iam_oidc", "ec2_alb_asg"]
+    },
+    {
+      "requirement": "Networking fundamentals (TCP/IP, DNS, subnetting, routing)",
+      "evidence": ["net_fundamentals", "vpn", "squid"]
+    },
+    {
+      "requirement": "Monitoring and observability (Prometheus, Grafana, CloudWatch)",
+      "evidence": ["prometheus", "grafana", "loki", "cloudwatch"]
+    },
+    {
+      "requirement": "Version control and Git-based workflows",
+      "evidence": ["git", "nexora_cicd"]
+    },
+    {
+      "requirement": "Security practices in pipelines (image scanning, secrets management)",
+      "evidence": ["trivy", "cosign", "secrets_manager", "eso"]
+    },
+    {
+      "requirement": "Incident and change documentation (runbooks, incident reports)",
+      "evidence": ["incident_docs", "lab_drills"]
+    }
+  ],
+  "missing": [
+    "Windows Server / Active Directory administration in production (known gap; common in DevOps roles)",
+    "Azure or GCP production experience (only relevant if the employer uses them)",
+    "On-call support for a live production system (known gap)",
+    "Paid full-time experience beyond the DevOps internship"
+  ],
+  "eligibility_issues": [],
+  "summary": "Strong on AWS, EKS, Terraform, Ansible, Jenkins, ArgoCD and Linux at junior level; scored from the title since no requirements are listed. Gaps: Windows/AD, Azure/GCP, on-call."
+}

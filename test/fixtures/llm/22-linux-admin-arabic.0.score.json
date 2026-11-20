@@ -1,0 +1,24 @@
+{
+  "fit_score": 88,
+  "matched": [
+    {
+      "requirement": "RHEL",
+      "evidence": ["linux", "lab_infra", "sysadmin_lab"]
+    },
+    {
+      "requirement": "Ansible",
+      "evidence": ["ansible", "lab_ansible", "cicd_pipeline"]
+    },
+    {
+      "requirement": "Bash",
+      "evidence": ["bash", "lab_testing"]
+    },
+    {
+      "requirement": "FreeIPA",
+      "evidence": ["freeipa", "lab_identity"]
+    }
+  ],
+  "missing": [],
+  "eligibility_issues": [],
+  "summary": "All four listed must-haves (RHEL, Ansible, Bash, FreeIPA) are proven by lab evidence; the candidate's experience is project-based, not paid sysadmin work."
+}

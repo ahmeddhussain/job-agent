@@ -1,0 +1,26 @@
+{
+  "fit_score": 84,
+  "matched": [
+    {
+      "requirement": "Kubernetes",
+      "evidence": ["kubernetes", "nexora_services", "ivolve_projects", "k8s_sec"]
+    },
+    {
+      "requirement": "Terraform",
+      "evidence": ["terraform", "nexora_infra", "ivg_terraform", "t3_stack"]
+    },
+    {
+      "requirement": "GitOps (ArgoCD)",
+      "evidence": ["argocd", "nexora_gitops", "ivg_stack", "cicd_infra"]
+    },
+    {
+      "requirement": "Observability",
+      "evidence": ["prometheus", "grafana", "loki", "nexora_observability", "ecs_monitoring"]
+    }
+  ],
+  "missing": [
+    "Paid full-time production experience beyond the internship (evidence is projects and an internship; not a job requirement stated, but relevant to a platform role)"
+  ],
+  "eligibility_issues": [],
+  "summary": "Strong on Kubernetes, Terraform, ArgoCD GitOps and Prometheus/Grafana/Loki observability, all backed by projects; the post lists only these four requirements and no eligibility conditions."
+}

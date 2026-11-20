@@ -31,12 +31,12 @@ Threat model and controls for `job-agent` (requirement R19). Status values:
 
 | # | Control | Stops | Status |
 |---|---|---|---|
-| A1 | Every model call runs `claude -p` with **`--tools ""`**, an empty working directory, `--strict-mcp-config`, `--no-session-persistence` and stdin closed | Prompt injection has nothing to execute: no shell, no file access, no MCP | planned (P2); flags verified 2026-11-20 |
-| A2 | The CLI child process gets an **environment allowlist** (`PATH`, `HOME`, `CLAUDE_CODE_OAUTH_TOKEN`), not the agent's whole environment | Other secrets never reach the CLI | planned (P2) |
-| A3 | **Refuse to start if `ANTHROPIC_API_KEY` is set**; preflight call must report `apiKeySource: "none"`; never `--bare` | Silent API billing; broken auth going unnoticed | planned (P2); behaviour verified with the real token in an isolated `HOME` |
+| A1 | Every model call runs `claude -p` with **`--tools ""`**, an empty working directory, `--strict-mcp-config`, `--no-session-persistence` and stdin closed | Prompt injection has nothing to execute: no shell, no file access, no MCP | done (P2), tested with a fake CLI; flags verified on the real CLI |
+| A2 | The CLI child process gets an **environment allowlist** (`PATH`, `HOME`, `CLAUDE_CODE_OAUTH_TOKEN`), not the agent's whole environment | Other secrets never reach the CLI | done (P2), tested |
+| A3 | **Refuse to start if `ANTHROPIC_API_KEY` is set**; preflight call must report `apiKeySource: "none"`; never `--bare` | Silent API billing; broken auth going unnoticed | done (P2), tested; live preflight passes |
 | A4 | CLI called by **absolute path** with a pinned version | PATH hijacking; untested CLI updates | config done; image pin planned (P9) |
-| A5 | Model output validated twice (`--json-schema`, then zod); the model can't choose files, paths or extra recipients; `apply_email` must appear literally in the post | Injected "send it to attacker@…" or path tricks | planned (P2, P5) |
-| A6 | `.env` is read into a private object, not exported to `process.env`; pino redacts token fields | Token in logs, crash dumps or child processes | redaction done; loader planned (P2) |
+| A5 | Model output validated twice (`--json-schema`, then zod); the model can't choose files, paths or extra recipients; `apply_email`, `apply_url` and `apply_phone` must appear literally in the post | Injected "send it to attacker@…" or path tricks | extraction checks done (P2, tested); recipients/attachments in P5 |
+| A6 | `.env` is read into a private object, not exported to `process.env`; pino redacts token fields | Token in logs, crash dumps or child processes | done (P2): `.env` loader + redaction |
 | A7 | **Text posts only**: no media is downloaded | Malicious image/PDF parsers; storing third-party files | done (plan, config) |
 | A8 | URL fetching guard: https only, DNS resolved and private/link-local/metadata ranges refused, no cookies, timeouts, size cap, redirects re-checked | SSRF | planned (P2 shorteners, P6 ATS) |
 | A9 | PDF rendering with **JavaScript disabled and all network requests blocked** in Puppeteer; templates escape every value | Script execution or data exfiltration through the CV template | planned (P3) |

@@ -1,0 +1,49 @@
+{
+  "fit_score": 50,
+  "matched": [
+    {
+      "requirement": "Write automated test suites in code (inferred core QA automation skill)",
+      "evidence": ["nexora_tests", "python"]
+    },
+    {
+      "requirement": "Automated test scripting in Bash with verification of outcomes",
+      "evidence": ["lab_testing", "bash"]
+    },
+    {
+      "requirement": "Test REST APIs and service behaviour (inferred from QA automation)",
+      "evidence": ["rest_apis", "nexora_services"]
+    },
+    {
+      "requirement": "Failure and recovery testing of services",
+      "evidence": ["barq_resilience"]
+    },
+    {
+      "requirement": "Performance/load testing with measured results",
+      "evidence": ["nexora_perf"]
+    },
+    {
+      "requirement": "Run automated tests and quality gates inside CI pipelines",
+      "evidence": ["cicd_jenkins", "nexora_cicd", "sonarqube"]
+    },
+    {
+      "requirement": "SQL and database validation",
+      "evidence": ["sql", "mysql"]
+    },
+    {
+      "requirement": "Version control with Git for test code",
+      "evidence": ["git"]
+    },
+    {
+      "requirement": "Documented test/incident results with root cause and actions",
+      "evidence": ["lab_drills", "incident_docs"]
+    }
+  ],
+  "missing": [
+    "UI or browser test automation (Selenium, Cypress, Playwright) not shown in profile",
+    "Manual QA experience: test plan and test case design, defect tracking tools such as Jira or TestRail not shown",
+    "Paid QA or test-engineering role; only DevOps internship and projects are evidenced",
+    "Specific QA framework requirements could not be checked because the post lists no requirements"
+  ],
+  "eligibility_issues": [],
+  "summary": "Adjacent fit: automated testing in Pytest and Bash, API and CI test work are evidenced, but UI automation and manual QA tooling are not, and the post lists no requirements."
+}

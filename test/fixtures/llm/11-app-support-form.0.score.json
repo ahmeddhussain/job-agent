@@ -1,0 +1,27 @@
+{
+  "fit_score": 62,
+  "matched": [
+    {
+      "requirement": "SQL",
+      "evidence": ["sql", "nexora"]
+    },
+    {
+      "requirement": "Linux",
+      "evidence": ["linux", "sysadmin_lab"]
+    },
+    {
+      "requirement": "REST APIs",
+      "evidence": ["rest_apis", "nexora_services", "barq_stack"]
+    },
+    {
+      "requirement": "Log analysis (partial: centralized logs, Loki/Grafana, incident root-cause reports)",
+      "evidence": ["loki", "nexora_observability", "lab_services", "lab_drills"]
+    }
+  ],
+  "missing": [
+    "Ticketing systems (Jira): profile shows only generic ticket-based change (incident_docs), with no Jira experience stated",
+    "Shift-based work: no shift or rotating-schedule experience in the profile"
+  ],
+  "eligibility_issues": [],
+  "summary": "Strong on Linux, SQL and REST APIs with log tooling; missing Jira experience and shift-based work, and the role is support-focused rather than DevOps."
+}

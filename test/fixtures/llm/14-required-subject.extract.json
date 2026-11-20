@@ -1,0 +1,24 @@
+{
+  "is_job_post": true,
+  "jobs": [
+    {
+      "title": "Infrastructure Engineer",
+      "company": "Deltaware",
+      "location": null,
+      "work_mode": "unknown",
+      "seniority": "unknown",
+      "years_min": 1,
+      "requirements": ["VMware", "Linux", "Ansible", "Bash", "1-2 years of experience"],
+      "nice_to_have": [],
+      "apply_channel": "email",
+      "apply_email": "infra@deltaware.example",
+      "apply_url": null,
+      "apply_phone": null,
+      "subject_hint": "INFRA-2611 Infrastructure Engineer",
+      "deadline": null,
+      "language": "en",
+      "eligibility": [],
+      "scam_signals": []
+    }
+  ]
+}

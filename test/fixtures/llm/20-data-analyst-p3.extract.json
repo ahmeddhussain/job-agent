@@ -1,0 +1,24 @@
+{
+  "is_job_post": true,
+  "jobs": [
+    {
+      "title": "Data Analyst",
+      "company": "Pyramid Pay",
+      "location": null,
+      "work_mode": "unknown",
+      "seniority": "unknown",
+      "years_min": null,
+      "requirements": ["Python", "SQL", "Power BI"],
+      "nice_to_have": [],
+      "apply_channel": "email",
+      "apply_email": "data@pyramidpay.example",
+      "apply_url": null,
+      "apply_phone": null,
+      "subject_hint": null,
+      "deadline": null,
+      "language": "en",
+      "eligibility": [],
+      "scam_signals": []
+    }
+  ]
+}

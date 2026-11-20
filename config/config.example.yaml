@@ -7,6 +7,7 @@ paths:
   db: data/agent.db
   profile: profile/master_profile.yaml
   titles: config/titles.yaml
+  env: .env                        # secrets file, read privately (never exported)
 
 run:
   first_run_lookback_hours: 24     # R1: the first run covers the last 24 h
@@ -34,6 +35,8 @@ llm:
   cli:
     binary: claude                 # use an absolute path in config.yaml (no PATH lookup)
     pinned_version: "2.1.317"      # tested version (D17); a different version logs a warning
+    home: data/claude-home         # isolated HOME when a token is used: no user settings, hooks or plugins
+    workdir: data/claude-work      # empty cwd: no CLAUDE.md or project settings
   extract_model: claude-haiku-5-5
   score_model: claude-haiku-5-5
   tailor_model: claude-sonnet-5-5  # all writing: CV, cover letter, email
@@ -44,6 +47,9 @@ llm:
 
 filters:
   locations: [Cairo, Giza, "New Cairo", "6th of October", "New Administrative Capital", Remote]
+  location_aliases:               # Cairo/Giza areas and country-only mentions that count as allowed
+    [Maadi, "Nasr City", Heliopolis, "Fifth Settlement", "5th Settlement", Zamalek, Dokki, Mohandessin,
+     "Smart Village", "Sheikh Zayed", October, Downtown, Mokattam, Shorouk, Obour, Katameya, "Capital", Egypt]
   allow_remote: true
   max_years_required: 3
   skip_seniority: [senior, lead]

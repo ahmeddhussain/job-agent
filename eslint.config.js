@@ -21,8 +21,12 @@ export default defineConfig(
     },
   },
   {
-    files: ['**/*.js'],
+    files: ['**/*.js', '**/*.mjs'],
     ...tseslint.configs.disableTypeChecked,
+  },
+  {
+    files: ['**/*.mjs'],
+    languageOptions: { globals: { process: 'readonly' } },
   },
   prettier,
 );

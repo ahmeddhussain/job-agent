@@ -21,6 +21,7 @@ export const ConfigSchema = z.strictObject({
     db: realString,
     profile: realString,
     titles: realString,
+    env: realString,
   }),
   run: z.strictObject({
     first_run_lookback_hours: positiveInt,
@@ -48,6 +49,8 @@ export const ConfigSchema = z.strictObject({
     cli: z.strictObject({
       binary: realString,
       pinned_version: z.string().regex(/^\d+\.\d+\.\d+$/),
+      home: realString,
+      workdir: realString,
     }),
     extract_model: realString,
     score_model: realString,
@@ -59,6 +62,7 @@ export const ConfigSchema = z.strictObject({
   }),
   filters: z.strictObject({
     locations: z.array(realString).min(1),
+    location_aliases: z.array(realString),
     allow_remote: z.boolean(),
     max_years_required: z.number().int().min(0),
     skip_seniority: z.array(z.enum(['intern', 'junior', 'mid', 'senior', 'lead'])),

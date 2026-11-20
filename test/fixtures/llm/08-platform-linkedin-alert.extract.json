@@ -1,0 +1,24 @@
+{
+  "is_job_post": true,
+  "jobs": [
+    {
+      "title": "Platform Engineer",
+      "company": "Cedar Analytics",
+      "location": "Egypt",
+      "work_mode": "remote",
+      "seniority": "unknown",
+      "years_min": null,
+      "requirements": [],
+      "nice_to_have": [],
+      "apply_channel": "form",
+      "apply_email": null,
+      "apply_url": "https://www.linkedin.com/comm/jobs/view/4123456789/?trackingId=abc123&refId=xyz&trk=eml-email_job_alert_digest_01",
+      "apply_phone": null,
+      "subject_hint": null,
+      "deadline": null,
+      "language": "en",
+      "eligibility": [],
+      "scam_signals": []
+    }
+  ]
+}

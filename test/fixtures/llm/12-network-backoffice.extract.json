@@ -1,0 +1,24 @@
+{
+  "is_job_post": true,
+  "jobs": [
+    {
+      "title": "Network Back Office Engineer",
+      "company": "Orbitel Networks",
+      "location": "Smart Village",
+      "work_mode": "unknown",
+      "seniority": "junior",
+      "years_min": 0,
+      "requirements": ["Routing and switching (OSPF, BGP)", "MPLS basics"],
+      "nice_to_have": [],
+      "apply_channel": "email",
+      "apply_email": "netjobs@orbitel.example",
+      "apply_url": null,
+      "apply_phone": null,
+      "subject_hint": null,
+      "deadline": null,
+      "language": "en",
+      "eligibility": ["CCNA certification required"],
+      "scam_signals": []
+    }
+  ]
+}

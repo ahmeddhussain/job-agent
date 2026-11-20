@@ -1,0 +1,27 @@
+{
+  "is_job_post": true,
+  "jobs": [
+    {
+      "title": "Senior DevOps Engineer",
+      "company": "Deltaware",
+      "location": null,
+      "work_mode": "unknown",
+      "seniority": "senior",
+      "years_min": 7,
+      "requirements": [
+        "Minimum 7 years of experience with AWS and Kubernetes",
+        "Experience leading a team of 4 engineers"
+      ],
+      "nice_to_have": [],
+      "apply_channel": "email",
+      "apply_email": "devops.hiring@deltaware.example",
+      "apply_url": null,
+      "apply_phone": null,
+      "subject_hint": null,
+      "deadline": null,
+      "language": "en",
+      "eligibility": [],
+      "scam_signals": []
+    }
+  ]
+}

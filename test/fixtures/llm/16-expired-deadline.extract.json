@@ -1,0 +1,24 @@
+{
+  "is_job_post": true,
+  "jobs": [
+    {
+      "title": "IT Engineer",
+      "company": "Sinai Cloud Solutions",
+      "location": null,
+      "work_mode": "unknown",
+      "seniority": "unknown",
+      "years_min": null,
+      "requirements": ["Windows and Linux servers", "Active Directory", "Networking basics"],
+      "nice_to_have": [],
+      "apply_channel": "email",
+      "apply_email": "it.jobs@sinaicloud.example",
+      "apply_url": null,
+      "apply_phone": null,
+      "subject_hint": null,
+      "deadline": "2026-11-10",
+      "language": "en",
+      "eligibility": [],
+      "scam_signals": []
+    }
+  ]
+}

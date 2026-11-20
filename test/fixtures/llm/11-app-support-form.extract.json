@@ -1,0 +1,31 @@
+{
+  "is_job_post": true,
+  "jobs": [
+    {
+      "title": "Application Support Engineer",
+      "company": "Pyramid Pay",
+      "location": "Cairo",
+      "work_mode": "unknown",
+      "seniority": "unknown",
+      "years_min": 0,
+      "requirements": [
+        "SQL",
+        "Linux",
+        "REST APIs",
+        "Log analysis",
+        "Ticketing systems (Jira)",
+        "Shift-based work"
+      ],
+      "nice_to_have": [],
+      "apply_channel": "form",
+      "apply_email": null,
+      "apply_url": "https://pyramidpay.example/careers/app-support-engineer?utm_campaign=wa",
+      "apply_phone": null,
+      "subject_hint": null,
+      "deadline": null,
+      "language": "en",
+      "eligibility": [],
+      "scam_signals": []
+    }
+  ]
+}

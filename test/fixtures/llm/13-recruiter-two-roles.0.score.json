@@ -1,0 +1,48 @@
+{
+  "fit_score": 68,
+  "matched": [
+    {
+      "requirement": "Linux system administration (RHEL/Amazon Linux)",
+      "evidence": ["linux", "sysadmin_lab", "systemd", "selinux", "firewalld"]
+    },
+    {
+      "requirement": "Identity and access management on Linux (users, DNS, Kerberos, sudo)",
+      "evidence": ["freeipa", "lab_identity"]
+    },
+    {
+      "requirement": "Shared storage and file services (NFS, autofs, quotas, ACLs)",
+      "evidence": ["nfs", "lab_services"]
+    },
+    {
+      "requirement": "Security hardening and compliance (SSH hardening, OpenSCAP CIS, auditd, AIDE)",
+      "evidence": ["ssh_hardening", "openscap", "lab_compliance"]
+    },
+    {
+      "requirement": "Patch management and incident handling",
+      "evidence": ["patching", "lab_patching", "lab_drills", "incident_docs"]
+    },
+    {
+      "requirement": "Networking fundamentals (TCP/IP, DNS, routing, VPN, proxy)",
+      "evidence": ["net_fundamentals", "vpn", "squid", "packet_tracer"]
+    },
+    {
+      "requirement": "Scripting for admin automation (Bash, Ansible)",
+      "evidence": ["bash", "lab_testing", "ansible"]
+    },
+    {
+      "requirement": "Cloud and infrastructure hosting of Linux systems (AWS EC2, VPC)",
+      "evidence": ["aws", "aws_networking", "lab_infra"]
+    },
+    {
+      "requirement": "Monitoring and logging of systems",
+      "evidence": ["prometheus", "grafana", "cloudwatch", "lab_services"]
+    }
+  ],
+  "missing": [
+    "Windows Server / Active Directory administration in production (known gap)",
+    "On-call support for a live production system (known gap)",
+    "Paid full-time system administration experience beyond the internship; Linux admin work is lab-based and the sysadmin lab is still in progress"
+  ],
+  "eligibility_issues": [],
+  "summary": "Strong on Linux administration, FreeIPA, hardening, NFS, networking and automation; gaps are Windows/AD production work, on-call duty and paid sysadmin experience."
+}

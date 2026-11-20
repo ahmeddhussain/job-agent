@@ -40,7 +40,25 @@ export function buildProgram(io: Io): Command {
       new Option('--source <name>', 'run one source only').choices(['whatsapp', 'alerts', 'ats']),
     )
     .option('--since <iso>', 'override the per-source watermark (ISO-8601)')
-    .action(notYet('run', 'P2 (dry run on fixtures) and P7 (live)'));
+    .option('--record', 'with --fixtures: save model outputs to test/fixtures/llm')
+    .option('--replay', 'with --fixtures: use saved model outputs, no Claude calls')
+    .option('--profile <path>', 'with --fixtures: profile file (default: paths.profile)')
+    .action(
+      async (opts: {
+        dryRun?: boolean;
+        fixtures?: boolean;
+        record?: boolean;
+        replay?: boolean;
+        profile?: string;
+      }) => {
+        if (!(opts.dryRun && opts.fixtures))
+          throw new NotImplementedError('run (live sources)', 'P7');
+        if (opts.record && opts.replay) throw new Error('--record and --replay are exclusive');
+        const { runFixturesCommand } = await import('./run-fixtures.js');
+        const code = await runFixturesCommand(loadConfig(configPath()), opts, io);
+        if (code !== 0) process.exitCode = code;
+      },
+    );
 
   program
     .command('wa:login')

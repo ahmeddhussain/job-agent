@@ -1,0 +1,24 @@
+{
+  "is_job_post": true,
+  "jobs": [
+    {
+      "title": "Cloud Engineer – AWS",
+      "company": "Nilecode Systems",
+      "location": "Cairo",
+      "work_mode": "unknown",
+      "seniority": "unknown",
+      "years_min": null,
+      "requirements": [],
+      "nice_to_have": [],
+      "apply_channel": "form",
+      "apply_email": null,
+      "apply_url": "https://wuzzuf.example/jobs/p/abc123-Cloud-Engineer-AWS",
+      "apply_phone": null,
+      "subject_hint": null,
+      "deadline": null,
+      "language": "en",
+      "eligibility": [],
+      "scam_signals": []
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "fit_score": 20,
+  "matched": [
+    {
+      "requirement": "Consuming REST APIs (backend-to-frontend integration, implied by a React frontend role)",
+      "evidence": ["rest_apis", "nexora_services"]
+    },
+    {
+      "requirement": "Git-based version control and collaboration (implied core workflow)",
+      "evidence": ["git"]
+    },
+    {
+      "requirement": "Frontend served behind NGINX (partial frontend-hosting exposure)",
+      "evidence": ["nexora_services"]
+    }
+  ],
+  "missing": [
+    "React (core framework; no React skill or project in profile)",
+    "JavaScript / TypeScript for UI development (only Node.js appears as a service language in ivg_stack, not frontend work)",
+    "Frontend build tooling (npm, Vite, Webpack or similar) for UI apps",
+    "Component, UI state and styling work (CSS, component libraries)",
+    "Frontend testing (Jest, React Testing Library or similar)",
+    "Browser-side debugging and responsive/accessibility UI delivery",
+    "Any frontend project or portfolio demonstrating React UI work"
+  ],
+  "eligibility_issues": [],
+  "summary": "Profile is DevOps/cloud-focused with no React, JavaScript or frontend UI evidence; only REST API and Git exposure partially overlap."
+}

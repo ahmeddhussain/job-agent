@@ -1,0 +1,54 @@
+{
+  "fit_score": 75,
+  "matched": [
+    {
+      "requirement": "AWS core services (title-implied): EC2, ALB, Auto Scaling, RDS, EKS, IAM",
+      "evidence": ["aws", "ec2_alb_asg", "rds", "eks", "iam_oidc"]
+    },
+    {
+      "requirement": "AWS networking (VPC, subnets, NAT, security groups)",
+      "evidence": ["aws_networking", "sysadmin_lab"]
+    },
+    {
+      "requirement": "Infrastructure as code on AWS (Terraform)",
+      "evidence": ["terraform", "nexora_infra", "lab_infra"]
+    },
+    {
+      "requirement": "Configuration automation (Ansible)",
+      "evidence": ["ansible", "lab_ansible"]
+    },
+    {
+      "requirement": "Linux administration",
+      "evidence": ["linux", "sysadmin_lab"]
+    },
+    {
+      "requirement": "Networking fundamentals (TCP/IP, DNS, routing, VPN)",
+      "evidence": ["net_fundamentals", "vpn"]
+    },
+    {
+      "requirement": "Cloud monitoring and alerting (CloudWatch, Prometheus, Grafana)",
+      "evidence": ["cloudwatch", "prometheus", "grafana", "ecs_monitoring"]
+    },
+    {
+      "requirement": "CI/CD on AWS (GitHub Actions with OIDC, Jenkins)",
+      "evidence": ["github_actions", "jenkins", "ivolve_projects"]
+    },
+    {
+      "requirement": "Containers on AWS (Docker, ECS Fargate, Kubernetes)",
+      "evidence": ["docker", "ecs", "kubernetes"]
+    },
+    {
+      "requirement": "AWS Certified Solutions Architect – Associate (held)",
+      "evidence": ["aws"]
+    }
+  ],
+  "missing": [
+    "Job lists no explicit requirements; must-haves inferred from title only, so scoring is approximate",
+    "Production experience on Azure or GCP (if the role needs multi-cloud)",
+    "Windows Server / Active Directory administration in production (known gap)",
+    "On-call support for a live production system (known gap)",
+    "Paid full-time experience beyond the internship (if the employer requires it; not a years filter)"
+  ],
+  "eligibility_issues": [],
+  "summary": "Strong on AWS, Terraform, EKS, Linux and networking from projects and labs; the post lists no explicit requirements, so fit rests on the title, and Azure/GCP and Windows AD are gaps."
+}

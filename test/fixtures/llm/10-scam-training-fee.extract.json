@@ -1,0 +1,29 @@
+{
+  "is_job_post": true,
+  "jobs": [
+    {
+      "title": "Cloud Support Engineer",
+      "company": null,
+      "location": null,
+      "work_mode": "remote",
+      "seniority": "junior",
+      "years_min": 0,
+      "requirements": [],
+      "nice_to_have": [],
+      "apply_channel": "unknown",
+      "apply_email": null,
+      "apply_url": null,
+      "apply_phone": null,
+      "subject_hint": null,
+      "deadline": null,
+      "language": "en",
+      "eligibility": [],
+      "scam_signals": [
+        "Asks the applicant to pay a 1500 EGP training fee before starting",
+        "Promises earnings of $150/day with no experience needed",
+        "Guarantees a job after paid training",
+        "Contact is Telegram only (@cloudjobs_fast) with no named company"
+      ]
+    }
+  ]
+}

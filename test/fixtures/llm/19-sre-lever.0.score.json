@@ -1,0 +1,22 @@
+{
+  "fit_score": 68,
+  "matched": [
+    {
+      "requirement": "Prometheus",
+      "evidence": ["prometheus", "nexora_observability", "nexora_gitops"]
+    },
+    {
+      "requirement": "Grafana",
+      "evidence": ["grafana", "nexora_observability"]
+    },
+    {
+      "requirement": "Kubernetes",
+      "evidence": ["kubernetes", "nexora_gitops", "k8s_sec"]
+    }
+  ],
+  "missing": [
+    "On-call rotation participation: the profile lists on-call for a live production system as a known gap, and no production on-call work is shown."
+  ],
+  "eligibility_issues": [],
+  "summary": "Strong on Prometheus, Grafana and Kubernetes from Nexora and lab projects; missing on-call rotation experience, and seniority is mid-level with no paid full-time work beyond the internship."
+}

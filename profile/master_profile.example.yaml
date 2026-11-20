@@ -1,0 +1,539 @@
+# master_profile.example.yaml: COMMITTED example (CI and tests use it).
+# The real profile/master_profile.yaml is gitignored. Contact details and the
+# salary expectation are placeholders here.
+# master_profile.yaml: the ONLY source of facts for every CV and cover letter.
+# GITIGNORED (contains phone and email). Review every line.
+#
+# Sources used to draft it (2026-11-20): Ahmed-Khater-CV.pdf, the READMEs of all
+# public repos under github.com/ahmeddhussain and github.com/Nexora-Banking-App,
+# and the ahmed-infra lab repo, then corrected with Ahmed's answers (2026-11-20).
+# Where the CV and a README disagree, this file follows what is true and exists;
+# Ahmed's own confirmation overrides a README (Cosign signing, the DR drill).
+#
+# Rules (enforced in code, PLAN.md 8.1):
+#   - The model may only select and rephrase what is here. It cannot add facts.
+#   - Bullets with status: in_progress can only be described as in progress.
+#   - Nothing in `not_held` may appear in any CV or cover letter.
+#   - Anything with `confirmed: false` is EXCLUDED by the profile loader until
+#     Ahmed confirms it and flips it to true (or deletes it). Default is true.
+
+candidate:
+  first_name: Ahmed
+  last_name: Khater
+  full_name: Ahmed Mohamed Hussain Mahmoud Khater   # CV header; file names use first_last
+  location: Cairo, Egypt
+  email: candidate@example.com
+  phone: "01000000000"
+  phone_alt: "01000000001"                           # both numbers go on the CV
+  links:
+    github: https://github.com/ahmeddhussain
+    linkedin: https://linkedin.com/in/ahmed-khater2611
+    portfolio: https://ahmeddhussain.github.io
+
+max_years_required: 3        # jobs requiring more than this are skipped
+
+# ---------------------------------------------------------------------------
+# Headlines and summaries per angle (PLAN.md section 6). The tailor step starts
+# from the angle's summary and adapts it to the job's top requirements, without
+# adding facts. Each summary is built only from bullets and stories below.
+# ---------------------------------------------------------------------------
+headlines:
+  devops: DevOps Engineer | Cloud Engineer | Linux System Administrator
+  support: Technical & Application Support Engineer | Linux | AWS
+  monitoring: DevOps & Monitoring Engineer | Prometheus | Grafana | AWS
+  networking: Network & Cloud Engineer | AWS | Linux
+  systems: Linux System Administrator | RHEL | Ansible | AWS
+
+summaries:
+  devops: >
+    Cloud and DevOps Engineer and AWS Certified Solutions Architect who builds platforms end to end:
+    modular Terraform on AWS, Amazon EKS, GitOps with ArgoCD and Argo Rollouts canary releases,
+    and CI/CD in GitHub Actions (OIDC, no stored keys) and Jenkins with Trivy and SonarQube gates.
+    Built Nexora, a core-banking platform on EKS, and rebuilt its staging cluster from nothing in
+    23 minutes 50 seconds during a disaster-recovery drill.
+  support: >
+    Cloud and DevOps Engineer who troubleshoots from evidence rather than guesswork: decoded a live
+    GitHub OIDC token to fix an AWS trust-policy failure, traced an AWS AuthFailure to clock skew from
+    blocked NTP, and writes incident reports with root cause and corrective actions. Operates an
+    enterprise-style RHEL environment (FreeIPA identity, VPN, proxy, file shares) through tickets and
+    runbooks, and is comfortable with Linux, networking, SQL, REST APIs, containers and AWS.
+  monitoring: >
+    Cloud and DevOps Engineer focused on observability and reliability: Prometheus alerting with 12
+    rules each backed by a runbook, Grafana dashboards as code, Loki logs and Tempo traces, and Argo
+    Rollouts canaries that abort when the Prometheus 5xx error rate crosses 5%. Measures recovery
+    instead of assuming it: a 23m50s disaster-recovery drill on EKS and restore drills against RPO
+    and RTO targets.
+  networking: >
+    Electronics and Communications Engineering graduate with networking depth (CCNA curriculum and
+    Huawei HCIA-Datacom course, studied) applied in the cloud: multi-AZ VPC design, private subnets
+    behind NAT, default-deny security groups, a WireGuard VPN with per-team address ranges, a Squid
+    proxy with per-team rules, and Istio mTLS. Designed a two-floor building network in Cisco Packet
+    Tracer.
+  systems: >
+    Linux System Administrator running an enterprise-style RHEL 10 environment on AWS: FreeIPA identity
+    with HBAC and sudo rules, NFSv4 automount home directories with quotas, OpenSCAP CIS Level 1 at
+    100%, auditd and AIDE, and monthly patching in rings. Everything is Terraform and idempotent
+    Ansible, rebuilt from Git and verified by 160 automated checks.
+
+# ---------------------------------------------------------------------------
+# Cover-letter material per angle (PLAN.md 8.4). Paragraph 2 maps two job
+# requirements to `evidence` ids; paragraph 3 uses `motivation`. Never use
+# "I'm at the start of my career and want to learn" as the reason.
+# ---------------------------------------------------------------------------
+cover_letter:
+  style:
+    - 180-250 words, 3 paragraphs, plain and specific
+    - each claim names the project, the technology and the result
+    - no cliches ("I am writing to express my interest", "team player", "passionate about technology")
+    - unknown company -> "Dear Hiring Team", never guess a name
+  angles:
+    devops:
+      pitch: I build cloud platforms as code and prove they recover, from Terraform and EKS to GitOps delivery.
+      evidence: [nexora_gitops, nexora_cicd, nexora_dr, ivg_oidc_fix, lab_infra, cicd_jenkins]
+      motivation: >
+        I like owning the path from a commit to a running, observable service, and making that path
+        safe enough that a release can be rolled back by a metric instead of a person.
+    support:
+      pitch: I solve infrastructure problems methodically and document them so they stay solved.
+      evidence: [story_oidc, story_ntp, lab_drills, lab_identity, story_systemd, nexora_tests]
+      motivation: >
+        Troubleshooting is the part of the work I already do every day: reading logs, narrowing a
+        cause with evidence, fixing it, and writing the runbook. A support role puts that skill
+        directly in front of users and production systems.
+    monitoring:
+      pitch: I instrument systems so problems are visible before users report them, and I test the alerts.
+      evidence: [nexora_observability, nexora_gitops, ivg_ssa_fix, nexora_dr, lab_drills, cicd_jenkins]
+      motivation: >
+        I have built the alerting, dashboards and canary gates for my own platforms; monitoring is
+        where I see the whole system at once, and where good signals turn incidents into short ones.
+    networking:
+      pitch: I combine network fundamentals from my engineering degree with hands-on cloud network design.
+      evidence: [lab_vpn, lab_infra, lab_services, nexora_security, pt_design]
+      motivation: >
+        My degree and networking courses gave me the fundamentals; building VPNs, proxies and
+        segmented VPCs on AWS showed me how much of reliability and security is decided in the network.
+    systems:
+      pitch: I run Linux fleets the way companies do, with central identity, hardening, patching and drills.
+      evidence: [lab_identity, lab_compliance, lab_patching, lab_ansible, story_systemd, lab_drills]
+      motivation: >
+        I built and operate a company's Linux environment end to end and enjoy the operational side:
+        patch cycles, access policy, compliance and recovering a host from a bad change.
+
+# ---------------------------------------------------------------------------
+education:
+  - id: scu_bsc
+    degree: B.Sc. Electronics and Communications Engineering
+    school: Suez Canal University, Ismailia, Egypt
+    dates: Sep 2020 – Jul 2025
+    gpa: 3.4/4
+
+certifications:            # only certifications actually held
+  - id: aws_saa
+    name: AWS Certified Solutions Architect – Associate
+    issuer: Amazon Web Services
+  - id: aws_ccp
+    name: AWS Certified Cloud Practitioner
+    issuer: Amazon Web Services
+
+badges:
+  - id: aws_academy_cf
+    name: AWS Academy Cloud Foundations
+  - id: aws_academy_csf
+    name: AWS Academy Cloud Security Foundations
+
+courses:                   # courses / programs: never presented as certifications
+  - id: nti_accelerator
+    name: NTI Cloud DevOps Accelerator (Hire Ready Initiative)
+    dates: Apr 2026 – Jul 2026
+  - id: ccna_curriculum
+    name: CCNA curriculum (studied; not certified)
+  - id: hcia_datacom
+    name: Huawei HCIA-Datacom course (completed; exam not taken)
+  - id: mcsa_course
+    name: MCSA course (studied; not certified)          # taken after graduation
+  - id: virtualization_course
+    name: Virtualization course                          # taken after graduation
+  - id: scu_netsec
+    name: Suez Canal University Network & Cyber Security Summer Program
+    dates: Jun 2024
+
+not_held:                  # validator blocks these anywhere in the output
+  - RHCSA
+  - RHCE
+  - Red Hat Certified
+  - OpenShift certification
+  - CCNA certified
+  - CCNA certification
+  - Cisco Certified Network Associate
+  - HCIA certified
+  - HCIA certification
+  - MCSA certified
+  - MCSA certification
+  - Microsoft Certified
+  - CKA
+  - CKAD
+  - Certified Kubernetes
+  - Terraform Associate
+  - HashiCorp Certified
+  - AWS Certified DevOps
+  - Solutions Architect Professional
+  - Solutions Architect - Professional
+  - double-entry          # Nexora's README states it is NOT a double-entry ledger
+
+# ---------------------------------------------------------------------------
+experience:
+  - id: ivolve
+    title: DevOps Intern
+    company: iVolve Technologies
+    dates: Jul 2026 – Aug 2026
+    status: done
+    bullets:
+      - id: ivolve_general
+        text: Applied DevOps practices to production-style projects covering CI/CD, GitOps, containerization and infrastructure automation.
+        tags: [cicd, gitops, docker, automation]
+      - id: ivolve_labs
+        text: Completed 30 hands-on labs across build tools (Gradle, Maven), Docker, Jenkins, Kubernetes, ArgoCD and Ansible, each documented with its objective, steps and verification.
+        tags: [docker, jenkins, kubernetes, argocd, ansible, gradle, maven]
+      - id: ivolve_projects
+        text: Delivered two end-to-end pipelines for a 3-service application on EKS, one with Jenkins and Ansible and one with GitHub Actions (OIDC) and ArgoCD GitOps.
+        tags: [jenkins, ansible, github_actions, oidc, argocd, eks, cicd]
+  - id: nti
+    title: Cloud DevOps Trainee
+    company: National Telecommunication Institute (NTI), Cloud DevOps Accelerator, Hire Ready Initiative
+    dates: Apr 2026 – Jul 2026
+    status: done
+    bullets:
+      - id: nti_training
+        text: Completed intensive hands-on training in Linux administration, networking, CI/CD, containerization and cloud infrastructure.
+        tags: [linux, networking, cicd, docker, aws]
+      - id: nti_pipeline
+        text: Built the final project, an end-to-end pipeline on AWS that provisions infrastructure with Terraform and Ansible, builds and scans images with Jenkins, SonarQube and Trivy, and deploys to EKS with Helm, monitored with Prometheus, Grafana and Loki.
+        tags: [aws, terraform, ansible, jenkins, sonarqube, trivy, docker, kubernetes, helm, eks, prometheus, grafana, loki, cicd]
+
+# ---------------------------------------------------------------------------
+projects:
+  - id: nexora
+    name: Nexora Core Banking Platform on AWS
+    link: https://github.com/Nexora-Banking-App/Nexora-Banking-App
+    stack: Terraform, CloudFormation, AWS (EKS, RDS MySQL, ECR, ALB, Secrets Manager), GitHub Actions (OIDC), ArgoCD, Argo Rollouts, Kustomize, Istio, Kafka (Strimzi, KRaft), External Secrets Operator (IRSA), Trivy, Cosign, Prometheus, Alertmanager, Grafana, Loki, Fluent Bit, Tempo, OpenTelemetry, Backstage, Python (FastAPI, Pytest), NGINX
+    status: done
+    bullets:
+      - id: nexora_services
+        text: Built a core-banking platform of six services (five Python/FastAPI microservices and an NGINX frontend) for accounts, authentication, transfers and fraud scoring, split across five repositories so each CI/CD job gets only the permissions it needs.
+        tags: [microservices, python, fastapi, architecture, security]
+        status: done
+      - id: nexora_concurrency
+        text: Engineered transfers for correctness under concurrency with a two-phase lease, monotonic fencing tokens, row locks taken in ascending account-ID order to rule out deadlocks, and takeover of a crashed worker's lease after 10 seconds.
+        tags: [architecture, mysql, sql, reliability]
+        status: done
+      - id: nexora_outbox
+        text: Published transfer events to Kafka (Strimzi, KRaft) through the transactional outbox pattern, with at-least-once delivery and de-duplication by event ID in the consumer.
+        tags: [kafka, architecture, messaging]
+        status: done
+      - id: nexora_infra
+        text: Provisioned the VPC, EKS and RDS MySQL from versioned Terraform modules, with environment definitions on Terraform 1.10+ native S3 state locking.
+        tags: [terraform, aws, eks, rds, vpc, networking]
+        status: done
+      - id: nexora_cicd
+        text: Built secretless CI/CD in GitHub Actions that assumes AWS IAM roles through OIDC; every pull request tests, builds and Trivy-scans all six service images.
+        tags: [github_actions, oidc, cicd, trivy, security]
+        status: done
+      - id: nexora_signing
+        text: Released images tagged with the Git SHA to Amazon ECR and signed them by digest with Cosign.
+        tags: [cosign, ecr, cicd, security]
+        status: done
+      - id: nexora_gitops
+        text: Delivered through ArgoCD App-of-Apps GitOps, where a CI bot opens image-bump pull requests and Argo Rollouts releases the API gateway as a 10%, 50%, 100% canary that aborts if the Prometheus 5xx error rate exceeds 5%.
+        tags: [argocd, gitops, argo_rollouts, prometheus, cicd, release]
+        status: done
+      - id: nexora_security
+        text: Secured the platform with Istio mTLS, default-deny Kubernetes NetworkPolicies with per-service allow rules, and secrets generated in AWS Secrets Manager and projected by External Secrets Operator through IRSA; services run non-root with a read-only root filesystem.
+        tags: [security, istio, networking, eso, irsa, kubernetes]
+        status: done
+      - id: nexora_observability
+        text: Declared observability as code with 12 Prometheus alert rules each backed by a runbook, three Grafana dashboards, Fluent Bit shipping JSON logs with correlation IDs to Loki, and OpenTelemetry traces in Tempo.
+        tags: [prometheus, alertmanager, grafana, loki, fluent_bit, tempo, opentelemetry, monitoring, observability]
+        status: done
+      - id: nexora_dr
+        text: Ran a disaster-recovery drill that deleted the EKS cluster and rebuilt it to a healthy application in 23 minutes 50 seconds through Terraform and ArgoCD reconciliation, against a 30-minute RTO target.
+        tags: [dr, reliability, terraform, argocd, eks]
+        status: done
+      - id: nexora_perf
+        text: Load-tested two concurrency profiles, measuring about 420 ms median and 3,660 ms p99 on a single-account hotspot, and ruled out row-lock contention and CPU saturation as the bottleneck on disjoint accounts.
+        tags: [performance, load_testing, mysql, troubleshooting]
+        status: done
+      - id: nexora_tests
+        text: Wrote Pytest async integration and concurrency tests for the transfer path.
+        tags: [python, pytest, testing]
+        status: done
+      - id: nexora_hpa
+        text: Configured HPA autoscaling for the fraud service at a 50% CPU target, from 1 to 5 replicas.
+        tags: [hpa, kubernetes, reliability]
+        status: done
+      - id: nexora_backstage
+        text: Cataloged the services and their dependency graph in a Backstage developer portal.
+        tags: [backstage, platform, developer_experience]
+        status: done
+
+  - id: sysadmin_lab
+    name: Linux System Administration Lab
+    link: https://github.com/ahmeddhussain/Linux-System-Administration
+    stack: RHEL 10, AWS (EC2, VPC, NAT Gateway, S3, SSM), Terraform, Ansible, FreeIPA (IdM, DNS, Kerberos, HBAC), WireGuard, wstunnel, Squid, NFSv4, autofs, firewalld, SELinux, OpenSCAP, auditd, AIDE, Bash
+    status: in_progress   # admin layer complete; the app01 web/database tier remains
+    bullets:
+      - id: lab_infra
+        text: Built an enterprise-style RHEL 10 environment on AWS with modular Terraform, private subnets behind a NAT gateway, default-deny security groups per role and S3 remote state with native locking; the environment is destroyed after every session and rebuilt from Git.
+        tags: [terraform, aws, vpc, networking, security, rhel, linux]
+        status: done
+      - id: lab_vpn
+        text: Made the network reachable only through a WireGuard VPN carried inside TLS on TCP 443 (wstunnel), with per-team VPN ranges that reach only what each team's policy allows.
+        tags: [vpn, wireguard, networking, security, firewalld]
+        status: done
+      - id: lab_identity
+        text: Centralized identity with FreeIPA, managing users, DNS, Kerberos, HBAC and sudo rules per team, with SSH keys stored in IPA.
+        tags: [freeipa, identity, linux, dns, kerberos, security]
+        status: done
+      - id: lab_services
+        text: Ran shared services on a utility server, including a Squid proxy (HTTPS only, per-team internet rules), NFSv4 home directories and team shares through automount with quotas and ACLs, and central logs shipped over TLS.
+        tags: [squid, nfs, linux, networking, logging]
+        status: done
+      - id: lab_compliance
+        text: Hardened every host to OpenSCAP CIS Level 1 at 100%, with each rule not met recorded as a documented exception, plus auditd rules and AIDE.
+        tags: [security, compliance, openscap, auditd, linux]
+        status: done
+      - id: lab_ansible
+        text: Automated configuration with idempotent Ansible roles on an EC2 dynamic inventory (SSH hardening, SELinux, firewalld, chrony), with secrets in Ansible Vault and the vault password in SSM Parameter Store.
+        tags: [ansible, linux, rhel, automation, selinux, secrets]
+        status: done
+      - id: lab_patching
+        text: Ran monthly patching in rings (canary first, identity last) with health gates, an urgent security-only cycle and a rollback runbook.
+        tags: [patching, linux, ansible, reliability]
+        status: done
+      - id: lab_testing
+        text: Wrote 160 automated checks in Bash that log in as each user and prove what is allowed and what is refused.
+        tags: [bash, testing, linux, security]
+        status: done
+      - id: lab_drills
+        text: Ran restore drills from a versioned S3 bucket that measure RPO and RTO against targets, and incident drills for an identity outage, a full log disk and a package rollback, documented in 7 incident reports with root cause and actions.
+        tags: [dr, reliability, troubleshooting, incident_response, documentation]
+        status: done
+
+  - id: ivolve_gitops
+    name: GitOps Pipeline on EKS (Serverless CI + GitOps CD)
+    link: https://github.com/ahmeddhussain/ivolve-GitOps
+    stack: GitHub Actions, ArgoCD, Terraform, EKS, ECR, RDS MySQL, AWS Secrets Manager with ESO, Helm, Prometheus, Grafana, Node.js, Flask, Spring Boot
+    status: done
+    bullets:
+      - id: ivg_stack
+        text: Delivered a 3-service application (Node.js, Python/Flask, Java/Spring Boot) with GitHub Actions CI that authenticates to AWS through OIDC with no stored keys, and ArgoCD pull-based CD with automated sync, prune and self-heal.
+        tags: [github_actions, oidc, argocd, gitops, kubernetes, cicd]
+      - id: ivg_terraform
+        text: Wrote modular Terraform for EKS, ECR and Amazon RDS MySQL 8.0, with secrets synced from AWS Secrets Manager by External Secrets Operator.
+        tags: [terraform, aws, eks, ecr, rds, eso]
+      - id: ivg_oidc_fix
+        text: Fixed a GitHub Actions OIDC trust-policy failure by decoding the live JWT, finding the immutable numeric IDs in its sub claim, and building the correct wildcard with Terraform replace().
+        tags: [troubleshooting, oidc, iam, terraform, github_actions]
+      - id: ivg_ssa_fix
+        text: Resolved a kube-prometheus-stack ArgoCD sync failure caused by the Kubernetes 262144-byte annotation limit by enabling ServerSideApply.
+        tags: [troubleshooting, argocd, prometheus, kubernetes, monitoring]
+
+  - id: cicd_pipeline
+    name: Jenkins CI/CD Pipeline with Security Gates on EKS
+    link: https://github.com/ahmeddhussain/ivolve-CloudDevOpsProject
+    stack: Jenkins (Groovy, Shared Library, JCasC), SonarQube, Trivy, Helm, Ansible, Terraform, Amazon EKS, ECR, ArgoCD, Prometheus, Grafana, Loki
+    status: done
+    bullets:
+      - id: cicd_jenkins
+        text: Built Jenkins multi-branch pipelines on EKS with Groovy Jenkinsfiles and a Jenkins Shared Library, with SonarQube and Trivy quality gates and builds on Docker-container agents.
+        tags: [jenkins, groovy, cicd, sonarqube, trivy, docker, eks, kubernetes]
+      - id: cicd_infra
+        text: Provisioned the infrastructure with Terraform and configured it with Ansible roles using an AWS dynamic inventory and Ansible Vault, then handed deployments to ArgoCD GitOps.
+        tags: [terraform, ansible, argocd, gitops, aws]
+      - id: cicd_jcasc
+        text: Hardened Jenkins and SonarQube by replacing imperative init.groovy.d scripts with Configuration as Code (JCasC), re-enabling forced authentication, and restricting SonarQube access to a single IP.
+        tags: [jenkins, jcasc, sonarqube, security]
+      - id: cicd_dood_fix
+        text: Debugged Docker-outside-of-Docker workspace path mismatches and AWS CLI installation issues inside Jenkins containers, and worked through EKS node resource limits.
+        tags: [troubleshooting, docker, jenkins, eks]
+
+  - id: ecs_fargate
+    name: 3-Tier Containerized Platform on AWS ECS Fargate
+    link: https://github.com/ahmeddhussain/Assesment-Task
+    stack: Terraform, ECS Fargate, ALB, RDS MySQL 8.0, AWS Secrets Manager, GitHub Actions (OIDC), Trivy, Cosign, CloudWatch, SNS, Docker Compose, Node.js, NGINX
+    status: done
+    bullets:
+      - id: ecs_stack
+        text: Deployed a 3-tier application on ECS Fargate in private subnets behind an Application Load Balancer, with Amazon RDS MySQL 8.0 reachable only from the backend tasks' security group, all provisioned with modular Terraform.
+        tags: [terraform, aws, ecs, fargate, alb, rds, networking, security]
+      - id: ecs_cicd
+        text: Built keyless GitHub Actions pipelines (OIDC) for infrastructure and application, with Trivy scanning, Cosign signing and credentials injected from AWS Secrets Manager at task start.
+        tags: [github_actions, oidc, trivy, cosign, secrets, cicd]
+      - id: ecs_monitoring
+        text: Streamed logs to CloudWatch Logs and set four CloudWatch metric alarms that notify by email through SNS.
+        tags: [cloudwatch, sns, monitoring]
+
+  - id: barq
+    name: Load-Balanced Flask Service with NGINX and PostgreSQL (Docker Compose)
+    link: https://github.com/ahmeddhussain/BARQ-Task
+    stack: Docker Compose, NGINX, Python/Flask, PostgreSQL, GitHub Actions
+    status: done
+    bullets:
+      - id: barq_stack
+        text: Containerized a Flask API as three non-root instances behind an NGINX reverse proxy load balancer, backed by PostgreSQL on a persistent volume, with health checks on every container.
+        tags: [docker, nginx, python, postgresql, load_balancing]
+      - id: barq_resilience
+        text: Wrote a failure test that stops a backend, measures traffic continuing on the healthy instances, restores it and proves recovery, plus backup and restore of the database.
+        tags: [reliability, testing, dr, postgresql]
+
+  - id: terraform_3tier
+    name: Three-Tier AWS Application with Terraform and Jenkins
+    link: https://github.com/ahmeddhussain/terraform-aws-project
+    stack: Terraform, Jenkins, AWS (VPC, ALB, Auto Scaling, EC2, RDS MySQL, CloudWatch, SNS), NGINX, Flask
+    status: done
+    bullets:
+      - id: t3_stack
+        text: Built modular Terraform for a 3-tier AWS application (VPC, public and internal ALBs, Auto Scaling groups, RDS MySQL) with tier-isolated security groups so the database is reachable only from the backend.
+        tags: [terraform, aws, ec2, alb, asg, rds, networking, security]
+      - id: t3_delivery
+        text: Deployed it through a Jenkins pipeline with a manual approval gate and monitored it with CloudWatch CPU alarms that notify by email through SNS.
+        tags: [jenkins, cicd, cloudwatch, sns, monitoring]
+
+  - id: k8s_security_lab
+    name: Kubernetes Phishing-Simulation Lab (Security Hardening)
+    link: https://github.com/ahmeddhussain/phishing-app-k8s
+    stack: Kubernetes, Cilium, RBAC, NGINX, Flask, MySQL
+    status: done
+    bullets:
+      - id: k8s_sec
+        text: Deployed a 3-tier application on Kubernetes secured with RBAC, default-deny NetworkPolicies and Cilium FQDN-based egress rules, with Ingress, autoscaling, resource quotas and a MySQL StatefulSet.
+        tags: [kubernetes, security, rbac, cilium, networking, mysql]
+
+  - id: openshift_wordpress
+    name: WordPress on Red Hat OpenShift
+    status: done
+    bullets:
+      - id: ocp_wp
+        text: Deployed a WordPress, MySQL and phpMyAdmin stack on Red Hat OpenShift.
+        tags: [openshift, kubernetes, mysql, containers]
+
+  - id: packet_tracer
+    name: Two-Floor Building Network Design (Cisco Packet Tracer)
+    status: done
+    bullets:
+      - id: pt_design
+        text: Designed the network for a two-floor building in Cisco Packet Tracer using routers, switches and end devices.
+        tags: [networking, cisco, routing, switching]
+
+# ---------------------------------------------------------------------------
+# Troubleshooting stories: strong material for support/monitoring cover letters.
+stories:
+  - id: story_oidc
+    text: GitHub Actions could not assume its AWS role through OIDC; decoded the live JWT, found GitHub embeds immutable numeric IDs in the sub claim, and fixed the trust-policy wildcard with Terraform replace().
+  - id: story_ntp
+    text: Terraform failed with AWS AuthFailure; traced it to about 14 minutes of clock skew on a machine where outbound UDP 123 (NTP) was blocked, and corrected the time with HTTP-based sync.
+  - id: story_ssa
+    text: kube-prometheus-stack would not sync in ArgoCD; the root cause was the 262144-byte annotation size limit, fixed with ServerSideApply.
+  - id: story_operator
+    text: Prometheus Operator cached "CRDs don't exist" at startup; fixed with a rollout restart after the CRDs were installed.
+  - id: story_systemd
+    text: systemctl crashed on a RHEL VPN gateway after installing wireguard-tools because of a systemd/OpenSSL version mismatch between the image and the repositories; fixed by adding a fleet-wide patch playbook that runs before anything else.
+
+# ---------------------------------------------------------------------------
+# Skills vocabulary. `level`: strong | working | familiar. The tailor step may only
+# list skills from here; `evidence` points at project/experience ids.
+skills:
+  linux:
+    - { id: linux, name: "Linux administration (RHEL, Amazon Linux)", level: strong, evidence: [sysadmin_lab] }
+    - { id: systemd, name: systemd, level: working, evidence: [sysadmin_lab] }
+    - { id: selinux, name: SELinux, level: working, evidence: [sysadmin_lab] }
+    - { id: firewalld, name: firewalld, level: working, evidence: [sysadmin_lab] }
+    - { id: ssh_hardening, name: SSH hardening, level: working, evidence: [sysadmin_lab] }
+    - { id: freeipa, name: "FreeIPA (IdM, DNS, Kerberos, HBAC, sudo rules)", level: working, evidence: [sysadmin_lab] }
+    - { id: nfs, name: "NFSv4, autofs, quotas, ACLs", level: working, evidence: [sysadmin_lab] }
+    - { id: patching, name: Patch management, level: working, evidence: [sysadmin_lab] }
+    - { id: openscap, name: "OpenSCAP (CIS Level 1), auditd, AIDE", level: working, evidence: [sysadmin_lab] }
+    - { id: bash, name: Bash scripting, level: working, evidence: [sysadmin_lab] }
+  networking:
+    - { id: net_fundamentals, name: "TCP/IP, DNS, subnetting, routing", level: working, evidence: [sysadmin_lab, packet_tracer] }
+    - { id: vpn, name: "VPN (WireGuard)", level: working, evidence: [sysadmin_lab] }
+    - { id: squid, name: Squid proxy, level: working, evidence: [sysadmin_lab] }
+    - { id: tls, name: TLS, level: working, evidence: [sysadmin_lab, nexora] }
+    - { id: net_routing_switching, name: "VLAN, STP/RSTP, OSPF, BGP, QoS", level: familiar, evidence: [packet_tracer] }   # networking-angle jobs only
+    - { id: mpls_vrf, name: "MPLS (L2/L3 VPN, TE), VRF", level: familiar, evidence: [] }                         # networking-angle jobs only
+    - { id: cisco_pt, name: Cisco Packet Tracer, level: working, evidence: [packet_tracer] }
+  cloud:
+    - { id: aws, name: AWS, level: strong, evidence: [nexora, sysadmin_lab, ivolve_gitops, ecs_fargate, terraform_3tier] }
+    - { id: eks, name: Amazon EKS, level: strong, evidence: [nexora, ivolve_gitops, cicd_pipeline] }
+    - { id: ecs, name: Amazon ECS Fargate, level: working, evidence: [ecs_fargate] }
+    - { id: aws_networking, name: "AWS networking (VPC, subnets, NAT, security groups)", level: strong, evidence: [nexora, sysadmin_lab, terraform_3tier, ecs_fargate] }
+    - { id: rds, name: Amazon RDS (MySQL), level: working, evidence: [nexora, ivolve_gitops, terraform_3tier, ecs_fargate] }
+    - { id: ec2_alb_asg, name: "EC2, ALB, Auto Scaling", level: working, evidence: [terraform_3tier, ecs_fargate] }
+    - { id: iam_oidc, name: "IAM, OIDC federation, IRSA", level: working, evidence: [nexora, ivolve_gitops, ecs_fargate] }
+    - { id: secrets_manager, name: AWS Secrets Manager, level: working, evidence: [nexora, ivolve_gitops, ecs_fargate] }
+    - { id: cloudwatch, name: "CloudWatch, SNS", level: working, evidence: [terraform_3tier, ecs_fargate] }
+    - { id: s3_ssm, name: "S3, SSM Parameter Store", level: working, evidence: [sysadmin_lab] }
+  iac_config:
+    - { id: terraform, name: Terraform (modular), level: strong, evidence: [nexora, sysadmin_lab, ivolve_gitops, terraform_3tier, ecs_fargate] }
+    - { id: cloudformation, name: CloudFormation, level: familiar, evidence: [nexora] }
+    - { id: ansible, name: "Ansible (roles, dynamic inventory, Vault)", level: strong, evidence: [sysadmin_lab, cicd_pipeline, nti] }
+  containers:
+    - { id: docker, name: "Docker, Docker Compose", level: strong, evidence: [cicd_pipeline, barq, ecs_fargate, nti] }
+    - { id: podman, name: Podman, level: familiar, evidence: [] }
+    - { id: kubernetes, name: Kubernetes, level: strong, evidence: [nexora, ivolve_gitops, cicd_pipeline, k8s_security_lab] }
+    - { id: helm, name: Helm, level: working, evidence: [nti, cicd_pipeline] }
+    - { id: kustomize, name: Kustomize, level: working, evidence: [nexora] }
+    - { id: istio, name: "Istio (mTLS), Gateway API", level: working, evidence: [nexora] }
+    - { id: openshift, name: Red Hat OpenShift, level: familiar, evidence: [openshift_wordpress] }
+  cicd_gitops:
+    - { id: jenkins, name: "Jenkins (Groovy, Shared Libraries, JCasC)", level: strong, evidence: [cicd_pipeline, nti, terraform_3tier] }
+    - { id: github_actions, name: GitHub Actions, level: strong, evidence: [nexora, ivolve_gitops, ecs_fargate] }
+    - { id: argocd, name: ArgoCD (App-of-Apps), level: strong, evidence: [nexora, ivolve_gitops, cicd_pipeline] }
+    - { id: argo_rollouts, name: Argo Rollouts (canary), level: working, evidence: [nexora] }
+    - { id: sonarqube, name: SonarQube, level: working, evidence: [cicd_pipeline, nti] }
+  security:
+    - { id: trivy, name: Trivy, level: working, evidence: [nexora, cicd_pipeline, ecs_fargate, nti] }
+    - { id: cosign, name: Cosign image signing, level: working, evidence: [nexora, ecs_fargate] }
+    - { id: eso, name: External Secrets Operator, level: working, evidence: [nexora, ivolve_gitops] }
+    - { id: netpol, name: "Kubernetes RBAC, NetworkPolicies, Cilium", level: working, evidence: [nexora, k8s_security_lab] }
+  observability:
+    - { id: prometheus, name: "Prometheus, Alertmanager", level: strong, evidence: [nexora, ivolve_gitops, cicd_pipeline, nti] }
+    - { id: grafana, name: Grafana, level: strong, evidence: [nexora, ivolve_gitops, nti] }
+    - { id: loki, name: "Loki, Fluent Bit, Promtail", level: working, evidence: [nexora, nti] }
+    - { id: tempo_otel, name: "Tempo, OpenTelemetry", level: familiar, evidence: [nexora] }
+    - { id: hpa, name: "HPA, metrics-server", level: working, evidence: [nexora] }
+  data_messaging:
+    - { id: sql, name: SQL, level: working, evidence: [nexora] }
+    - { id: mysql, name: MySQL, level: working, evidence: [nexora, ivolve_gitops, terraform_3tier, ecs_fargate] }
+    - { id: postgresql, name: PostgreSQL, level: working, evidence: [barq] }
+    - { id: kafka, name: "Apache Kafka (Strimzi, transactional outbox)", level: working, evidence: [nexora] }
+  programming:
+    - { id: python, name: "Python (FastAPI, Flask, Pytest)", level: working, evidence: [nexora, barq] }
+    - { id: groovy, name: Groovy (Jenkins pipelines), level: working, evidence: [cicd_pipeline] }
+    - { id: rest_apis, name: REST APIs, level: working, evidence: [nexora, barq] }
+    - { id: yaml, name: YAML, level: strong, evidence: [nexora] }
+    - { id: windows_batch, name: Windows batch scripting, level: familiar, evidence: [] }   # only when a job asks for it
+  other:
+    - { id: git, name: "Git, GitHub", level: strong, evidence: [nexora, sysadmin_lab] }
+    - { id: backstage, name: Backstage developer portal, level: familiar, evidence: [nexora] }
+    - { id: incident_docs, name: "Runbooks, incident reports, ticket-based change", level: working, evidence: [sysadmin_lab, nexora] }
+
+soft_skills: [Problem solving, Troubleshooting, Written documentation, Time management, Teamwork, Self-learning]
+
+known_gaps:   # never claimed; used for the fit score's "missing" list
+  - Windows Server / Active Directory administration in production
+  - Azure or GCP production experience
+  - Paid full-time experience beyond the internship
+  - On-call for a live production system
+
+languages:
+  - { name: Arabic, level: Native }
+  - { name: English, level: Fluent }
+
+# ---------------------------------------------------------------------------
+# Default answers for form screening questions (PLAN.md section 9).
+application_answers:
+  notice_period: Immediate
+  expected_salary_egp: "Negotiable"
+  military_status: Exempted
+  willing_to_relocate: "Yes"
+  work_authorization: Egypt

@@ -1,0 +1,28 @@
+{
+  "is_job_post": true,
+  "jobs": [
+    {
+      "title": "NOC Engineer",
+      "company": "Orbitel Networks",
+      "location": "Maadi, Cairo",
+      "work_mode": "unknown",
+      "seniority": "unknown",
+      "years_min": null,
+      "requirements": [
+        "Work 24/7 shifts",
+        "Experience with monitoring tools (Zabbix, Grafana)",
+        "CCNA level knowledge"
+      ],
+      "nice_to_have": [],
+      "apply_channel": "email",
+      "apply_email": "noc.jobs@orbitel.example",
+      "apply_url": null,
+      "apply_phone": null,
+      "subject_hint": null,
+      "deadline": null,
+      "language": "en",
+      "eligibility": [],
+      "scam_signals": []
+    }
+  ]
+}

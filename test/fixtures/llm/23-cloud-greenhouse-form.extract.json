@@ -1,0 +1,24 @@
+{
+  "is_job_post": true,
+  "jobs": [
+    {
+      "title": "Cloud Engineer (AWS)",
+      "company": "Nilecode Systems",
+      "location": null,
+      "work_mode": "unknown",
+      "seniority": "unknown",
+      "years_min": null,
+      "requirements": [],
+      "nice_to_have": [],
+      "apply_channel": "form",
+      "apply_email": null,
+      "apply_url": "https://boards.greenhouse.io/nilecode/jobs/7012345?gh_src=whatsapp#app",
+      "apply_phone": null,
+      "subject_hint": null,
+      "deadline": null,
+      "language": "en",
+      "eligibility": [],
+      "scam_signals": []
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "fit_score": 52,
+  "matched": [
+    {
+      "requirement": "Linux",
+      "evidence": ["linux", "sysadmin_lab", "lab_ansible"]
+    },
+    {
+      "requirement": "Networking",
+      "evidence": ["net_fundamentals", "vpn", "squid", "aws_networking"]
+    }
+  ],
+  "missing": [
+    "Customer communication: no customer-facing support experience or client communication is stated in the profile (incident_docs covers internal runbooks and reports only)",
+    "Senior-level support experience: the profile shows an internship and projects, with no paid full-time support role"
+  ],
+  "eligibility_issues": [],
+  "summary": "Strong on Linux and networking from the sysadmin lab and projects, but no customer-communication evidence and the senior seniority level is a poor fit for an intern-level profile."
+}

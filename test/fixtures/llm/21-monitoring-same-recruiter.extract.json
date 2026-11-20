@@ -1,0 +1,31 @@
+{
+  "is_job_post": true,
+  "jobs": [
+    {
+      "title": "Monitoring Engineer",
+      "company": "Orbitel Networks",
+      "location": null,
+      "work_mode": "unknown",
+      "seniority": "unknown",
+      "years_min": 1,
+      "requirements": [
+        "Experience with Zabbix",
+        "Experience with Prometheus",
+        "Experience with Grafana",
+        "Experience with alerting",
+        "Experience with incident response",
+        "At least 1 year of experience"
+      ],
+      "nice_to_have": [],
+      "apply_channel": "email",
+      "apply_email": "noc.jobs@orbitel.example",
+      "apply_url": null,
+      "apply_phone": null,
+      "subject_hint": null,
+      "deadline": null,
+      "language": "en",
+      "eligibility": [],
+      "scam_signals": []
+    }
+  ]
+}

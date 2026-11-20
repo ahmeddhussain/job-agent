@@ -1,0 +1,52 @@
+{
+  "fit_score": 72,
+  "matched": [
+    {
+      "requirement": "Years of experience (1 year) - checked by a separate filter; not scored",
+      "evidence": ["ivolve_general", "nti_training"]
+    },
+    {
+      "requirement": "AWS services for cloud support (EC2, VPC, RDS, ECS, EKS, IAM, CloudWatch)",
+      "evidence": ["aws", "ec2_alb_asg", "aws_networking", "rds", "eks", "cloudwatch"]
+    },
+    {
+      "requirement": "AWS certification (Solutions Architect Associate, Cloud Practitioner)",
+      "evidence": [
+        "AWS Certified Solutions Architect – Associate",
+        "AWS Certified Cloud Practitioner"
+      ]
+    },
+    {
+      "requirement": "Linux administration and troubleshooting",
+      "evidence": ["linux", "systemd", "firewalld", "selinux", "nfs", "sysadmin_lab"]
+    },
+    {
+      "requirement": "Networking fundamentals (TCP/IP, DNS, routing, VPN)",
+      "evidence": ["net_fundamentals", "vpn", "aws_networking", "squid"]
+    },
+    {
+      "requirement": "Monitoring and alerting",
+      "evidence": ["prometheus", "grafana", "loki", "ecs_monitoring", "cloudwatch"]
+    },
+    {
+      "requirement": "Incident handling and documentation (runbooks, incident reports, ticket-based change)",
+      "evidence": ["incident_docs", "lab_drills"]
+    },
+    {
+      "requirement": "Scripting for automation and troubleshooting",
+      "evidence": ["bash", "python", "ansible"]
+    },
+    {
+      "requirement": "Infrastructure as code for cloud environments",
+      "evidence": ["terraform", "nti_pipeline"]
+    }
+  ],
+  "missing": [
+    "Customer-facing or client support experience is not shown in the profile",
+    "Paid full-time support experience beyond the internship",
+    "Windows Server / Active Directory production administration (known gap, if the role needs it)",
+    "Azure or GCP production experience (if the role needs it)"
+  ],
+  "eligibility_issues": [],
+  "summary": "Strong on AWS, Linux, networking and monitoring for a cloud support role; lacks shown customer-facing support experience and paid full-time history."
+}

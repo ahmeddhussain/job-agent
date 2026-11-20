@@ -1,0 +1,24 @@
+{
+  "is_job_post": true,
+  "jobs": [
+    {
+      "title": "Platform Engineer",
+      "company": "Cedar Analytics",
+      "location": null,
+      "work_mode": "remote",
+      "seniority": "unknown",
+      "years_min": 2,
+      "requirements": ["Kubernetes", "Terraform", "GitOps (ArgoCD)", "Observability"],
+      "nice_to_have": [],
+      "apply_channel": "form",
+      "apply_email": null,
+      "apply_url": "https://www.linkedin.com/jobs/view/4123456789/?utm_source=share&utm_medium=member_android",
+      "apply_phone": null,
+      "subject_hint": null,
+      "deadline": null,
+      "language": "en",
+      "eligibility": [],
+      "scam_signals": []
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "is_job_post": true,
+  "jobs": [
+    {
+      "title": "Cloud Engineer",
+      "company": "Sinai Cloud Solutions",
+      "location": null,
+      "work_mode": "remote",
+      "seniority": "unknown",
+      "years_min": 1,
+      "requirements": ["At least 1 year of experience with AWS and Azure"],
+      "nice_to_have": [],
+      "apply_channel": "email",
+      "apply_email": "hr@sinaicloud.example",
+      "apply_url": null,
+      "apply_phone": null,
+      "subject_hint": "Cloud Engineer",
+      "deadline": null,
+      "language": "mixed",
+      "eligibility": [],
+      "scam_signals": []
+    }
+  ]
+}

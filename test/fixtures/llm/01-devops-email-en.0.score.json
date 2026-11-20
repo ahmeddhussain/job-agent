@@ -1,0 +1,42 @@
+{
+  "fit_score": 90,
+  "matched": [
+    {
+      "requirement": "AWS (EC2, VPC, IAM)",
+      "evidence": [
+        "aws",
+        "ec2_alb_asg",
+        "aws_networking",
+        "iam_oidc",
+        "terraform_3tier",
+        "nexora_infra"
+      ]
+    },
+    {
+      "requirement": "Terraform",
+      "evidence": ["terraform", "ivg_terraform", "nexora_infra", "lab_infra"]
+    },
+    {
+      "requirement": "Docker & Kubernetes",
+      "evidence": [
+        "docker",
+        "kubernetes",
+        "nexora_gitops",
+        "ivolve_projects",
+        "k8s_security_lab",
+        "ecs_fargate"
+      ]
+    },
+    {
+      "requirement": "CI/CD with Jenkins or GitHub Actions",
+      "evidence": ["jenkins", "github_actions", "cicd_jenkins", "nexora_cicd", "ivg_stack"]
+    },
+    {
+      "requirement": "Linux administration",
+      "evidence": ["linux", "sysadmin_lab", "lab_compliance", "lab_identity", "lab_services"]
+    }
+  ],
+  "missing": [],
+  "eligibility_issues": [],
+  "summary": "Strong on AWS, Terraform, Docker/Kubernetes, Jenkins/GitHub Actions and Linux, all backed by projects and labs; only gap is paid full-time experience beyond the internship, which the job does not require."
+}

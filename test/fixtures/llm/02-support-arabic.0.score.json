@@ -1,0 +1,23 @@
+{
+  "fit_score": 78,
+  "matched": [
+    {
+      "requirement": "Experience from 0 to 2 years (junior level)",
+      "evidence": ["ivolve_general", "nti_training", "sysadmin_lab"]
+    },
+    {
+      "requirement": "Knowledge of Linux systems",
+      "evidence": ["linux", "systemd", "selinux", "firewalld", "freeipa", "lab_compliance"]
+    },
+    {
+      "requirement": "Knowledge of Windows systems (partial: only familiar-level scripting, no Windows Server or AD administration)",
+      "evidence": ["windows_batch"]
+    }
+  ],
+  "missing": [
+    "Windows systems administration beyond familiar-level batch scripting (Windows Server / Active Directory in production is a known gap)",
+    "Excellent communication skills: the profile shows written documentation (incident_docs, lab_drills incident reports) but no evidence of customer-facing or support communication"
+  ],
+  "eligibility_issues": [],
+  "summary": "Strong on Linux, networking and troubleshooting documentation, junior-level fit; partial on Windows (familiar only) and communication is not directly proven."
+}

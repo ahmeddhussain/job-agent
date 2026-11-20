@@ -1,0 +1,43 @@
+{
+  "is_job_post": true,
+  "jobs": [
+    {
+      "title": "Linux System Administrator",
+      "company": null,
+      "location": null,
+      "work_mode": "unknown",
+      "seniority": "unknown",
+      "years_min": 2,
+      "requirements": ["2 years of experience"],
+      "nice_to_have": [],
+      "apply_channel": "email",
+      "apply_email": "recruiter.mona@talentbridge.example",
+      "apply_url": null,
+      "apply_phone": null,
+      "subject_hint": null,
+      "deadline": null,
+      "language": "en",
+      "eligibility": [],
+      "scam_signals": []
+    },
+    {
+      "title": "Cloud Support Engineer",
+      "company": null,
+      "location": null,
+      "work_mode": "unknown",
+      "seniority": "unknown",
+      "years_min": 1,
+      "requirements": ["1 year of experience"],
+      "nice_to_have": [],
+      "apply_channel": "email",
+      "apply_email": "recruiter.mona@talentbridge.example",
+      "apply_url": null,
+      "apply_phone": null,
+      "subject_hint": null,
+      "deadline": null,
+      "language": "en",
+      "eligibility": [],
+      "scam_signals": []
+    }
+  ]
+}

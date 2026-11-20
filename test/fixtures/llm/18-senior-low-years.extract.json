@@ -1,0 +1,24 @@
+{
+  "is_job_post": true,
+  "jobs": [
+    {
+      "title": "Senior Technical Support Specialist",
+      "company": "Nilecode Systems",
+      "location": "Nasr City",
+      "work_mode": "unknown",
+      "seniority": "senior",
+      "years_min": 2,
+      "requirements": ["2 years of experience", "Linux", "Networking", "Customer communication"],
+      "nice_to_have": [],
+      "apply_channel": "email",
+      "apply_email": "support@nilecode.example",
+      "apply_url": null,
+      "apply_phone": null,
+      "subject_hint": null,
+      "deadline": null,
+      "language": "en",
+      "eligibility": [],
+      "scam_signals": []
+    }
+  ]
+}

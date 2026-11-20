@@ -1,0 +1,22 @@
+{
+  "fit_score": 30,
+  "matched": [
+    {
+      "requirement": "Routing and switching (OSPF, BGP)",
+      "evidence": ["net_routing_switching", "net_fundamentals", "cisco_pt"]
+    },
+    {
+      "requirement": "MPLS basics",
+      "evidence": ["mpls_vrf"]
+    }
+  ],
+  "missing": [
+    "OSPF and BGP are only at familiar level (course/Packet Tracer exposure); no production or lab evidence of configuring them on real routers.",
+    "MPLS is familiar level only and has no evidence entry; no lab or project shows MPLS work.",
+    "Network back-office operations (NOC, provisioning, ticket-based network support on carrier equipment) is not shown beyond general incident and runbook experience."
+  ],
+  "eligibility_issues": [
+    "CCNA certification required: the profile holds no CCNA certification (CCNA curriculum studied only, and CCNA is on the NOT held list)."
+  ],
+  "summary": "Partial networking overlap (OSPF/BGP and MPLS only at familiar level) but the required CCNA certification is not held, so this is a weak fit."
+}

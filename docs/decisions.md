@@ -93,3 +93,28 @@ D1 to D10 come from `PLAN.md` section 3 (full reasoning there); new decisions ar
 | Image flyers | Vision extraction of images and PDFs | Text posts only; no media downloaded (R3) | Most of his target posts are text. Removes file parsing and media storage from the attack surface, and the untested image path through `claude -p` |
 | Writing model | `claude-sonnet-5-5` for tailoring | Unchanged, and confirmed for all writing: CV, cover letter, email | Haiku stays on extraction and scoring, where volume is high and the task is simple |
 | Private data | Whole profile gitignored | Unchanged; additionally, one phone number is blocklisted from Git everywhere (G2) and the rest of the portfolio contact data is not treated as secret | Ahmed's call: everything already public on his portfolio is fine; only one number stays private |
+
+## D19: Fit-score rubric calibrated after the first live run
+
+- **Choice:** the scoring prompt (`prompts/score.md`) tells the model that years of experience are already filtered (never count them as missing), that projects and labs are valid evidence, and that a post with few or no requirements is judged against the core skills its title implies. It also anchors the scale (strong candidate 70–95, adjacent 40–70, unrelated under 30). The thresholds (P1 45, P2 60, P3 75) did not change.
+- **Evidence:** the first live run passed the gate, but the scores were wrong for the jobs that matter most:
+
+  | Fixture | Before | After |
+  |---|---|---|
+  | 04 Junior DevOps Engineer (no requirements listed) | 30, skipped | 84, queued |
+  | 23 Cloud Engineer (AWS) (title only) | 18, skipped | 75, queued |
+  | 13 Linux System Administrator (2 years) | 55, skipped | 68, queued |
+  | 18 Senior Technical Support Specialist (2 years) | 40, skipped | 52, queued |
+  | 04 Frontend Developer | 8, skipped | 20, skipped |
+  | 20 Data Analyst | 50, skipped | 50, skipped |
+
+  The model's own summaries showed why: "The post lists no requirements, so no must-haves can be matched" and "the 2-year experience requirement is not proven since the only work experience is an internship".
+- **Alternatives:** lower the thresholds (would also let unrelated roles through); compute the score in code from matched/missing counts (fails the same way on posts without requirements).
+- **Why:** the defect was in what the model was told, not in where the bar sits. Fixing the instructions keeps unrelated roles low while lifting the right ones.
+- **Production would add:** a labelled set of real posts with Ahmed's own apply/skip decisions, to measure precision and recall of the score over time.
+
+## D20: Record/replay of model outputs
+
+- **Choice:** `agent run --dry-run --fixtures --record` saves each validated structured output to `test/fixtures/llm/<fixture>.<stage>.json`; `npm test` replays them (`ReplayLlm`) through the real pipeline, against the committed example profile.
+- **Alternatives:** mock the model per test (tests the mocks, not the pipeline); call Claude in CI (needs a token in CI, costs usage, and results change run to run).
+- **Why:** CI never needs a Claude token and is deterministic, yet still exercises the real prompts' outputs end to end. Re-record after changing a prompt.

@@ -144,3 +144,40 @@ result could not be trusted either.
 
 **Fix.** Feed `scan_text` through process substitution (`scan_text "$f" < <(git diff ...)`)
 so it runs in the main shell. All 8 tests pass, and the history was re-scanned: clean.
+
+---
+
+## 7. Claude's isolated HOME was created inside the working directory
+
+**Symptom.** After the first live P2 run, `data/claude-home` was empty, and:
+
+```
+$ find data/claude-work -maxdepth 3
+data/claude-work/data/claude-home/.claude.json
+$ stat -c '%A %n' data/claude-work/data/claude-home
+drwxr-xr-x data/claude-work/data/claude-home
+```
+
+**Diagnosis.** `HOME` was passed to the CLI as the relative path `data/claude-home`,
+and the CLI runs with `cwd=data/claude-work`, so the relative path resolved inside the
+working directory. Two security properties broke: the "empty" working directory wasn't
+empty, and the home was world-readable (`755`, created by the CLI).
+
+**Fix.** `ClaudeCli` resolves `home` and `workdir` to absolute paths once, in the
+constructor (a new test runs from another directory with relative paths). The stray
+directory was deleted, and `grep` confirmed the token was not written to any file under
+`data/`.
+
+---
+
+## 8. Good-fit jobs scored too low on the first live run
+
+**Symptom.** The P2 gate passed, but "Junior DevOps Engineer" scored 30 and "Cloud
+Engineer (AWS)" scored 18, so both were skipped as `low_fit`.
+
+**Diagnosis.** The recorded fit outputs showed `matched: []` with the summary "The post
+lists no requirements, so no must-haves can be matched", and a years-of-experience
+requirement counted as missing even though the hard filter had already allowed it.
+
+**Fix.** Rubric calibration in `prompts/score.md` (D19); same thresholds. Re-recorded:
+84 and 75.

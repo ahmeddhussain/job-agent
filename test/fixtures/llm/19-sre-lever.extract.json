@@ -1,0 +1,30 @@
+{
+  "is_job_post": true,
+  "jobs": [
+    {
+      "title": "Site Reliability Engineer (SRE)",
+      "company": "Cedar Analytics",
+      "location": null,
+      "work_mode": "remote",
+      "seniority": "unknown",
+      "years_min": 2,
+      "requirements": [
+        "Prometheus",
+        "Grafana",
+        "Kubernetes",
+        "On-call rotation participation",
+        "2-3 years of experience"
+      ],
+      "nice_to_have": [],
+      "apply_channel": "form",
+      "apply_email": null,
+      "apply_url": "https://jobs.lever.co/cedaranalytics/0f3c9b2e-1d4a-4b6e-9c1a-2f5d7e8a9b10?lever-source=WhatsApp",
+      "apply_phone": null,
+      "subject_hint": null,
+      "deadline": null,
+      "language": "en",
+      "eligibility": [],
+      "scam_signals": []
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "fit_score": 48,
+  "matched": [
+    {
+      "requirement": "Experience with monitoring tools (Grafana)",
+      "evidence": ["grafana", "nexora_observability", "prometheus"]
+    },
+    {
+      "requirement": "CCNA level knowledge (networking fundamentals: TCP/IP, DNS, subnetting, routing; VLAN, STP, OSPF, BGP at familiar level)",
+      "evidence": ["net_fundamentals", "net_routing_switching", "cisco_pt", "packet_tracer"]
+    }
+  ],
+  "missing": [
+    "24/7 shift work: the profile does not state availability for rotating or night shifts",
+    "Zabbix experience: not shown anywhere in the profile (Prometheus and Grafana are related but not Zabbix)",
+    "CCNA level is only partly shown: CCNA is studied, not certified, and routing/switching skills are familiar level only, with no live network operations evidence",
+    "No NOC or live production on-call experience (listed as a known gap)"
+  ],
+  "eligibility_issues": [],
+  "summary": "Adjacent fit: Grafana and networking fundamentals are covered, but Zabbix, 24/7 shift availability and CCNA-level depth are not proven."
+}

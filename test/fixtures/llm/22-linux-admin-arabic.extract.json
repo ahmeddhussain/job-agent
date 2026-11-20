@@ -1,0 +1,24 @@
+{
+  "is_job_post": true,
+  "jobs": [
+    {
+      "title": "Linux System Administrator",
+      "company": null,
+      "location": "6th of October City",
+      "work_mode": "onsite",
+      "seniority": "unknown",
+      "years_min": 1,
+      "requirements": ["RHEL", "Ansible", "Bash", "FreeIPA", "1-2 years of experience"],
+      "nice_to_have": [],
+      "apply_channel": "email",
+      "apply_email": "sysadmin.jobs@deltaware.example",
+      "apply_url": null,
+      "apply_phone": null,
+      "subject_hint": null,
+      "deadline": null,
+      "language": "mixed",
+      "eligibility": [],
+      "scam_signals": []
+    }
+  ]
+}
