@@ -1,5 +1,5 @@
 // The `agent` command tree. Built by a factory so tests can run it without a process.
-import { Command, Option } from 'commander';
+import { Argument, Command, Option } from 'commander';
 import { loadConfig } from '../config.js';
 import { listTables, migrate, openDb } from '../db/index.js';
 
@@ -83,12 +83,46 @@ export function buildProgram(io: Io): Command {
   program
     .command('wa:login')
     .description('link the WhatsApp number once (QR in the terminal)')
-    .action(notYet('wa:login', 'P4'));
+    .action(async () => {
+      const { waLogin } = await import('./whatsapp.js');
+      await waLogin(loadConfig(configPath()), io);
+    });
 
   program
     .command('wa:groups')
     .description('list WhatsApp groups with their ids, to build the allowlist')
-    .action(notYet('wa:groups', 'P4'));
+    .action(async () => {
+      const { waGroups } = await import('./whatsapp.js');
+      await waGroups(loadConfig(configPath()), io);
+    });
+
+  program
+    .command('collect')
+    .description('collect new posts from one source into the database (no model calls)')
+    .addArgument(new Argument('<source>', 'source').choices(['whatsapp', 'whatsapp-export']))
+    .option('--since <iso>', 'override the watermark (ISO-8601)')
+    .option('--dry-run', 'count only; write nothing')
+    .option('--file <path>', 'whatsapp-export: the exported chat .txt')
+    .option('--group <name>', 'whatsapp-export: the group the export came from')
+    .action(
+      async (
+        source: string,
+        opts: { since?: string; dryRun?: boolean; file?: string; group?: string },
+      ) => {
+        const cfg = loadConfig(configPath());
+        const wa = await import('./whatsapp.js');
+        if (source === 'whatsapp') {
+          await wa.collectWhatsAppCommand(cfg, opts, io);
+          return;
+        }
+        if (!opts.file || !opts.group) throw new Error('whatsapp-export needs --file and --group');
+        wa.collectExportCommand(
+          cfg,
+          { file: opts.file, group: opts.group, ...(opts.dryRun ? { dryRun: true } : {}) },
+          io,
+        );
+      },
+    );
 
   program
     .command('gmail:auth')

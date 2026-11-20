@@ -19,6 +19,12 @@ whatsapp:
   groups: []                       # allowlist of group names or ids; fill from `agent wa:groups` (P4)
   fetch_limit: 500                 # per group per run
   settle_seconds: 20               # wait after `ready` for history sync
+  ready_timeout_seconds: 120       # normal start; a linked session is ready well before this
+  login_timeout_seconds: 300       # wa:login: time to scan the QR
+  web_cache_path: data/wa-web-cache   # pins the WhatsApp Web version that worked (webVersionCache: local)
+  author_salt_file: data/wa-author-salt   # members' ids are stored only as salted hashes
+  min_text_chars: 40               # shorter messages need an email or link to be kept
+  export_date_order: dmy           # exported chats from an Egyptian phone: day/month/year
 
 alerts:
   gmail_label: job-alerts          # Gmail filter puts LinkedIn/Wuzzuf/Bayt/Indeed alerts here

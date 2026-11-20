@@ -167,3 +167,16 @@ D1 to D10 come from `PLAN.md` section 3 (full reasoning there); new decisions ar
 - **ATS check change:** links are now verified as real link targets in the PDF (`/URI` annotations), not as visible text. Keyword coverage counts only keywords the profile backs.
 - **Trade-off:** some older parsers read only visible text and won't see the GitHub/LinkedIn URLs behind the words. The URLs are still present as clickable links, and the job keywords now carry more weight. This was Ahmed's call.
 - **Result (live, 3 gate jobs):** one page each, ATS pass, keyword coverage 100% on all three (the Support CV was 50% before the keyword fix), 8–9 working links, private number absent.
+
+## D26: WhatsApp collector (P4)
+
+- **Choice:**
+  - `ReadOnlyWhatsApp` (`src/collect/whatsapp/readonly.ts`) is the only module that imports `whatsapp-web.js` 1.34.8. It keeps the client private and exposes `getChats`, `fetchMessages` and `destroy`. The rest of the code sees only the `WhatsAppReader` interface.
+  - Verified in the library source: `Chat.fetchMessages` only reads (it loads earlier messages; no `sendSeen`), and presence is sent only by `sendPresenceAvailable`, which is never called.
+  - Tests fail if any WhatsApp write call appears anywhere in `src/`. The facade is checked with the full list, including generic names such as `delete`, `reply` and `join`.
+  - `LocalAuth` in `data/wa-session/` (owner-only); `webVersionCache: local` in `data/wa-web-cache/` pins the WhatsApp Web build that worked.
+  - Text posts and media captions only; nothing is downloaded (R3). Short messages without an email or link are dropped before any model call. Other members' ids are stored only as salted SHA-256 hashes (salt in `data/wa-author-salt`, 0600).
+- **Watermark semantics (refines PLAN 5.1):** a group's watermark advances in the same transaction that commits its raw items, not after model processing. Once a post is in `raw_items` it is durable, and P7 processes unprocessed raw items, so nothing is lost if a later stage fails, and the collector never re-reads posts it already stored. The 15-minute overlap plus dedupe L0 covers clock edges.
+- **Commands:** `agent wa:login` (QR in the terminal, one time), `agent wa:groups` (prints names and ids for the allowlist), `agent collect whatsapp [--dry-run] [--since ISO]`, and the fallback `agent collect whatsapp-export --file chat.txt --group "Name"`, which parses Android and iOS exports in Cairo time (DST-aware).
+- **Alternatives:** Baileys (lighter, but reimplements the protocol); official Cloud API (can't read groups you only joined); manual exports only (safe but not automatic). Kept as decided in D3.
+- **Audit additions (accepted):** `archiver`/`zip-stream`/`archiver-utils`/`glob`/`minimatch` (moderate) arrive with `whatsapp-web.js`, which uses them only for `RemoteAuth` (zipping a session to remote storage). We use `LocalAuth`, so that code never runs. The high findings remain the two install-time ones from D22.

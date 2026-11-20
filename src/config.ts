@@ -33,6 +33,12 @@ export const ConfigSchema = z.strictObject({
     groups: z.array(realString),
     fetch_limit: positiveInt,
     settle_seconds: z.number().int().min(0),
+    ready_timeout_seconds: positiveInt,
+    login_timeout_seconds: positiveInt,
+    web_cache_path: realString,
+    author_salt_file: realString,
+    min_text_chars: positiveInt,
+    export_date_order: z.enum(['dmy', 'mdy']),
   }),
   alerts: z.strictObject({
     gmail_label: realString,
