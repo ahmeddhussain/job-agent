@@ -1,0 +1,38 @@
+{
+  "id": "24-cloud-wuzzuf-alert",
+  "description": "Same job as 23 from a job-board alert with a different link",
+  "source": "alert_email",
+  "source_name": "alerts@wuzzuf.example",
+  "source_ref": "gm-0002",
+  "posted_at": "2026-11-19T20:00:00Z",
+  "text": "New job match: Cloud Engineer – AWS\nNilecode Systems – Cairo\nhttps://wuzzuf.example/jobs/p/abc123-Cloud-Engineer-AWS",
+  "media": null,
+  "expected": {
+    "is_job_post": true,
+    "jobs": [
+      {
+        "title": "Cloud Engineer – AWS",
+        "company": "Nilecode Systems",
+        "location": "Cairo",
+        "work_mode": "unknown",
+        "seniority": "unknown",
+        "years_min": null,
+        "apply_channel": "form",
+        "apply_email": null,
+        "apply_url": "https://wuzzuf.example/jobs/p/abc123-Cloud-Engineer-AWS",
+        "subject_hint": null,
+        "deadline": null,
+        "language": "en",
+        "tier": 1,
+        "angle": "devops",
+        "excluded": null,
+        "skip_reason": null,
+        "flags": []
+      }
+    ],
+    "dedupe": {
+      "layer": "L3",
+      "duplicate_of": "23-cloud-greenhouse-form"
+    }
+  }
+}

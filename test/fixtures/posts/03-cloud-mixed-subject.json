@@ -1,0 +1,35 @@
+{
+  "id": "03-cloud-mixed-subject",
+  "description": "Mixed Arabic/English post with a required subject",
+  "source": "whatsapp",
+  "source_name": "IT Jobs Egypt",
+  "source_ref": "wa-0003",
+  "posted_at": "2026-11-19T08:05:00Z",
+  "text": "مطلوب Cloud Engineer لشركة Sinai Cloud Solutions\nخبرة سنة على الأقل في AWS و Azure\nRemote\nابعت الـ CV على hr@sinaicloud.example مع كتابة Cloud Engineer في الـ subject",
+  "media": null,
+  "expected": {
+    "is_job_post": true,
+    "jobs": [
+      {
+        "title": "Cloud Engineer",
+        "company": "Sinai Cloud Solutions",
+        "location": null,
+        "work_mode": "remote",
+        "seniority": "unknown",
+        "years_min": 1,
+        "apply_channel": "email",
+        "apply_email": "hr@sinaicloud.example",
+        "apply_url": null,
+        "subject_hint": "Cloud Engineer",
+        "deadline": null,
+        "language": "mixed",
+        "tier": 1,
+        "angle": "devops",
+        "excluded": null,
+        "skip_reason": null,
+        "flags": []
+      }
+    ],
+    "dedupe": null
+  }
+}

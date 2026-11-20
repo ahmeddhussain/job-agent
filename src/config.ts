@@ -21,6 +21,7 @@ export const ConfigSchema = z.strictObject({
     db: realString,
     profile: realString,
     media_dir: realString,
+    titles: realString,
   }),
   run: z.strictObject({
     first_run_lookback_hours: positiveInt,

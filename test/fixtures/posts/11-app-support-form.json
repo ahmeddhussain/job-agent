@@ -1,0 +1,35 @@
+{
+  "id": "11-app-support-form",
+  "description": "Application support role with a form link",
+  "source": "whatsapp",
+  "source_name": "IT Jobs Egypt",
+  "source_ref": "wa-0012",
+  "posted_at": "2026-11-19T13:30:00Z",
+  "text": "Application Support Engineer – Fintech\nCompany: Pyramid Pay\nShift-based, Cairo\nSQL, Linux, REST APIs, log analysis, ticketing (Jira)\n0-2 years\nApply: https://pyramidpay.example/careers/app-support-engineer?utm_campaign=wa",
+  "media": null,
+  "expected": {
+    "is_job_post": true,
+    "jobs": [
+      {
+        "title": "Application Support Engineer",
+        "company": "Pyramid Pay",
+        "location": "Cairo",
+        "work_mode": "unknown",
+        "seniority": "unknown",
+        "years_min": 0,
+        "apply_channel": "form",
+        "apply_email": null,
+        "apply_url": "https://pyramidpay.example/careers/app-support-engineer",
+        "subject_hint": null,
+        "deadline": null,
+        "language": "en",
+        "tier": 1,
+        "angle": "support",
+        "excluded": null,
+        "skip_reason": null,
+        "flags": []
+      }
+    ],
+    "dedupe": null
+  }
+}

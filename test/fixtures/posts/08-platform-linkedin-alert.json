@@ -1,0 +1,38 @@
+{
+  "id": "08-platform-linkedin-alert",
+  "description": "The same job from a LinkedIn alert email",
+  "source": "alert_email",
+  "source_name": "jobalerts-noreply@linkedin.com",
+  "source_ref": "gm-0001",
+  "posted_at": "2026-11-19T12:00:00Z",
+  "text": "Your job alert for Platform Engineer in Egypt\n\nPlatform Engineer\nCedar Analytics\nEgypt (Remote)\nView job: https://www.linkedin.com/comm/jobs/view/4123456789/?trackingId=abc123&refId=xyz&trk=eml-email_job_alert_digest_01",
+  "media": null,
+  "expected": {
+    "is_job_post": true,
+    "jobs": [
+      {
+        "title": "Platform Engineer",
+        "company": "Cedar Analytics",
+        "location": "Egypt",
+        "work_mode": "remote",
+        "seniority": "unknown",
+        "years_min": null,
+        "apply_channel": "form",
+        "apply_email": null,
+        "apply_url": "https://linkedin.com/jobs/view/4123456789",
+        "subject_hint": null,
+        "deadline": null,
+        "language": "en",
+        "tier": 1,
+        "angle": "devops",
+        "excluded": null,
+        "skip_reason": null,
+        "flags": []
+      }
+    ],
+    "dedupe": {
+      "layer": "L3",
+      "duplicate_of": "07-platform-linkedin-share"
+    }
+  }
+}

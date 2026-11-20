@@ -1,0 +1,38 @@
+{
+  "id": "05c-noc-forward",
+  "description": "Same NOC post forwarded again with extra blank lines",
+  "source": "whatsapp",
+  "source_name": "Network Jobs Egypt",
+  "source_ref": "wa-0007",
+  "posted_at": "2026-11-19T10:02:00Z",
+  "text": "‼️ Hiring NOC Engineer\n\nCompany: Orbitel Networks\n\n Maadi, Cairo\n\n👉 24/7 shifts\n\n👉 Monitoring tools (Zabbix, Grafana)\n\n👉 CCNA level knowledge\n\n noc.jobs@orbitel.example",
+  "media": null,
+  "expected": {
+    "is_job_post": true,
+    "jobs": [
+      {
+        "title": "NOC Engineer",
+        "company": "Orbitel Networks",
+        "location": "Maadi, Cairo",
+        "work_mode": "onsite",
+        "seniority": "unknown",
+        "years_min": null,
+        "apply_channel": "email",
+        "apply_email": "noc.jobs@orbitel.example",
+        "apply_url": null,
+        "subject_hint": null,
+        "deadline": null,
+        "language": "en",
+        "tier": 2,
+        "angle": "monitoring",
+        "excluded": null,
+        "skip_reason": null,
+        "flags": []
+      }
+    ],
+    "dedupe": {
+      "layer": "L1",
+      "duplicate_of": "05a-noc-forward"
+    }
+  }
+}

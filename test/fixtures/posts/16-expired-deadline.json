@@ -1,0 +1,35 @@
+{
+  "id": "16-expired-deadline",
+  "description": "Deadline already passed",
+  "source": "whatsapp",
+  "source_name": "IT Jobs Egypt",
+  "source_ref": "wa-0017",
+  "posted_at": "2026-11-19T16:00:00Z",
+  "text": "IT Engineer – Sinai Cloud Solutions\nWindows & Linux servers, Active Directory, networking basics\nApply before 10 November 2026\nCV: it.jobs@sinaicloud.example",
+  "media": null,
+  "expected": {
+    "is_job_post": true,
+    "jobs": [
+      {
+        "title": "IT Engineer",
+        "company": "Sinai Cloud Solutions",
+        "location": null,
+        "work_mode": "unknown",
+        "seniority": "unknown",
+        "years_min": null,
+        "apply_channel": "email",
+        "apply_email": "it.jobs@sinaicloud.example",
+        "apply_url": null,
+        "subject_hint": null,
+        "deadline": "2026-11-10",
+        "language": "en",
+        "tier": 1,
+        "angle": "support",
+        "excluded": null,
+        "skip_reason": "deadline_passed",
+        "flags": []
+      }
+    ],
+    "dedupe": null
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "id": "23-cloud-greenhouse-form",
+  "description": "Form-only job on a Greenhouse board",
+  "source": "whatsapp",
+  "source_name": "Egypt DevOps Jobs",
+  "source_ref": "wa-0024",
+  "posted_at": "2026-11-19T19:30:00Z",
+  "text": "Cloud Engineer (AWS) — Nilecode Systems\nApply: https://boards.greenhouse.io/nilecode/jobs/7012345?gh_src=whatsapp#app",
+  "media": null,
+  "expected": {
+    "is_job_post": true,
+    "jobs": [
+      {
+        "title": "Cloud Engineer (AWS)",
+        "company": "Nilecode Systems",
+        "location": null,
+        "work_mode": "unknown",
+        "seniority": "unknown",
+        "years_min": null,
+        "apply_channel": "form",
+        "apply_email": null,
+        "apply_url": "https://boards.greenhouse.io/nilecode/jobs/7012345",
+        "subject_hint": null,
+        "deadline": null,
+        "language": "en",
+        "tier": 1,
+        "angle": "devops",
+        "excluded": null,
+        "skip_reason": null,
+        "flags": []
+      }
+    ],
+    "dedupe": null
+  }
+}

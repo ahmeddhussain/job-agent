@@ -1,0 +1,73 @@
+{
+  "id": "04-multi-job",
+  "description": "One post, three roles; only the DevOps one is relevant",
+  "source": "whatsapp",
+  "source_name": "Egypt DevOps Jobs",
+  "source_ref": "wa-0004",
+  "posted_at": "2026-11-19T08:40:00Z",
+  "text": "Pyramid Pay is hiring!\n1) Junior DevOps Engineer\n2) QA Automation Engineer\n3) Frontend Developer (React)\nLocation: New Cairo, onsite\nApply: talent@pyramidpay.example (mention the role in the subject)",
+  "media": null,
+  "expected": {
+    "is_job_post": true,
+    "jobs": [
+      {
+        "title": "Junior DevOps Engineer",
+        "company": "Pyramid Pay",
+        "location": "New Cairo",
+        "work_mode": "onsite",
+        "seniority": "junior",
+        "years_min": null,
+        "apply_channel": "email",
+        "apply_email": "talent@pyramidpay.example",
+        "apply_url": null,
+        "subject_hint": null,
+        "deadline": null,
+        "language": "en",
+        "tier": 1,
+        "angle": "devops",
+        "excluded": null,
+        "skip_reason": null,
+        "flags": []
+      },
+      {
+        "title": "QA Automation Engineer",
+        "company": "Pyramid Pay",
+        "location": "New Cairo",
+        "work_mode": "onsite",
+        "seniority": "unknown",
+        "years_min": null,
+        "apply_channel": "email",
+        "apply_email": "talent@pyramidpay.example",
+        "apply_url": null,
+        "subject_hint": null,
+        "deadline": null,
+        "language": "en",
+        "tier": 2,
+        "angle": "devops",
+        "excluded": null,
+        "skip_reason": null,
+        "flags": []
+      },
+      {
+        "title": "Frontend Developer",
+        "company": "Pyramid Pay",
+        "location": "New Cairo",
+        "work_mode": "onsite",
+        "seniority": "unknown",
+        "years_min": null,
+        "apply_channel": "email",
+        "apply_email": "talent@pyramidpay.example",
+        "apply_url": null,
+        "subject_hint": null,
+        "deadline": null,
+        "language": "en",
+        "tier": 3,
+        "angle": "devops",
+        "excluded": null,
+        "skip_reason": null,
+        "flags": []
+      }
+    ],
+    "dedupe": null
+  }
+}

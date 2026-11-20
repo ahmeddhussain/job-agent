@@ -1,0 +1,54 @@
+{
+  "id": "13-recruiter-two-roles",
+  "description": "A recruiter posting two different roles to one email",
+  "source": "whatsapp",
+  "source_name": "IT Jobs Egypt",
+  "source_ref": "wa-0014",
+  "posted_at": "2026-11-19T14:30:00Z",
+  "text": "Hiring for our client (a leading telecom company):\n• Linux System Administrator – 2 years\n• Cloud Support Engineer – 1 year\nSend CV to recruiter.mona@talentbridge.example and mention the position",
+  "media": null,
+  "expected": {
+    "is_job_post": true,
+    "jobs": [
+      {
+        "title": "Linux System Administrator",
+        "company": null,
+        "location": null,
+        "work_mode": "unknown",
+        "seniority": "unknown",
+        "years_min": 2,
+        "apply_channel": "email",
+        "apply_email": "recruiter.mona@talentbridge.example",
+        "apply_url": null,
+        "subject_hint": null,
+        "deadline": null,
+        "language": "en",
+        "tier": 2,
+        "angle": "systems",
+        "excluded": null,
+        "skip_reason": null,
+        "flags": []
+      },
+      {
+        "title": "Cloud Support Engineer",
+        "company": null,
+        "location": null,
+        "work_mode": "unknown",
+        "seniority": "unknown",
+        "years_min": 1,
+        "apply_channel": "email",
+        "apply_email": "recruiter.mona@talentbridge.example",
+        "apply_url": null,
+        "subject_hint": null,
+        "deadline": null,
+        "language": "en",
+        "tier": 1,
+        "angle": "support",
+        "excluded": null,
+        "skip_reason": null,
+        "flags": []
+      }
+    ],
+    "dedupe": null
+  }
+}

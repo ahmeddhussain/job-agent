@@ -1,0 +1,35 @@
+{
+  "id": "18-senior-low-years",
+  "description": "'Senior' in the title but only 2 years required",
+  "source": "whatsapp",
+  "source_name": "IT Jobs Egypt",
+  "source_ref": "wa-0019",
+  "posted_at": "2026-11-19T17:00:00Z",
+  "text": "Senior Technical Support Specialist (2 years experience)\nNilecode Systems, Nasr City\nLinux, networking, customer communication\nCV: support@nilecode.example",
+  "media": null,
+  "expected": {
+    "is_job_post": true,
+    "jobs": [
+      {
+        "title": "Senior Technical Support Specialist",
+        "company": "Nilecode Systems",
+        "location": "Nasr City",
+        "work_mode": "unknown",
+        "seniority": "senior",
+        "years_min": 2,
+        "apply_channel": "email",
+        "apply_email": "support@nilecode.example",
+        "apply_url": null,
+        "subject_hint": null,
+        "deadline": null,
+        "language": "en",
+        "tier": 1,
+        "angle": "support",
+        "excluded": null,
+        "skip_reason": null,
+        "flags": []
+      }
+    ],
+    "dedupe": null
+  }
+}

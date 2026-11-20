@@ -1,0 +1,15 @@
+{
+  "id": "15-non-job",
+  "description": "A question, not a job",
+  "source": "whatsapp",
+  "source_name": "Egypt DevOps Jobs",
+  "source_ref": "wa-0016",
+  "posted_at": "2026-11-19T15:30:00Z",
+  "text": "Anyone know a good Kubernetes course? preferably in Arabic 🙏",
+  "media": null,
+  "expected": {
+    "is_job_post": false,
+    "jobs": [],
+    "dedupe": null
+  }
+}

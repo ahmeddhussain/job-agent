@@ -1,0 +1,35 @@
+{
+  "id": "02-support-arabic",
+  "description": "Arabic technical support post",
+  "source": "whatsapp",
+  "source_name": "IT Jobs Egypt",
+  "source_ref": "wa-0002",
+  "posted_at": "2026-11-19T07:30:00Z",
+  "text": "مطلوب مهندس دعم فني (Technical Support Engineer) لشركة دلتا وير للبرمجيات بالقاهرة\nالمتطلبات:\n- خبرة من 0 إلى 2 سنة\n- معرفة بأنظمة Linux و Windows\n- مهارات تواصل ممتازة\nإرسال السيرة الذاتية على: jobs@deltaware.example",
+  "media": null,
+  "expected": {
+    "is_job_post": true,
+    "jobs": [
+      {
+        "title": "Technical Support Engineer",
+        "company": "Deltaware",
+        "location": "Cairo",
+        "work_mode": "unknown",
+        "seniority": "unknown",
+        "years_min": 0,
+        "apply_channel": "email",
+        "apply_email": "jobs@deltaware.example",
+        "apply_url": null,
+        "subject_hint": null,
+        "deadline": null,
+        "language": "ar",
+        "tier": 1,
+        "angle": "support",
+        "excluded": null,
+        "skip_reason": null,
+        "flags": []
+      }
+    ],
+    "dedupe": null
+  }
+}

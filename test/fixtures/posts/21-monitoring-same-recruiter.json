@@ -1,0 +1,35 @@
+{
+  "id": "21-monitoring-same-recruiter",
+  "description": "Different role to the same email as the NOC post: must NOT merge",
+  "source": "whatsapp",
+  "source_name": "IT Jobs Egypt",
+  "source_ref": "wa-0022",
+  "posted_at": "2026-11-19T18:30:00Z",
+  "text": "Monitoring Engineer\nOrbitel Networks\nZabbix, Prometheus, Grafana, alerting, incident response\n1+ year\nnoc.jobs@orbitel.example",
+  "media": null,
+  "expected": {
+    "is_job_post": true,
+    "jobs": [
+      {
+        "title": "Monitoring Engineer",
+        "company": "Orbitel Networks",
+        "location": null,
+        "work_mode": "unknown",
+        "seniority": "unknown",
+        "years_min": 1,
+        "apply_channel": "email",
+        "apply_email": "noc.jobs@orbitel.example",
+        "apply_url": null,
+        "subject_hint": null,
+        "deadline": null,
+        "language": "en",
+        "tier": 1,
+        "angle": "monitoring",
+        "excluded": null,
+        "skip_reason": null,
+        "flags": []
+      }
+    ],
+    "dedupe": null
+  }
+}

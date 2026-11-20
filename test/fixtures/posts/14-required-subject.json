@@ -1,0 +1,35 @@
+{
+  "id": "14-required-subject",
+  "description": "Post that requires an exact subject line",
+  "source": "whatsapp",
+  "source_name": "Egypt DevOps Jobs",
+  "source_ref": "wa-0015",
+  "posted_at": "2026-11-19T15:00:00Z",
+  "text": "Infrastructure Engineer needed at Deltaware\nVMware, Linux, Ansible, Bash\n1-2 years\nSend your CV to infra@deltaware.example with the subject: INFRA-2611 Infrastructure Engineer",
+  "media": null,
+  "expected": {
+    "is_job_post": true,
+    "jobs": [
+      {
+        "title": "Infrastructure Engineer",
+        "company": "Deltaware",
+        "location": null,
+        "work_mode": "unknown",
+        "seniority": "unknown",
+        "years_min": 1,
+        "apply_channel": "email",
+        "apply_email": "infra@deltaware.example",
+        "apply_url": null,
+        "subject_hint": "INFRA-2611 Infrastructure Engineer",
+        "deadline": null,
+        "language": "en",
+        "tier": 1,
+        "angle": "devops",
+        "excluded": null,
+        "skip_reason": null,
+        "flags": []
+      }
+    ],
+    "dedupe": null
+  }
+}

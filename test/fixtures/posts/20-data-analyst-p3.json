@@ -1,0 +1,35 @@
+{
+  "id": "20-data-analyst-p3",
+  "description": "Not a priority title: P3, applied only at a high fit score",
+  "source": "whatsapp",
+  "source_name": "IT Jobs Egypt",
+  "source_ref": "wa-0021",
+  "posted_at": "2026-11-19T18:00:00Z",
+  "text": "Data Analyst – Pyramid Pay\nPython, SQL, Power BI\nCV: data@pyramidpay.example",
+  "media": null,
+  "expected": {
+    "is_job_post": true,
+    "jobs": [
+      {
+        "title": "Data Analyst",
+        "company": "Pyramid Pay",
+        "location": null,
+        "work_mode": "unknown",
+        "seniority": "unknown",
+        "years_min": null,
+        "apply_channel": "email",
+        "apply_email": "data@pyramidpay.example",
+        "apply_url": null,
+        "subject_hint": null,
+        "deadline": null,
+        "language": "en",
+        "tier": 3,
+        "angle": "devops",
+        "excluded": null,
+        "skip_reason": null,
+        "flags": []
+      }
+    ],
+    "dedupe": null
+  }
+}

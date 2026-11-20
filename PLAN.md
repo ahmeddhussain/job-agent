@@ -369,7 +369,7 @@ The WhatsApp groups re-forward the same post many times, and the same job shows 
 |---|---|---|---|
 | **L0 — source id** | Same message seen twice (run overlap) | `UNIQUE(source, source_ref)` | collect |
 | **L1 — exact content** | Forwards across groups | `content_hash` seen in the last 60 days | normalize, before the LLM |
-| **L2 — near-duplicate** | Reposts with small edits, an added emoji, a new line | simhash Hamming distance ≤ 3, then confirm with a token-set similarity ≥ 0.90 against the last 30 days | normalize, before the LLM |
+| **L2 — near-duplicate** | Reposts with small edits, an added emoji, a new line | simhash Hamming distance ≤ 10 (candidate filter, D16), then confirm with a token-set similarity ≥ 0.90 against the last 30 days | normalize, before the LLM |
 | **L3 — job fingerprint** | The same job from different sources/wording | `sha256(company_norm \| title_norm_canonical \| apply_target)` where `apply_target` = lowercase email or canonical URL; if company is null, use `apply_target \| title`. Plus fuzzy: same `apply_target` and title similarity ≥ 0.85 within 60 days | after extract |
 | **L4 — application guard** | Re-applying, including to jobs Ahmed applied to **by hand** before the agent existed | (a) an `applications` row exists for the same `to_email` + similar title within `dedupe.cooldown_days (60)`; (b) **Gmail Sent check:** `in:sent to:<email> newer_than:60d` returns a message | right before apply |
 

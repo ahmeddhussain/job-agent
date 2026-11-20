@@ -1,0 +1,35 @@
+{
+  "id": "17-sales-excluded",
+  "description": "Sales title is excluded even with cloud words",
+  "source": "whatsapp",
+  "source_name": "Egypt DevOps Jobs",
+  "source_ref": "wa-0018",
+  "posted_at": "2026-11-19T16:30:00Z",
+  "text": "Cloud Sales Engineer\nSell our AWS-based solutions to enterprise customers\nCV: sales@cedaranalytics.example",
+  "media": null,
+  "expected": {
+    "is_job_post": true,
+    "jobs": [
+      {
+        "title": "Cloud Sales Engineer",
+        "company": "Cedar Analytics",
+        "location": null,
+        "work_mode": "unknown",
+        "seniority": "unknown",
+        "years_min": null,
+        "apply_channel": "email",
+        "apply_email": "sales@cedaranalytics.example",
+        "apply_url": null,
+        "subject_hint": null,
+        "deadline": null,
+        "language": "en",
+        "tier": null,
+        "angle": null,
+        "excluded": "excluded_title",
+        "skip_reason": "excluded_title",
+        "flags": []
+      }
+    ],
+    "dedupe": null
+  }
+}

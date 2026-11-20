@@ -59,3 +59,11 @@ D1 to D10 come from `PLAN.md` section 3 (full reasoning there); new decisions ar
 | `pino` JSON logs on **stderr** | winston; console | Structured logs for the `runs`/observability story; stderr keeps stdout clean for command output and pipes |
 | Exit codes: 0 ok, 1 failure, 2 not implemented, 78 bad config (`EX_CONFIG`) | always 1 | The systemd unit and scripts can tell a config mistake from a crash |
 | `@types/node` 22 | latest (26) | Types must match the Node 22 runtime, or code compiles against APIs that don't exist |
+
+## D16: L2 simhash distance raised from 3 to 10 (candidate filter only)
+
+- **Choice:** `dedupe.simhash_max_distance: 10`. The simhash only selects candidates; a near-duplicate is confirmed only when the token-set (Jaccard) similarity is at least `near_dup_similarity` (0.90, unchanged).
+- **Evidence (P1, measured on the fixtures):** adding one line to a ~35-token WhatsApp post moved the 64-bit simhash by 3 to 7 bits (`- Good English`: 7 bits, Jaccard 0.946). Unrelated posts were 26+ bits apart at the 10th percentile and 31 at the median. With the plan's `≤ 3`, the obvious repost in fixture 06 was missed.
+- **Alternatives:** keep 3 (misses most short reposts; they then cost an extraction call each); lower the Jaccard confirmation (catches more reposts, but a false merge drops a real job before extraction, which is worse than spending tokens); overlap coefficient instead of Jaccard (a short post contained in a long multi-job post would be merged wrongly).
+- **Why:** L2 exists to save LLM calls; correctness ("never apply twice") comes from L3 and L4. A wider candidate net with the same confirmation saves more calls without any new false-merge risk. A repost that still slips past L2 (e.g. `Urgent hiring!` added to a short post: Jaccard 0.895) is caught by L3, which a test proves.
+- **Production would add:** an index (banded simhash / LSH) instead of scanning the 30-day window, once volume grows.

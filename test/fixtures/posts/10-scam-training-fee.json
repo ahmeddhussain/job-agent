@@ -1,0 +1,35 @@
+{
+  "id": "10-scam-training-fee",
+  "description": "Fee-based training + job scam",
+  "source": "whatsapp",
+  "source_name": "IT Jobs Egypt",
+  "source_ref": "wa-0011",
+  "posted_at": "2026-11-19T13:00:00Z",
+  "text": "🔥 Work from home – Cloud Support Engineer 🔥\nEarn $150/day! No experience needed\nPay a 1500 EGP training fee to start, guaranteed job after the course\nContact us on Telegram only: @cloudjobs_fast",
+  "media": null,
+  "expected": {
+    "is_job_post": true,
+    "jobs": [
+      {
+        "title": "Cloud Support Engineer",
+        "company": null,
+        "location": null,
+        "work_mode": "remote",
+        "seniority": "unknown",
+        "years_min": null,
+        "apply_channel": "unknown",
+        "apply_email": null,
+        "apply_url": null,
+        "subject_hint": null,
+        "deadline": null,
+        "language": "en",
+        "tier": 1,
+        "angle": "support",
+        "excluded": null,
+        "skip_reason": null,
+        "flags": ["suspicious"]
+      }
+    ],
+    "dedupe": null
+  }
+}

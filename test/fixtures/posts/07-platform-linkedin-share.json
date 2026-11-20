@@ -1,0 +1,35 @@
+{
+  "id": "07-platform-linkedin-share",
+  "description": "WhatsApp post sharing a LinkedIn job link",
+  "source": "whatsapp",
+  "source_name": "Egypt DevOps Jobs",
+  "source_ref": "wa-0009",
+  "posted_at": "2026-11-19T11:00:00Z",
+  "text": "Platform Engineer (Remote) at Cedar Analytics\nKubernetes, Terraform, GitOps (ArgoCD), observability\n2+ years\nApply here: https://www.linkedin.com/jobs/view/4123456789/?utm_source=share&utm_medium=member_android",
+  "media": null,
+  "expected": {
+    "is_job_post": true,
+    "jobs": [
+      {
+        "title": "Platform Engineer",
+        "company": "Cedar Analytics",
+        "location": null,
+        "work_mode": "remote",
+        "seniority": "unknown",
+        "years_min": 2,
+        "apply_channel": "form",
+        "apply_email": null,
+        "apply_url": "https://linkedin.com/jobs/view/4123456789",
+        "subject_hint": null,
+        "deadline": null,
+        "language": "en",
+        "tier": 1,
+        "angle": "devops",
+        "excluded": null,
+        "skip_reason": null,
+        "flags": []
+      }
+    ],
+    "dedupe": null
+  }
+}

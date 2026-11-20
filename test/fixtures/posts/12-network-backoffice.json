@@ -1,0 +1,35 @@
+{
+  "id": "12-network-backoffice",
+  "description": "Networking back-office role",
+  "source": "whatsapp",
+  "source_name": "Network Jobs Egypt",
+  "source_ref": "wa-0013",
+  "posted_at": "2026-11-19T14:00:00Z",
+  "text": "Network Back Office Engineer\nOrbitel Networks – Smart Village\nRouting & switching (OSPF, BGP), MPLS basics, CCNA required\nFresh graduates are welcome\nCV to: netjobs@orbitel.example",
+  "media": null,
+  "expected": {
+    "is_job_post": true,
+    "jobs": [
+      {
+        "title": "Network Back Office Engineer",
+        "company": "Orbitel Networks",
+        "location": "Smart Village",
+        "work_mode": "unknown",
+        "seniority": "junior",
+        "years_min": null,
+        "apply_channel": "email",
+        "apply_email": "netjobs@orbitel.example",
+        "apply_url": null,
+        "subject_hint": null,
+        "deadline": null,
+        "language": "en",
+        "tier": 2,
+        "angle": "networking",
+        "excluded": null,
+        "skip_reason": null,
+        "flags": []
+      }
+    ],
+    "dedupe": null
+  }
+}

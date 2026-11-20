@@ -1,0 +1,35 @@
+{
+  "id": "01-devops-email-en",
+  "description": "English DevOps post with an email",
+  "source": "whatsapp",
+  "source_name": "Egypt DevOps Jobs",
+  "source_ref": "wa-0001",
+  "posted_at": "2026-11-19T07:12:00Z",
+  "text": "🚀 We're Hiring: DevOps Engineer\nCompany: Nilecode Systems\nLocation: Cairo (Hybrid)\nExperience: 1-3 years\nRequirements:\n- AWS (EC2, VPC, IAM)\n- Terraform\n- Docker & Kubernetes\n- CI/CD with Jenkins or GitHub Actions\n- Linux administration\nSend your CV to careers@nilecode.example",
+  "media": null,
+  "expected": {
+    "is_job_post": true,
+    "jobs": [
+      {
+        "title": "DevOps Engineer",
+        "company": "Nilecode Systems",
+        "location": "Cairo",
+        "work_mode": "hybrid",
+        "seniority": "unknown",
+        "years_min": 1,
+        "apply_channel": "email",
+        "apply_email": "careers@nilecode.example",
+        "apply_url": null,
+        "subject_hint": null,
+        "deadline": null,
+        "language": "en",
+        "tier": 1,
+        "angle": "devops",
+        "excluded": null,
+        "skip_reason": null,
+        "flags": []
+      }
+    ],
+    "dedupe": null
+  }
+}

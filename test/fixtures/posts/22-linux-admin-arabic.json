@@ -1,0 +1,35 @@
+{
+  "id": "22-linux-admin-arabic",
+  "description": "Arabic post for a Linux sysadmin",
+  "source": "whatsapp",
+  "source_name": "Linux Jobs Egypt",
+  "source_ref": "wa-0023",
+  "posted_at": "2026-11-19T19:00:00Z",
+  "text": "مطلوب Linux System Administrator\nRHEL, Ansible, Bash, FreeIPA\nخبرة 1-2 سنة\nمقر العمل: 6 أكتوبر\nCV: sysadmin.jobs@deltaware.example",
+  "media": null,
+  "expected": {
+    "is_job_post": true,
+    "jobs": [
+      {
+        "title": "Linux System Administrator",
+        "company": "Deltaware",
+        "location": "6th of October",
+        "work_mode": "unknown",
+        "seniority": "unknown",
+        "years_min": 1,
+        "apply_channel": "email",
+        "apply_email": "sysadmin.jobs@deltaware.example",
+        "apply_url": null,
+        "subject_hint": null,
+        "deadline": null,
+        "language": "mixed",
+        "tier": 2,
+        "angle": "systems",
+        "excluded": null,
+        "skip_reason": null,
+        "flags": []
+      }
+    ],
+    "dedupe": null
+  }
+}

@@ -69,3 +69,38 @@ node dist/cli.js db:migrate | head -2; echo "exit=${PIPESTATUS[0]}"
 # applied: none
 # exit=0
 ```
+
+---
+
+## 3. Near-duplicate repost not detected (dedupe L2)
+
+**Symptom.** P1 gate, fixture `06-devops-repost-edited` (fixture 01 reposted with one added line):
+
+```
+FAIL  test/unit/dedupe.test.ts > dedupe L0–L3 over the fixtures > 06-devops-repost-edited
+AssertionError: expected undefined to be 'L2'
+```
+
+**Diagnosis.** Measured with a probe script: Hamming distance 7, Jaccard 0.946. The
+token similarity passed; the simhash candidate filter (`≤ 3`, from PLAN 7) rejected
+it first. On ~35-token posts one extra line moves 3–7 of 64 bits; unrelated posts
+sit 26+ bits apart.
+
+**Fix.** `simhash_max_distance: 10`, keeping the 0.90 Jaccard confirmation (D16). A
+new test proves that a repost L2 still misses is caught by L3.
+
+---
+
+## 4. Trailing slash kept on URLs with a query string
+
+**Symptom.**
+
+```
+AssertionError: expected 'https://example.com/jobs/1/?a=1&b=2' to be 'https://example.com/jobs/1?a=1&b=2'
+```
+
+**Diagnosis.** `canonicalizeUrl` trimmed the trailing `/` from the serialized string
+only when there was no query string, so `/jobs/1/?a=1` and `/jobs/1?a=1` produced
+different apply targets and would have defeated the L3 fingerprint.
+
+**Fix.** Trim trailing slashes from `url.pathname` before serializing.
