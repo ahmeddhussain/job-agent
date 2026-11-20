@@ -34,6 +34,7 @@ export const ConfigSchema = z.strictObject({
     fetch_limit: positiveInt,
     settle_seconds: z.number().int().min(0),
     ready_timeout_seconds: positiveInt,
+    auth_timeout_seconds: positiveInt,
     login_timeout_seconds: positiveInt,
     web_cache_path: realString,
     author_salt_file: realString,

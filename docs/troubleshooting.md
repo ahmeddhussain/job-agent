@@ -274,3 +274,35 @@ substring, and skills the fit cited as evidence ("ticket-based change") weren't 
 
 **Fix.** Coverage counts only profile-backed keywords; the duplicate check matches whole
 words; skills cited as fit evidence are shown. Re-run: 100% on all three CVs.
+
+---
+
+## 14. wa:login showed nothing after the QR scan; a second command "refused"
+
+**Symptom.** Ahmed scanned the QR; `wa:login` printed nothing afterwards. `wa:groups`
+in a second terminal refused to start. Later runs crashed with a stack trace or failed:
+
+```
+Error: WhatsApp is not linked (QR requested). Run: agent wa:login
+    at Client.<anonymous> (src/collect/whatsapp/readonly.ts:70:18)      <- uncaught
+command failed Waiting failed: 30000ms exceeded
+```
+
+**Diagnosis (with evidence).**
+- The session folder held 4 KB: the link never completed or was never saved.
+- The "refusal": two processes can't open the same Chrome profile (`data/wa-session/session`), and nothing prevented or explained that.
+- The crash: the `ready` promise rejected while `initialize()` was still running and nothing was listening yet → unhandled rejection.
+- The 30 s timeout: whatsapp-web.js waits for WhatsApp Web's socket model to leave `OPENING/PAIRING`.
+- Ruled out with measurements:
+  - **network:** web.whatsapp.com answers in 0.6 s and a websocket handshake returns `101`;
+  - **tsx rewriting functions:** the probe works under tsx and the function text is unchanged;
+  - **the cached WhatsApp Web build:** live and cached both show a QR in about 10 s.
+- Confirmed: the same probe that works on a fresh folder fails with `auth timeout` on the existing `data/wa-session`, and the real command on a fresh folder reaches the QR in 10.8 s and exits cleanly. The interrupted login left a broken session that every later start loaded.
+- One earlier fresh run also failed and could not be reproduced (possibly throttling after many QR sessions in a row).
+
+**Fix.**
+- **Lock:** an exclusive lock (`data/wa.lock`, stale pid detection) gives a clear "another WhatsApp command is running" message.
+- **Clean exits:** the rejection is handled at once, so failures exit cleanly; Ctrl-C/SIGTERM closes the browser so a session isn't left half-written.
+- **Progress:** `wa:login` prints `authenticated` → `loading N%` → `ready`.
+- **Timeout:** `whatsapp.auth_timeout_seconds: 60`.
+- **Clean-up:** the broken session folders were deleted (none were linked).

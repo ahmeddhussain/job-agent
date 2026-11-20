@@ -20,6 +20,7 @@ whatsapp:
   fetch_limit: 500                 # per group per run
   settle_seconds: 20               # wait after `ready` for history sync
   ready_timeout_seconds: 120       # normal start; a linked session is ready well before this
+  auth_timeout_seconds: 60         # library wait for WhatsApp Web's socket (default 30 s is tight on this VM)
   login_timeout_seconds: 300       # wa:login: time to scan the QR
   web_cache_path: data/wa-web-cache   # pins the WhatsApp Web version that worked (webVersionCache: local)
   author_salt_file: data/wa-author-salt   # members' ids are stored only as salted hashes

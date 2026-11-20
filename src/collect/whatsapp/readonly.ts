@@ -34,9 +34,12 @@ export interface ReadOnlyOptions {
   webCachePath: string;
   settleSeconds: number;
   readyTimeoutSeconds: number;
+  authTimeoutSeconds: number;
   log: Logger;
   /** Called with the QR payload when the number isn't linked yet (wa:login). */
   onQr?: (qr: string) => void;
+  /** Human-readable lifecycle steps (wa:login prints them). */
+  onProgress?: (step: string) => void;
 }
 
 /** The minimal read surface the collector depends on (lets tests use a fake). */
@@ -53,13 +56,14 @@ export class ReadOnlyWhatsApp implements WhatsAppReader {
     const client = new Client({
       authStrategy: new LocalAuth({ dataPath: o.sessionPath }),
       webVersionCache: { type: 'local', path: o.webCachePath },
+      authTimeoutMs: o.authTimeoutSeconds * 1000,
       puppeteer: { headless: true },
     });
     const ready = new Promise<void>((resolve, reject) => {
       const timer = setTimeout(() => {
         reject(
           new Error(
-            `WhatsApp not ready after ${String(o.readyTimeoutSeconds)} s (not linked? run: agent wa:login)`,
+            `WhatsApp not ready after ${String(o.readyTimeoutSeconds)} s (not linked, or WhatsApp Web stuck loading; run: agent wa:login)`,
           ),
         );
       }, o.readyTimeoutSeconds * 1000);
@@ -79,13 +83,28 @@ export class ReadOnlyWhatsApp implements WhatsAppReader {
         resolve();
       });
     });
+    // Handled right away: a rejection during initialize() must not crash the process
+    // with an unhandled rejection (troubleshooting #14).
+    ready.catch(() => undefined);
+    // Lifecycle visibility: scan → authenticated → loading_screen % → ready.
+    client.on('authenticated', () => {
+      o.onProgress?.('authenticated (QR accepted), loading WhatsApp Web');
+      o.log.info('whatsapp authenticated');
+    });
+    client.on('loading_screen', (percent: string | number, message: string) => {
+      o.onProgress?.(`loading ${String(percent)}% ${message}`);
+      o.log.info({ percent, message }, 'whatsapp loading');
+    });
+    client.on('change_state', (state: string) => {
+      o.log.info({ state }, 'whatsapp state');
+    });
     client.on('disconnected', (reason: string) => {
       o.log.warn({ reason }, 'whatsapp disconnected');
     });
     const wa = new ReadOnlyWhatsApp(client);
     try {
-      await client.initialize();
-      await ready;
+      await Promise.race([client.initialize().then(() => ready), ready]);
+      o.onProgress?.('ready');
       // Let history sync finish before reading (PLAN 5.1 step 1).
       await new Promise((r) => setTimeout(r, o.settleSeconds * 1000));
       return wa;

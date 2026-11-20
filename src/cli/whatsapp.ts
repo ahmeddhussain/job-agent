@@ -1,5 +1,6 @@
 // CLI actions for P4: wa:login, wa:groups, collect whatsapp, collect whatsapp-export.
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import qrcode from 'qrcode-terminal';
 import type { Config } from '../config.js';
 import {
@@ -15,56 +16,129 @@ import { insertRawItem, prepareRawItem } from '../pipeline/dedupe.js';
 import { logger } from '../util/logger.js';
 import type { Io } from './program.js';
 
+/**
+ * One WhatsApp command at a time: two processes can't share the Chrome profile in
+ * data/wa-session (Chrome refuses the second one). A stale lock from a killed process
+ * is detected by its pid and replaced (troubleshooting #14).
+ */
+export async function withWhatsAppLock<T>(
+  cfg: Config,
+  fn: (onExit: (cb: () => Promise<void>) => void) => Promise<T>,
+): Promise<T> {
+  const lockPath = join(dirname(cfg.whatsapp.session_path), 'wa.lock');
+  mkdirSync(dirname(lockPath), { recursive: true, mode: 0o700 });
+  const take = () => {
+    writeFileSync(lockPath, String(process.pid), { flag: 'wx', mode: 0o600 });
+  };
+  try {
+    take();
+  } catch {
+    const pid = Number(readFileSync(lockPath, 'utf8').trim());
+    const alive = (() => {
+      if (!Number.isInteger(pid) || pid <= 0) return false;
+      try {
+        process.kill(pid, 0); // signal 0: existence check only
+        return true;
+      } catch {
+        return false;
+      }
+    })();
+    if (alive)
+      throw new Error(
+        `another WhatsApp command is running (pid ${String(pid)}); wait for it or stop it first`,
+      );
+    rmSync(lockPath, { force: true });
+    take();
+  }
+  // Ctrl-C / kill: close the browser cleanly so the session isn't left half-written.
+  let cleanup: (() => Promise<void>) | null = null;
+  const onSignal = (sig: NodeJS.Signals) => {
+    void (async () => {
+      process.stderr.write(`\n${sig}: closing WhatsApp cleanly...\n`);
+      if (cleanup) await cleanup();
+      rmSync(lockPath, { force: true });
+      process.exit(130);
+    })();
+  };
+  process.once('SIGINT', onSignal);
+  process.once('SIGTERM', onSignal);
+  try {
+    return await fn((cb) => {
+      cleanup = cb;
+    });
+  } finally {
+    process.off('SIGINT', onSignal);
+    process.off('SIGTERM', onSignal);
+    rmSync(lockPath, { force: true });
+  }
+}
+
 function startOptions(cfg: Config, timeoutSeconds: number) {
   return {
     sessionPath: cfg.whatsapp.session_path,
     webCachePath: cfg.whatsapp.web_cache_path,
     settleSeconds: cfg.whatsapp.settle_seconds,
     readyTimeoutSeconds: timeoutSeconds,
+    authTimeoutSeconds: cfg.whatsapp.auth_timeout_seconds,
     log: logger,
   };
 }
 
 /** Links the number once: prints a QR, waits for the scan, then closes (never logs out). */
 export async function waLogin(cfg: Config, io: Io): Promise<void> {
-  io.out('Open WhatsApp on the phone → Linked devices → Link a device, then scan:');
-  const wa = await ReadOnlyWhatsApp.start({
-    ...startOptions(cfg, cfg.whatsapp.login_timeout_seconds),
-    settleSeconds: 5,
-    onQr: (qr) => {
-      qrcode.generate(qr, { small: true }, (art: string) => {
-        io.out(art);
-      });
-    },
+  await withWhatsAppLock(cfg, async (onExit) => {
+    io.out('Open WhatsApp on the phone → Linked devices → Link a device, then scan:');
+    const wa = await ReadOnlyWhatsApp.start({
+      ...startOptions(cfg, cfg.whatsapp.login_timeout_seconds),
+      settleSeconds: 5,
+      onQr: (qr) => {
+        qrcode.generate(qr, { small: true }, (art: string) => {
+          io.out(art);
+        });
+        io.out('(a new QR appears about every 20 s until one is scanned)');
+      },
+      onProgress: (step) => {
+        io.out(`… ${step}`);
+      },
+    });
+    onExit(() => wa.destroy());
+    try {
+      const groups = (await wa.getChats()).filter((c) => c.isGroup).length;
+      io.out(
+        `Linked. Session saved in ${cfg.whatsapp.session_path} (keep it private). Groups visible: ${String(groups)}.`,
+      );
+      io.out(
+        'Next: agent wa:groups, then put the job groups in whatsapp.groups in config/config.yaml.',
+      );
+    } finally {
+      await wa.destroy();
+    }
   });
-  try {
-    const groups = (await wa.getChats()).filter((c) => c.isGroup).length;
-    io.out(
-      `Linked. Session saved in ${cfg.whatsapp.session_path} (keep it private). Groups visible: ${String(groups)}.`,
-    );
-    io.out(
-      'Next: agent wa:groups, then put the job groups in whatsapp.groups in config/config.yaml.',
-    );
-  } finally {
-    await wa.destroy();
-  }
 }
 
 export async function waGroups(cfg: Config, io: Io): Promise<void> {
-  const wa = await ReadOnlyWhatsApp.start(startOptions(cfg, cfg.whatsapp.ready_timeout_seconds));
-  try {
-    const allow = new Set(cfg.whatsapp.groups.map((g) => g.trim().toLowerCase()));
-    const groups = (await wa.getChats())
-      .filter((c) => c.isGroup)
-      .sort((a, b) => a.name.localeCompare(b.name));
-    io.out(`${String(groups.length)} groups (* = allowlisted in whatsapp.groups):`);
-    for (const g of groups) {
-      const on = allow.has(g.name.trim().toLowerCase()) || allow.has(g.id.toLowerCase());
-      io.out(`${on ? '*' : ' '} ${g.name}    ${g.id}`);
+  await withWhatsAppLock(cfg, async (onExit) => {
+    const wa = await ReadOnlyWhatsApp.start({
+      ...startOptions(cfg, cfg.whatsapp.ready_timeout_seconds),
+      onProgress: (step) => {
+        io.out(`… ${step}`);
+      },
+    });
+    onExit(() => wa.destroy());
+    try {
+      const allow = new Set(cfg.whatsapp.groups.map((g) => g.trim().toLowerCase()));
+      const groups = (await wa.getChats())
+        .filter((c) => c.isGroup)
+        .sort((a, b) => a.name.localeCompare(b.name));
+      io.out(`${String(groups.length)} groups (* = allowlisted in whatsapp.groups):`);
+      for (const g of groups) {
+        const on = allow.has(g.name.trim().toLowerCase()) || allow.has(g.id.toLowerCase());
+        io.out(`${on ? '*' : ' '} ${g.name}    ${g.id}`);
+      }
+    } finally {
+      await wa.destroy();
     }
-  } finally {
-    await wa.destroy();
-  }
+  });
 }
 
 export async function collectWhatsAppCommand(
@@ -72,31 +146,37 @@ export async function collectWhatsAppCommand(
   opts: { since?: string; dryRun?: boolean },
   io: Io,
 ): Promise<void> {
-  const db = openDb(cfg.paths.db);
-  migrate(db);
-  const wa = await ReadOnlyWhatsApp.start(startOptions(cfg, cfg.whatsapp.ready_timeout_seconds));
-  try {
-    const res = await collectWhatsApp({
-      wa,
-      db,
-      cfg,
-      now: new Date(),
-      salt: loadOrCreateSalt(cfg.whatsapp.author_salt_file),
-      log: logger,
-      ...(opts.since ? { since: new Date(opts.since) } : {}),
-      ...(opts.dryRun ? { dryRun: true } : {}),
+  await withWhatsAppLock(cfg, async (onExit) => {
+    const db = openDb(cfg.paths.db);
+    migrate(db);
+    const wa = await ReadOnlyWhatsApp.start(startOptions(cfg, cfg.whatsapp.ready_timeout_seconds));
+    onExit(async () => {
+      await wa.destroy();
+      db.close();
     });
-    for (const g of res.groups) {
-      io.out(
-        `${g.name}: since ${g.since} fetched=${String(g.fetched)} in-window=${String(g.inWindow)} kept=${String(g.kept)} new=${String(g.inserted)}${g.limitHit ? ' (LIMIT HIT)' : ''}`,
-      );
+    try {
+      const res = await collectWhatsApp({
+        wa,
+        db,
+        cfg,
+        now: new Date(),
+        salt: loadOrCreateSalt(cfg.whatsapp.author_salt_file),
+        log: logger,
+        ...(opts.since ? { since: new Date(opts.since) } : {}),
+        ...(opts.dryRun ? { dryRun: true } : {}),
+      });
+      for (const g of res.groups) {
+        io.out(
+          `${g.name}: since ${g.since} fetched=${String(g.fetched)} in-window=${String(g.inWindow)} kept=${String(g.kept)} new=${String(g.inserted)}${g.limitHit ? ' (LIMIT HIT)' : ''}`,
+        );
+      }
+      for (const w of res.warnings) io.out(`warning: ${w}`);
+      io.out(opts.dryRun ? 'dry run: nothing written' : `stored ${String(res.inserted)} new posts`);
+    } finally {
+      await wa.destroy();
+      db.close();
     }
-    for (const w of res.warnings) io.out(`warning: ${w}`);
-    io.out(opts.dryRun ? 'dry run: nothing written' : `stored ${String(res.inserted)} new posts`);
-  } finally {
-    await wa.destroy();
-    db.close();
-  }
+  });
 }
 
 export function collectExportCommand(
