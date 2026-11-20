@@ -157,3 +157,13 @@ D1 to D10 come from `PLAN.md` section 3 (full reasoning there); new decisions ar
 - **Fitting to one page, cheapest loss first:** font 10 → 9.5 → 9 pt, extra experience bullets, project bullets beyond 2, projects beyond `min_projects` (4), shorter stack lines, up to `max_skills_dropped` (6) least relevant skills, bullets beyond 1, then more skills. Spacing was tightened slightly (line height 1.18) so the top projects keep both labelled bullets.
 - **Alternatives:** the generic template from P3 (rejected by Ahmed: "the first CV I gave you was my best one"); his CV unchanged on two pages (R14 says one); font below 9 pt (too small to read comfortably).
 - **Result on the 3 gate jobs:** one page, 97–100% full, 4 projects each. The DevOps CV keeps both Nexora and both lab bullets and drops 3 of 91 skills; the Support and Networking CVs keep all skills. 8 working links per PDF (verified in the PDF's `/URI` annotations); the ATS check passes.
+
+## D25: Ahmed's ATS-first refinements of the CV
+
+- **Choice (Ahmed, 2026-11-20):**
+  - **Contact line:** GitHub, LinkedIn and Portfolio are words with the URL behind them, so the line fits on one row. Only one phone (01272132996) is printed; the private number is no longer in the profile at all.
+  - **Skills:** each category shows short main titles (`core: true`, e.g. "Linux: RHEL administration, Bash/Shell scripting, FreeIPA, OpenSCAP"), plus any other skill the job asks for, found in the job's text or cited by the fit score as evidence. The job's keywords therefore appear in the CV for the ATS.
+  - **Projects:** Nexora and the Linux lab (`featured_projects`) are printed with their labelled bullets. Every other project is title + tech stack only; on networking jobs Packet Tracer also gets its bullet. Freed space goes first to the featured bullets, then to more stack-only projects (up to `max_projects`, 6).
+- **ATS check change:** links are now verified as real link targets in the PDF (`/URI` annotations), not as visible text. Keyword coverage counts only keywords the profile backs.
+- **Trade-off:** some older parsers read only visible text and won't see the GitHub/LinkedIn URLs behind the words. The URLs are still present as clickable links, and the job keywords now carry more weight. This was Ahmed's call.
+- **Result (live, 3 gate jobs):** one page each, ATS pass, keyword coverage 100% on all three (the Support CV was 50% before the keyword fix), 8–9 working links, private number absent.

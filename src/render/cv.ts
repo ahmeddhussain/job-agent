@@ -34,6 +34,13 @@ const display = (url: string) =>
     .replace(/^www\./, '')
     .replace(/\/$/, '');
 
+/** Contact links appear as words with the URL behind them (Ahmed, D25). */
+const LINK_WORDS: Record<string, string> = {
+  github: 'GitHub',
+  linkedin: 'LinkedIn',
+  portfolio: 'Portfolio',
+};
+
 export interface Link {
   text: string;
   href: string | null;
@@ -47,7 +54,7 @@ export function contactLine(p: Profile): Link[] {
     { text: c.email, href: `mailto:${c.email}` },
     { text: c.phone, href: null },
     ...(c.phone_alt ? [{ text: c.phone_alt, href: null }] : []),
-    ...Object.values(c.links).map((u) => ({ text: display(u), href: u })),
+    ...Object.entries(c.links).map(([k, u]) => ({ text: LINK_WORDS[k] ?? display(u), href: u })),
   ];
 }
 
@@ -73,6 +80,16 @@ export function shortStack(stack: string, max = 8, maxChars = 105): string {
   return out.join(', ');
 }
 
+/** What the job needs from the CV, decided once per job by the caller. */
+export interface RenderContext {
+  /** True when the job asks for this skill (adds it next to the main titles). */
+  jobMatch: (skillName: string, skillId: string) => boolean;
+  /** Projects shown with bullets; all others show title + stack only (D25). */
+  bulletProjects: Set<string>;
+}
+
+export const CORE_ONLY: RenderContext = { jobMatch: () => false, bulletProjects: new Set() };
+
 export interface Layout {
   fontPt: number;
   shortStacks: boolean;
@@ -80,12 +97,36 @@ export interface Layout {
   skillsDropped: number;
 }
 
-/** Every profile skill, grouped in Ahmed's categories; the model's ranking decides what comes first. */
-export function orderedSkills(p: Profile, ranked: string[], dropped = 0) {
+/**
+ * Skills in Ahmed's categories: the main titles (`core`) always, plus any other skill the
+ * job asks for, so the ATS finds the job's keywords. Order follows the model's ranking.
+ */
+export function orderedSkills(
+  p: Profile,
+  ranked: string[],
+  dropped = 0,
+  jobMatch: (name: string, id: string) => boolean = () => false,
+) {
   const all = Object.entries(p.skills).flatMap(([cat, list]) => list.map((s) => ({ cat, ...s })));
+  const shown = all.filter((s) => s.core);
+  const shownText = () => shown.map((s) => s.name).join(' | ');
+  for (const s of all) {
+    if (s.core || !jobMatch(s.name, s.id)) continue;
+    // Skip an extra already covered by a shown title as a whole word ("Amazon EKS" vs
+    // "AWS (… EKS …)"); "SQL" is NOT covered by "MySQL" (troubleshooting #13).
+    const core = s.name
+      .replace(/^amazon\s+|^aws\s+/i, '')
+      .replace(/\(.*?\)/g, '')
+      .trim();
+    const esc = core.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    if (core && new RegExp(`(?<![A-Za-z0-9])${esc}(?![A-Za-z0-9])`, 'i').test(shownText())) {
+      continue;
+    }
+    shown.push(s);
+  }
   const rank = new Map(ranked.map((id, i) => [id, i]));
   const score = (s: (typeof all)[number]) => rank.get(s.id) ?? 1e6 + all.indexOf(s);
-  const sorted = [...all].sort((a, b) => score(a) - score(b));
+  const sorted = [...shown].sort((a, b) => score(a) - score(b));
   const kept = sorted.slice(0, Math.max(0, sorted.length - dropped));
   const cats: string[] = [];
   for (const s of kept) if (!cats.includes(s.cat)) cats.push(s.cat);
@@ -102,6 +143,7 @@ export function buildCvModel(
   p: Profile,
   out: TailorOutput,
   layout: Layout = { fontPt: 10, shortStacks: false, skillsDropped: 0 },
+  ctx: RenderContext = CORE_ONLY,
 ): Record<string, unknown> {
   const labelOf = new Map(
     [...p.experience, ...p.projects].flatMap((e) => e.bullets.map((b) => [b.id, b.label] as const)),
@@ -138,11 +180,11 @@ export function buildCvModel(
         name: e?.name ?? x.id,
         link: e?.link ?? null,
         stack: e?.stack ? (layout.shortStacks ? shortStack(e.stack) : e.stack) : null,
-        bullets: bullets(x.bullets),
+        bullets: ctx.bulletProjects.has(x.id) ? bullets(x.bullets) : [],
       };
     }),
     skills: [
-      ...orderedSkills(p, out.skills, layout.skillsDropped),
+      ...orderedSkills(p, out.skills, layout.skillsDropped, ctx.jobMatch),
       { label: 'Soft Skills', items: p.soft_skills.join(', ') },
     ],
     languages: p.languages.map((l) => `${l.name} (${l.level})`).join(' | '),
@@ -190,12 +232,12 @@ export interface FitReport {
 }
 
 /**
- * One step towards one page, cheapest loss first (D24): smaller font, then extra
- * experience bullets, project bullets beyond 2, projects beyond `min_projects`, shorter
- * stack lines, up to `max_skills_dropped` least relevant skills, bullets beyond 1, and only
- * then more skills from the least relevant end.
+ * One step towards one page, cheapest loss first (D24, D25): smaller font, extra
+ * experience bullets, detailed-project bullets beyond 2, stack-only projects beyond
+ * `min_projects`, shorter stack lines, up to `max_skills_dropped` least relevant skills,
+ * detailed-project bullets beyond 1, then more skills.
  */
-function shrinkOnce(out: TailorOutput, layout: Layout, cfg: Config): string {
+function shrinkOnce(out: TailorOutput, layout: Layout, cfg: Config, ctx: RenderContext): string {
   if (layout.fontPt - cfg.cv.font_pt.step >= cfg.cv.font_pt.min - 1e-9) {
     layout.fontPt = Math.round((layout.fontPt - cfg.cv.font_pt.step) * 10) / 10;
     return `font ${String(layout.fontPt)}pt`;
@@ -203,24 +245,30 @@ function shrinkOnce(out: TailorOutput, layout: Layout, cfg: Config): string {
   for (const ex of out.experience) {
     if (ex.bullets.length > 1) return `bullet ${ex.bullets.pop()?.id ?? '?'}`;
   }
-  for (let i = out.projects.length - 1; i >= 0; i--) {
-    const pr = out.projects[i];
+  const detailed = out.projects.filter((pr) => ctx.bulletProjects.has(pr.id));
+  for (let i = detailed.length - 1; i >= 0; i--) {
+    const pr = detailed[i];
     if (pr && pr.bullets.length > 2) return `bullet ${pr.bullets.pop()?.id ?? '?'}`;
   }
   if (out.projects.length > cfg.cv.min_projects) {
-    return `project ${out.projects.pop()?.id ?? '?'}`;
+    for (let i = out.projects.length - 1; i >= 0; i--) {
+      const pr = out.projects[i];
+      if (pr && !ctx.bulletProjects.has(pr.id)) {
+        out.projects.splice(i, 1);
+        return `project ${pr.id}`;
+      }
+    }
   }
   if (!layout.shortStacks) {
     layout.shortStacks = true;
     return 'shorter stack lines';
   }
-  // A few of the least relevant skills go before a top project's second bullet (D24).
   if (layout.skillsDropped < cfg.cv.max_skills_dropped) {
     layout.skillsDropped += 3;
     return 'three least relevant skills';
   }
-  for (let i = out.projects.length - 1; i >= 0; i--) {
-    const pr = out.projects[i];
+  for (let i = detailed.length - 1; i >= 0; i--) {
+    const pr = detailed[i];
     if (pr && pr.bullets.length > 1) return `bullet ${pr.bullets.pop()?.id ?? '?'}`;
   }
   if (out.courses.length > 0) return `course ${out.courses.pop() ?? '?'}`;
@@ -228,9 +276,12 @@ function shrinkOnce(out: TailorOutput, layout: Layout, cfg: Config): string {
   return 'three least relevant skills';
 }
 
-/** One step back towards a full page: the next unused bullet of a chosen project (untouched text). */
-function growOnce(out: TailorOutput, p: Profile): string | null {
-  for (const pick of out.projects) {
+/**
+ * One step back towards a full page: first the next unused bullet of a detailed project
+ * (untouched profile text, labelled bullets first), then one more stack-only project.
+ */
+function growOnce(out: TailorOutput, p: Profile, cfg: Config, ctx: RenderContext): string | null {
+  for (const pick of out.projects.filter((pr) => ctx.bulletProjects.has(pr.id))) {
     const e = p.projects.find((x) => x.id === pick.id);
     const next = e?.bullets.find(
       (b) => !pick.bullets.some((x) => x.id === b.id) && b.status !== 'in_progress',
@@ -244,6 +295,13 @@ function growOnce(out: TailorOutput, p: Profile): string | null {
       return `bullet ${next.id}`;
     }
   }
+  if (out.projects.length < cfg.cv.max_projects) {
+    const extra = p.projects.find((x) => x.stack && !out.projects.some((pr) => pr.id === x.id));
+    if (extra) {
+      out.projects.push({ id: extra.id, bullets: [] });
+      return `project ${extra.id}`;
+    }
+  }
   return null;
 }
 
@@ -254,9 +312,10 @@ async function measure(
   p: Profile,
   out: TailorOutput,
   layout: Layout,
+  ctx: RenderContext,
   path: string,
 ) {
-  writeFileSync(path, await renderer.pdf(renderTemplate('cv', buildCvModel(p, out, layout))));
+  writeFileSync(path, await renderer.pdf(renderTemplate('cv', buildCvModel(p, out, layout, ctx))));
   const { pages, heightPt } = await pdfInfo(path);
   const fill = pages === 1 ? (await lastTextY(path)) / (heightPt - BOTTOM_MARGIN_PT) : 1;
   return { pages, fill };
@@ -269,33 +328,66 @@ export async function renderOnePageCv(
   selection: TailorOutput,
   cfg: Config,
   path: string,
+  ctx: RenderContext = CORE_ONLY,
 ): Promise<FitReport & { output: TailorOutput; layout: Layout }> {
   const out = structuredClone(selection);
   const layout: Layout = { fontPt: cfg.cv.font_pt.max, shortStacks: false, skillsDropped: 0 };
   const trimmed: string[] = [];
   const added: string[] = [];
-  let { pages, fill } = await measure(renderer, p, out, layout, path);
+  let { pages, fill } = await measure(renderer, p, out, layout, ctx, path);
   let rounds = 0;
   while (pages > 1 && rounds < cfg.cv.max_trim_rounds) {
-    trimmed.push(shrinkOnce(out, layout, cfg));
+    trimmed.push(shrinkOnce(out, layout, cfg, ctx));
     rounds++;
-    ({ pages, fill } = await measure(renderer, p, out, layout, path));
+    ({ pages, fill } = await measure(renderer, p, out, layout, ctx, path));
   }
   while (pages === 1 && fill < cfg.cv.min_fill && rounds < cfg.cv.max_trim_rounds * 2) {
     const before = structuredClone(out);
-    const step = growOnce(out, p);
+    const step = growOnce(out, p, cfg, ctx);
     if (!step) break;
     rounds++;
-    const m = await measure(renderer, p, out, layout, path);
+    const m = await measure(renderer, p, out, layout, ctx, path);
     if (m.pages > 1) {
-      Object.assign(out, before);
-      ({ pages, fill } = await measure(renderer, p, out, layout, path));
+      out.projects = before.projects;
+      out.experience = before.experience;
+      ({ pages, fill } = await measure(renderer, p, out, layout, ctx, path));
       break;
     }
     added.push(step);
     ({ pages, fill } = m);
   }
   return { pages, fill, rounds, fontPt: layout.fontPt, trimmed, added, output: out, layout };
+}
+
+/**
+ * The render context for one job: which projects show bullets (the featured ones, plus
+ * Packet Tracer for networking jobs) and which extra skills the job's text asks for.
+ */
+export function renderContextFor(
+  cfg: Config,
+  angle: string,
+  jobText: string,
+  findTerms: (text: string) => Set<string>,
+  /** Skill ids the fit score cited as evidence for this job's requirements. */
+  evidenceIds: Set<string> = new Set(),
+): RenderContext {
+  const bulletProjects = new Set(cfg.cv.featured_projects);
+  if (angle === 'networking') for (const id of cfg.cv.networking_projects) bulletProjects.add(id);
+  const jobTerms = findTerms(jobText);
+  const lower = jobText.toLowerCase();
+  return {
+    bulletProjects,
+    jobMatch: (name, id) => {
+      if (evidenceIds.has(id)) return true;
+      const terms = findTerms(name);
+      if (terms.size > 0) return [...terms].some((t) => jobTerms.has(t));
+      const plain = name
+        .replace(/\(.*?\)/g, '')
+        .trim()
+        .toLowerCase();
+      return plain.length > 2 && lower.includes(plain);
+    },
+  };
 }
 
 /** `{First}_{Last}_CV_{Company}_{Role}.pdf`, sanitized, at most 80 characters. */

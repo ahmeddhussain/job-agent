@@ -1,91 +1,92 @@
 {
   "headline": "DevOps Engineer | Cloud Engineer | Linux System Administrator",
-  "summary": "DevOps Engineer trained through the NTI Cloud DevOps Accelerator, with hands-on experience in AWS (EC2, VPC, IAM), Terraform, Docker, Kubernetes, and CI/CD with Jenkins and GitHub Actions. Built end-to-end cloud-native projects from infrastructure provisioning and GitOps delivery to security and monitoring, plus a RHEL Linux administration lab, with a focus on automation, security, and scalable system design.",
+  "summary": "Cloud and DevOps Engineer trained through the NTI Cloud DevOps Accelerator, with hands-on experience in AWS (EC2, VPC, IAM), Terraform, Docker, Kubernetes, CI/CD with Jenkins and GitHub Actions, and Linux administration. Built end-to-end cloud-native projects, from infrastructure provisioning and GitOps delivery to security and monitoring, with a focus on automation, security, and scalable system design.",
   "skills": [
     "aws",
-    "vpc_design",
     "terraform",
-    "docker",
     "kubernetes",
-    "eks",
+    "docker",
     "jenkins",
     "github_actions",
     "linux",
-    "argocd",
+    "eks",
+    "vpc_design",
     "iam_oidc",
+    "argocd",
     "ansible",
+    "ecr",
+    "alb_asg",
     "ha",
-    "nat",
     "helm",
-    "kustomize",
-    "trivy",
-    "sonarqube",
-    "cosign",
-    "irsa",
-    "prometheus",
-    "grafana",
-    "loki",
-    "alertmanager",
-    "cloudwatch",
+    "git",
+    "github",
     "bash",
     "systemd",
     "selinux",
     "firewalld",
     "ssh_hardening",
-    "git",
-    "github",
+    "user_mgmt",
+    "sudo",
+    "patching",
+    "openscap",
+    "auditd",
+    "nat",
+    "vpn",
+    "tls",
+    "dns",
+    "net_fundamentals",
+    "subnetting",
+    "prometheus",
+    "grafana",
+    "loki",
+    "cloudwatch",
+    "trivy",
+    "sonarqube",
+    "cosign",
+    "irsa",
     "secrets_manager",
     "eso",
-    "netpol",
     "rbac",
+    "netpol",
+    "kustomize",
     "argo_rollouts",
-    "hpa",
-    "dr",
+    "docker_compose",
     "rds",
     "mysql",
     "python",
     "yaml",
     "groovy",
-    "amazon_linux",
-    "docker_compose",
-    "cloudformation",
-    "openscap",
-    "auditd",
-    "user_mgmt",
-    "sudo",
-    "patching",
-    "freeipa",
-    "vpn",
-    "tls",
-    "dns",
-    "subnetting",
-    "routing",
-    "net_fundamentals",
-    "istio",
-    "ingress",
-    "gateway_api",
-    "aws_lbc",
-    "fluent_bit",
+    "bash_scripting",
+    "dr",
+    "hpa",
     "incident_docs",
-    "ansible_vault",
-    "openshift"
+    "freeipa",
+    "amazon_linux",
+    "ssm",
+    "ebs",
+    "sns",
+    "encryption_at_rest",
+    "alertmanager",
+    "fluent_bit",
+    "istio",
+    "ingress"
   ],
   "experience": [
-    {
-      "id": "ivolve",
-      "bullets": [
-        {
-          "id": "ivolve_projects",
-          "text": "Delivered two end-to-end pipelines for a 3-service application on EKS, one with Jenkins and Ansible and one with GitHub Actions (OIDC) and ArgoCD GitOps."
-        }
-      ]
-    },
     {
       "id": "nti",
       "bullets": [
         {
           "id": "nti_pipeline",
           "text": "Built the final project, an end-to-end pipeline on AWS that provisions infrastructure with Terraform and Ansible, builds and scans images with Jenkins, SonarQube and Trivy, and deploys to EKS with Helm, monitored with Prometheus, Grafana and Loki."
+        }
+      ]
+    },
+    {
+      "id": "ivolve",
+      "bullets": [
+        {
+          "id": "ivolve_projects",
+          "text": "Delivered two end-to-end CI/CD pipelines for a 3-service application on EKS, one with Jenkins and Ansible and one with GitHub Actions (OIDC) and ArgoCD GitOps."
         }
       ]
     }
@@ -131,6 +132,15 @@
       ]
     },
     {
+      "id": "terraform_3tier",
+      "bullets": [
+        {
+          "id": "t3_cv",
+          "text": "Modular Terraform for a 3-tier AWS app (VPC, ALBs, Auto Scaling groups, RDS) with tier-isolated security groups, deployed through a Jenkins pipeline with a manual approval gate and monitored by CloudWatch alarms."
+        }
+      ]
+    },
+    {
       "id": "ivolve_gitops",
       "bullets": [
         {
@@ -140,16 +150,18 @@
       ]
     }
   ],
-  "courses": [],
+  "courses": [
+    "nti_accelerator"
+  ],
   "cover_letter": {
     "greeting": "Dear Hiring Team,",
     "paragraphs": [
-      "I am applying for the DevOps Engineer role at Nilecode Systems. I build cloud platforms as code and prove they recover, from Terraform and EKS to GitOps delivery. I completed the NTI Cloud DevOps Accelerator and a DevOps internship at iVolve Technologies, where I delivered two end-to-end pipelines on EKS.",
-      "Your posting asks for CI/CD with Jenkins or GitHub Actions and for Terraform on AWS. On the Nexora banking platform, I built secretless GitHub Actions pipelines that assume AWS IAM roles through OIDC, with versioned Terraform modules for the VPC, EKS and RDS MySQL. ArgoCD releases the API gateway as a 10%, 50% and 100% canary that aborts if the Prometheus 5xx error rate exceeds 5%. I also built Jenkins multi-branch pipelines on EKS with a Shared Library and SonarQube and Trivy quality gates. For Linux, I am building a RHEL 10 lab on AWS (in progress) with modular Terraform, Ansible and OpenSCAP CIS Level 1 hardening.",
-      "I like owning the path from a commit to a running, observable service, and making that path safe enough that a release can be rolled back by a metric instead of a person. In Nexora's disaster recovery drill, I deleted the EKS cluster and rebuilt it to a healthy application in 23 minutes 50 seconds through Terraform and ArgoCD. I would welcome a conversation about bringing that approach to Nilecode Systems."
+      "I am applying for the DevOps Engineer role at Nilecode Systems in Cairo. I build cloud platforms as code and prove they recover, from Terraform and EKS to GitOps delivery, and I hold the AWS Certified Solutions Architect – Associate certification.",
+      "Your posting asks for AWS, Terraform, Kubernetes and CI/CD. In my Nexora core banking project I provisioned the VPC, EKS and RDS MySQL from versioned Terraform modules, and delivered through GitHub Actions, which assumes AWS IAM roles through OIDC, and ArgoCD GitOps. A disaster recovery drill deleted the EKS cluster and rebuilt it to a healthy application in 23 minutes 50 seconds, against a 30-minute RTO target. For Linux administration, my RHEL 10 lab on AWS uses modular Terraform and idempotent Ansible roles, with every host hardened to OpenSCAP CIS Level 1 at 100%.",
+      "I like owning the path from a commit to a running, observable service, and making that path safe enough that a release can be rolled back by a metric instead of a person. In Nexora, an Argo Rollouts canary aborts if the Prometheus 5xx error rate exceeds 5%. I would bring that approach to Nilecode Systems, and I would welcome a conversation about your platform."
     ],
     "closing": "Best regards,"
   },
-  "email_body": "Hello,\n\nI am applying for the DevOps Engineer role at Nilecode Systems in Cairo.\nMy CV and cover letter are attached.\nMy background covers AWS, Terraform, Docker, Kubernetes, Jenkins, GitHub Actions and Linux administration.\nI would be glad to discuss the role.",
-  "why_this_role": "This role matches the work I did on Nexora and at iVolve: Terraform on AWS, Docker and Kubernetes on EKS, and CI/CD with GitHub Actions and Jenkins, plus RHEL administration in my Linux lab."
+  "email_body": "Hello,\n\nI am applying for the DevOps Engineer role at Nilecode Systems in Cairo.\nMy CV and cover letter are attached. They cover my work with AWS, Terraform, Docker, Kubernetes, CI/CD and Linux administration.\nI would be glad to discuss the role.",
+  "why_this_role": "This role matches the work I did in Nexora, where I provisioned AWS infrastructure with Terraform, delivered to EKS through GitHub Actions and ArgoCD, and proved recovery with a 23 minute 50 second rebuild drill."
 }

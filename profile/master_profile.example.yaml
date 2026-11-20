@@ -23,8 +23,7 @@ candidate:
   full_name: Ahmed Mohamed Hussain Mahmoud Khater   # CV header; file names use first_last
   location: Cairo, Egypt
   email: candidate@example.com
-  phone: "01000000000"
-  phone_alt: "01000000001"                           # both numbers go on the CV
+  phone: "01000000000"                               # the only number on CVs (Ahmed, 2026-11-20)
   links:
     github: https://github.com/ahmeddhussain
     linkedin: https://linkedin.com/in/ahmed-khater2611
@@ -460,6 +459,7 @@ projects:
 
   - id: openshift_wordpress
     name: WordPress on Red Hat OpenShift
+    stack: Red Hat OpenShift, WordPress, MySQL, phpMyAdmin
     status: done
     bullets:
       - id: ocp_wp
@@ -468,6 +468,7 @@ projects:
 
   - id: packet_tracer
     name: Two-Floor Building Network Design (Cisco Packet Tracer)
+    stack: Cisco Packet Tracer, routers, switches, end devices
     status: done
     bullets:
       - id: pt_design
@@ -492,11 +493,11 @@ stories:
 # Skills vocabulary. `level`: strong | working | familiar. The tailor step may only
 # list skills from here; `evidence` points at project/experience ids.
 skills:
-  # Mirrors the Skills section of Ahmed's own CV (Ahmed-Khater-CV.pdf), category by
-  # category, plus true items from the lab and projects. The CV renders ALL of them;
-  # the tailor step only orders them by relevance.
+  # Mirrors the Skills section of Ahmed's own CV, category by category, plus true items
+  # from the lab and projects. `core: true` = the main titles shown on every CV; the other
+  # skills appear only when the job asks for them (keywords for the ATS, D25).
   linux:
-    - { id: linux, name: Red Hat Enterprise Linux (RHEL), level: strong, evidence: [sysadmin_lab] }
+    - { id: linux, core: true, name: "RHEL administration", level: strong, evidence: [sysadmin_lab] }
     - { id: amazon_linux, name: Amazon Linux, level: working, evidence: [terraform_3tier] }
     - { id: systemd, name: systemd, level: working, evidence: [sysadmin_lab] }
     - { id: selinux, name: SELinux, level: working, evidence: [sysadmin_lab] }
@@ -504,103 +505,108 @@ skills:
     - { id: ssh_hardening, name: SSH hardening, level: working, evidence: [sysadmin_lab] }
     - { id: user_mgmt, name: user and group management, level: working, evidence: [sysadmin_lab] }
     - { id: sudo, name: sudo, level: working, evidence: [sysadmin_lab] }
-    - { id: freeipa, name: FreeIPA (centralized identity), level: working, evidence: [sysadmin_lab] }
+    - { id: freeipa, core: true, name: "FreeIPA", level: working, evidence: [sysadmin_lab] }
     - { id: patching, name: patch management, level: working, evidence: [sysadmin_lab] }
-    - { id: openscap, name: OpenSCAP (CIS Level 1), level: working, evidence: [sysadmin_lab] }
+    - { id: openscap, core: true, name: "OpenSCAP", level: working, evidence: [sysadmin_lab] }
     - { id: auditd, name: auditd, level: working, evidence: [sysadmin_lab] }
     - { id: aide, name: AIDE, level: familiar, evidence: [sysadmin_lab] }
     - { id: nfs, name: NFSv4 and autofs, level: working, evidence: [sysadmin_lab] }
-    - { id: bash, name: Bash/Shell Scripting, level: working, evidence: [sysadmin_lab] }
+    - { id: bash, core: true, name: "Bash/Shell scripting", level: working, evidence: [sysadmin_lab] }
   networking:
-    - { id: net_fundamentals, name: TCP/IP, level: working, evidence: [sysadmin_lab, packet_tracer] }
-    - { id: dns, name: DNS, level: working, evidence: [sysadmin_lab] }
+    - { id: net_fundamentals, core: true, name: TCP/IP, level: working, evidence: [sysadmin_lab, packet_tracer] }
+    - { id: dns, core: true, name: DNS, level: working, evidence: [sysadmin_lab] }
     - { id: subnetting, name: subnetting, level: working, evidence: [sysadmin_lab, nexora] }
     - { id: routing, name: routing, level: working, evidence: [sysadmin_lab, packet_tracer] }
-    - { id: vpc_design, name: VPC design, level: strong, evidence: [nexora, sysadmin_lab, terraform_3tier] }
+    - { id: vpc_design, core: true, name: VPC design, level: strong, evidence: [nexora, sysadmin_lab, terraform_3tier] }
     - { id: nat, name: NAT, level: working, evidence: [sysadmin_lab, terraform_3tier] }
-    - { id: vpn, name: VPN (WireGuard), level: working, evidence: [sysadmin_lab] }
+    - { id: vpn, core: true, name: VPN (WireGuard), level: working, evidence: [sysadmin_lab] }
     - { id: tls, name: TLS, level: working, evidence: [sysadmin_lab, nexora] }
     - { id: squid, name: Squid proxy, level: working, evidence: [sysadmin_lab] }
     - { id: net_routing_switching, name: "VLAN, STP/RSTP, OSPF, BGP, QoS", level: familiar, evidence: [packet_tracer] }   # networking-angle jobs only
     - { id: mpls_vrf, name: "MPLS (L2/L3 VPN, TE), VRF", level: familiar, evidence: [] }                           # networking-angle jobs only
     - { id: cisco_pt, name: Cisco Packet Tracer, level: working, evidence: [packet_tracer] }
   cloud:
-    - { id: aws, name: "AWS (EC2, VPC, EKS, ECS Fargate, ECR, RDS, IAM, S3, ALB, Auto Scaling, EBS, CloudWatch, SNS, Secrets Manager, SSM)", level: strong, evidence: [nexora, sysadmin_lab, ivolve_gitops, ecs_fargate, terraform_3tier] }
+    - { id: aws, core: true, name: "AWS (EC2, EKS, ECS Fargate, RDS, IAM, S3, VPC)", level: strong, evidence: [nexora, sysadmin_lab, ivolve_gitops, ecs_fargate, terraform_3tier] }
+    - { id: ecr, name: Amazon ECR, level: working, evidence: [nexora, ivolve_gitops, cicd_pipeline] }
+    - { id: alb_asg, name: "ALB, Auto Scaling", level: working, evidence: [terraform_3tier, ecs_fargate] }
+    - { id: ebs, name: EBS, level: working, evidence: [nexora] }
+    - { id: sns, name: SNS, level: working, evidence: [terraform_3tier, ecs_fargate] }
+    - { id: ssm, name: SSM Parameter Store, level: working, evidence: [sysadmin_lab] }
     - { id: eks, name: Amazon EKS, level: strong, evidence: [nexora, ivolve_gitops, cicd_pipeline] }
-    - { id: ha, name: high availability (Multi-AZ), level: working, evidence: [nexora, terraform_3tier] }
+    - { id: ha, core: true, name: high availability (Multi-AZ), level: working, evidence: [nexora, terraform_3tier] }
     - { id: encryption_at_rest, name: encryption at rest, level: working, evidence: [nexora, ecs_fargate] }
   iac_config:
-    - { id: terraform, name: Terraform, level: strong, evidence: [nexora, sysadmin_lab, ivolve_gitops, terraform_3tier, ecs_fargate] }
-    - { id: cloudformation, name: CloudFormation, level: familiar, evidence: [nexora] }
-    - { id: ansible, name: Ansible, level: strong, evidence: [sysadmin_lab, cicd_pipeline, nti] }
+    - { id: terraform, core: true, name: Terraform, level: strong, evidence: [nexora, sysadmin_lab, ivolve_gitops, terraform_3tier, ecs_fargate] }
+    - { id: cloudformation, core: true, name: CloudFormation, level: familiar, evidence: [nexora] }
+    - { id: ansible, core: true, name: Ansible, level: strong, evidence: [sysadmin_lab, cicd_pipeline, nti] }
   containers:
-    - { id: docker, name: Docker, level: strong, evidence: [cicd_pipeline, barq, ecs_fargate, nti] }
+    - { id: docker, core: true, name: Docker, level: strong, evidence: [cicd_pipeline, barq, ecs_fargate, nti] }
     - { id: docker_compose, name: Docker Compose, level: working, evidence: [barq, ecs_fargate] }
     - { id: podman, name: Podman, level: familiar, evidence: [] }
-    - { id: kubernetes, name: Kubernetes, level: strong, evidence: [nexora, ivolve_gitops, cicd_pipeline, k8s_security_lab] }
-    - { id: openshift, name: OpenShift, level: familiar, evidence: [openshift_wordpress] }
-    - { id: helm, name: Helm, level: working, evidence: [nti, cicd_pipeline] }
+    - { id: kubernetes, core: true, name: Kubernetes, level: strong, evidence: [nexora, ivolve_gitops, cicd_pipeline, k8s_security_lab] }
+    - { id: openshift, core: true, name: OpenShift, level: familiar, evidence: [openshift_wordpress] }
+    - { id: helm, core: true, name: Helm, level: working, evidence: [nti, cicd_pipeline] }
     - { id: kustomize, name: Kustomize, level: working, evidence: [nexora] }
     - { id: istio, name: "Istio (service mesh, mTLS)", level: working, evidence: [nexora] }
   service_mesh:
-    - { id: istio_traffic, name: Istio, level: working, evidence: [nexora] }
-    - { id: gateway_api, name: Gateway API, level: working, evidence: [nexora] }
+    - { id: istio_traffic, core: true, name: Istio, level: working, evidence: [nexora] }
+    - { id: gateway_api, core: true, name: Gateway API, level: working, evidence: [nexora] }
     - { id: ingress, name: Ingress, level: working, evidence: [k8s_security_lab, nexora] }
     - { id: aws_lbc, name: AWS Load Balancer Controller, level: working, evidence: [nexora] }
   cicd_gitops:
-    - { id: jenkins, name: "Jenkins (Shared Libraries, JCasC)", level: strong, evidence: [cicd_pipeline, nti, terraform_3tier] }
-    - { id: github_actions, name: GitHub Actions, level: strong, evidence: [nexora, ivolve_gitops, ecs_fargate] }
-    - { id: argocd, name: ArgoCD, level: strong, evidence: [nexora, ivolve_gitops, cicd_pipeline] }
-    - { id: argo_rollouts, name: Argo Rollouts, level: working, evidence: [nexora] }
+    - { id: jenkins, core: true, name: "Jenkins (Shared Libraries, JCasC)", level: strong, evidence: [cicd_pipeline, nti, terraform_3tier] }
+    - { id: github_actions, core: true, name: GitHub Actions, level: strong, evidence: [nexora, ivolve_gitops, ecs_fargate] }
+    - { id: argocd, core: true, name: ArgoCD, level: strong, evidence: [nexora, ivolve_gitops, cicd_pipeline] }
+    - { id: argo_rollouts, core: true, name: Argo Rollouts, level: working, evidence: [nexora] }
   devsecops:
-    - { id: trivy, name: Trivy, level: working, evidence: [nexora, cicd_pipeline, ecs_fargate, nti] }
-    - { id: sonarqube, name: SonarQube, level: working, evidence: [cicd_pipeline, nti] }
-    - { id: cosign, name: Cosign, level: working, evidence: [nexora, ecs_fargate] }
-    - { id: iam_oidc, name: OIDC federation, level: working, evidence: [nexora, ivolve_gitops, ecs_fargate] }
+    - { id: trivy, core: true, name: Trivy, level: working, evidence: [nexora, cicd_pipeline, ecs_fargate, nti] }
+    - { id: sonarqube, core: true, name: SonarQube, level: working, evidence: [cicd_pipeline, nti] }
+    - { id: cosign, core: true, name: Cosign, level: working, evidence: [nexora, ecs_fargate] }
+    - { id: iam_oidc, core: true, name: OIDC federation, level: working, evidence: [nexora, ivolve_gitops, ecs_fargate] }
     - { id: irsa, name: IRSA, level: working, evidence: [nexora] }
     - { id: rbac, name: Kubernetes RBAC, level: working, evidence: [k8s_security_lab] }
     - { id: netpol, name: NetworkPolicies, level: working, evidence: [nexora, k8s_security_lab] }
     - { id: cilium, name: Cilium, level: working, evidence: [k8s_security_lab] }
     - { id: mtls, name: mTLS, level: working, evidence: [nexora] }
   secrets:
-    - { id: secrets_manager, name: AWS Secrets Manager, level: working, evidence: [nexora, ivolve_gitops, ecs_fargate] }
-    - { id: eso, name: External Secrets Operator, level: working, evidence: [nexora, ivolve_gitops] }
+    - { id: secrets_manager, core: true, name: AWS Secrets Manager, level: working, evidence: [nexora, ivolve_gitops, ecs_fargate] }
+    - { id: eso, core: true, name: External Secrets Operator, level: working, evidence: [nexora, ivolve_gitops] }
     - { id: ansible_vault, name: Ansible Vault, level: working, evidence: [sysadmin_lab, cicd_pipeline] }
   messaging:
-    - { id: kafka, name: Apache Kafka, level: working, evidence: [nexora] }
+    - { id: kafka, core: true, name: Apache Kafka, level: working, evidence: [nexora] }
   databases:
-    - { id: mysql, name: MySQL, level: working, evidence: [nexora, ivolve_gitops, terraform_3tier, ecs_fargate] }
-    - { id: postgresql, name: PostgreSQL, level: working, evidence: [barq] }
+    - { id: mysql, core: true, name: MySQL, level: working, evidence: [nexora, ivolve_gitops, terraform_3tier, ecs_fargate] }
+    - { id: postgresql, core: true, name: PostgreSQL, level: working, evidence: [barq] }
     - { id: rds, name: Amazon RDS, level: working, evidence: [nexora, ivolve_gitops, terraform_3tier, ecs_fargate] }
     - { id: sql, name: SQL, level: working, evidence: [nexora] }
   observability:
-    - { id: prometheus, name: Prometheus, level: strong, evidence: [nexora, ivolve_gitops, cicd_pipeline, nti] }
+    - { id: prometheus, core: true, name: Prometheus, level: strong, evidence: [nexora, ivolve_gitops, cicd_pipeline, nti] }
     - { id: alertmanager, name: Alertmanager, level: working, evidence: [nexora] }
-    - { id: grafana, name: Grafana, level: strong, evidence: [nexora, ivolve_gitops, nti] }
-    - { id: loki, name: Loki, level: working, evidence: [nexora, nti] }
+    - { id: grafana, core: true, name: Grafana, level: strong, evidence: [nexora, ivolve_gitops, nti] }
+    - { id: loki, core: true, name: Loki, level: working, evidence: [nexora, nti] }
     - { id: promtail, name: Promtail, level: working, evidence: [nti] }
     - { id: fluent_bit, name: Fluent Bit, level: working, evidence: [nexora] }
     - { id: cloudwatch, name: CloudWatch, level: working, evidence: [terraform_3tier, ecs_fargate] }
     - { id: tempo_otel, name: "Tempo, OpenTelemetry", level: familiar, evidence: [nexora] }
   reliability:
-    - { id: hpa, name: HPA, level: working, evidence: [nexora] }
+    - { id: hpa, core: true, name: HPA, level: working, evidence: [nexora] }
     - { id: metrics_server, name: metrics-server, level: working, evidence: [nexora] }
-    - { id: dr, name: disaster recovery drills (RTO/RPO), level: working, evidence: [nexora, sysadmin_lab] }
+    - { id: dr, core: true, name: disaster recovery drills (RTO/RPO), level: working, evidence: [nexora, sysadmin_lab] }
     - { id: load_testing, name: load testing, level: working, evidence: [nexora] }
   programming:
     - { id: bash_scripting, name: Bash, level: working, evidence: [sysadmin_lab] }
-    - { id: python, name: "Python (FastAPI, Flask, Pytest)", level: working, evidence: [nexora, barq] }
-    - { id: groovy, name: Groovy, level: working, evidence: [cicd_pipeline] }
+    - { id: python, core: true, name: "Python (FastAPI, Flask, Pytest)", level: working, evidence: [nexora, barq] }
+    - { id: groovy, core: true, name: Groovy, level: working, evidence: [cicd_pipeline] }
     - { id: yaml, name: YAML, level: strong, evidence: [nexora] }
     - { id: rest_apis, name: REST APIs, level: working, evidence: [nexora, barq] }
     - { id: windows_batch, name: Windows batch scripting, level: familiar, evidence: [] }   # only when a job asks for it
   testing:
-    - { id: pytest_tests, name: Automated testing with Pytest (async integration and concurrency tests), level: working, evidence: [nexora] }
+    - { id: pytest_tests, core: true, name: "Pytest (async integration and concurrency tests)", level: working, evidence: [nexora] }
     - { id: benchmarking, name: load testing and benchmarking, level: working, evidence: [nexora] }
   devplatform:
     - { id: backstage, name: Backstage, level: familiar, evidence: [nexora] }
-    - { id: git, name: Git, level: strong, evidence: [nexora, sysadmin_lab] }
-    - { id: github, name: GitHub, level: strong, evidence: [nexora, sysadmin_lab] }
+    - { id: git, core: true, name: Git, level: strong, evidence: [nexora, sysadmin_lab] }
+    - { id: github, core: true, name: GitHub, level: strong, evidence: [nexora, sysadmin_lab] }
     - { id: incident_docs, name: "runbooks, incident reports, ticket-based change", level: working, evidence: [sysadmin_lab, nexora] }
 
 soft_skills: [Problem Solving, Troubleshooting, Time Management, Teamwork, Self-Learning]

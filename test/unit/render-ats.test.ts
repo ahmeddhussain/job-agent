@@ -120,11 +120,19 @@ describe('one-page CV + ATS check', () => {
     const path = join(dir, 'keywords.pdf');
     await renderOnePageCv(renderer, profile, recording('12-network-backoffice'), cfg, path);
     const ats = await atsCheck(path, cfg, profile, vocab, [
-      'Azure DevOps pipelines',
-      'GCP and Azure AKS',
+      'Podman containers',
+      'Windows batch scripting',
     ]);
     expect(ats.keywordsMissing.length).toBeGreaterThan(0);
     expect(ats.failures.join()).toMatch(/keyword coverage/);
+  }, 60_000);
+
+  it('only counts keywords the profile backs (an unbacked tool like Azure is ignored)', async () => {
+    const path = join(dir, 'unbacked.pdf');
+    await renderOnePageCv(renderer, profile, recording('12-network-backoffice'), cfg, path);
+    const ats = await atsCheck(path, cfg, profile, vocab, ['Azure DevOps pipelines', 'GCP']);
+    expect(ats.keywordsMissing).toEqual([]);
+    expect(ats.keywordCoverage).toBe(1);
   }, 60_000);
 
   it('blocks network requests and scripts while rendering (security A9)', async () => {

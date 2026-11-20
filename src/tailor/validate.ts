@@ -38,6 +38,16 @@ const CLICHES = [
 const SENIORITY_CLAIMS = /\b(senior|lead|principal|staff|head of|manager|architect)\b/i;
 const IN_PROGRESS = /\b(in progress|ongoing|currently|being built|underway)\b/i;
 
+/** Case-insensitive whole-phrase matcher; spaces and hyphens in the phrase match either. */
+export function notHeldRegex(phrase: string): RegExp {
+  const body = phrase
+    .trim()
+    .split(/[\s-]+/)
+    .map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('[\\s-]+');
+  return new RegExp(`(?<![A-Za-z0-9])${body}(?![A-Za-z0-9])`, 'i');
+}
+
 function words(s: string): number {
   return s.trim().split(/\s+/).filter(Boolean).length;
 }
@@ -53,7 +63,8 @@ export function validateTailor(
   const addField = (f: Field, msg: string) => fields.set(f, [...(fields.get(f) ?? []), msg]);
   const addBullet = (id: string, msg: string) => bullets.set(id, [...(bullets.get(id) ?? []), msg]);
 
-  const notHeld = profile.not_held.map((n) => n.toLowerCase());
+  // Whole words only: "CKA" must not match inside "package" (troubleshooting #12).
+  const notHeld = profile.not_held.map((n) => ({ n, re: notHeldRegex(n) }));
   const allText = profileText(profile);
   const profileNumbers = numbersIn(allText);
   const profileTerms = vocab.find(allText);
@@ -99,8 +110,8 @@ export function validateTailor(
         ) {
           addBullet(b.id, 'in-progress work must be described as in progress');
         }
-        for (const n of notHeld)
-          if (outFull.toLowerCase().includes(n)) addBullet(b.id, `mentions "${n}" (not held)`);
+        for (const { n, re } of notHeld)
+          if (re.test(outFull)) addBullet(b.id, `mentions "${n}" (not held)`);
       }
     }
   };
@@ -121,12 +132,11 @@ export function validateTailor(
     ['why_this_role', out.why_this_role],
   ];
   for (const [f, text] of free) {
-    const lower = text.toLowerCase();
     for (const n of numbersIn(text))
       if (!profileNumbers.has(n)) addField(f, `number ${n} is not in the profile`);
     for (const t of vocab.find(text))
       if (!profileTerms.has(t)) addField(f, `"${t}" is not in the profile`);
-    for (const n of notHeld) if (lower.includes(n)) addField(f, `mentions "${n}" (not held)`);
+    for (const { n, re } of notHeld) if (re.test(text)) addField(f, `mentions "${n}" (not held)`);
   }
   if (SENIORITY_CLAIMS.test(out.headline))
     addField('headline', 'headline claims a seniority level');

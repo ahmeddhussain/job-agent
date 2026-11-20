@@ -37,7 +37,7 @@
 <h2>Projects</h2>
 {{#each projects}}
 <p class="head">{{#if link}}<a href="{{link}}"><b>{{name}}</b></a>{{else}}<b>{{name}}</b>{{/if}}{{#if stack}} — <i>{{stack}}</i>{{/if}}</p>
-<ul>{{#each bullets}}<li>{{#if label}}<span class="label">{{label}}:</span> {{/if}}{{text}}</li>{{/each}}</ul>
+{{#if bullets.length}}<ul>{{#each bullets}}<li>{{#if label}}<span class="label">{{label}}:</span> {{/if}}{{text}}</li>{{/each}}</ul>{{/if}}
 {{/each}}
 </section>
 

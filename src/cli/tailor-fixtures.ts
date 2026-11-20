@@ -18,6 +18,7 @@ import {
   buildCvModel,
   ensureDir,
   fileName,
+  renderContextFor,
   renderOnePageCv,
 } from '../render/cv.js';
 import { Renderer } from '../render/renderer.js';
@@ -47,7 +48,7 @@ function signature(p: Profile): string {
     'Best regards,',
     `${c.first_name} ${c.last_name}`,
     [c.phone, c.phone_alt].filter(Boolean).join(' | '),
-    ...Object.values(c.links),
+    ...Object.entries(c.links).map(([k, u]) => `${k[0]?.toUpperCase() ?? ''}${k.slice(1)}: ${u}`),
   ].join('\n');
 }
 
@@ -129,7 +130,14 @@ export async function tailorFixturesCommand(
       const t = await tailorJob(llm, cfg, profile, vocab, angle, tj, `${id}.tailor`);
 
       const cvPath = join(dir, fileName(profile, 'CV', job.company, job.title));
-      const fitRep = await renderOnePageCv(renderer, profile, t.output, cfg, cvPath);
+      const ctx = renderContextFor(
+        cfg,
+        angle,
+        [job.title, ...job.requirements, ...job.nice_to_have].join('\n'),
+        (text) => vocab.find(text),
+        new Set(fit.matched.flatMap((m) => m.evidence)),
+      );
+      const fitRep = await renderOnePageCv(renderer, profile, t.output, cfg, cvPath, ctx);
       const ats: AtsReport = await atsCheck(cvPath, cfg, profile, vocab, tj.matched);
 
       const coverPath = join(dir, fileName(profile, 'Cover_Letter', job.company, job.title));
@@ -149,7 +157,10 @@ export async function tailorFixturesCommand(
         `${profile.candidate.first_name} ${profile.candidate.last_name}`,
       ].join('\n\n');
       writeFileSync(join(dir, 'cover_letter.txt'), `${coverText}\n`);
-      writeFileSync(join(dir, 'cv.md'), cvMarkdown(buildCvModel(profile, fitRep.output)));
+      writeFileSync(
+        join(dir, 'cv.md'),
+        cvMarkdown(buildCvModel(profile, fitRep.output, fitRep.layout, ctx)),
+      );
       writeFileSync(
         join(dir, 'email.txt'),
         `Subject: ${emailSubject(profile, job.title, job.subject_hint)}\n\n${fitRep.output.email_body}\n\n${signature(profile)}\n`,

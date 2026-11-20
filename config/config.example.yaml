@@ -89,6 +89,9 @@ cv:
   max_pages: 1                     # R14: every applied CV is exactly one page
   min_fill: 0.93                   # grow back (more bullets) if the page is less full than this
   min_projects: 4                  # Ahmed: at least 4 projects on every CV
+  max_projects: 6                  # extra stack-only projects fill free space up to this
+  featured_projects: [nexora, sysadmin_lab]   # shown with bullets; other projects: title + stack only (D25)
+  networking_projects: [packet_tracer]        # also shown with bullets on networking jobs
   max_skills_dropped: 6            # least relevant skills that may go before a top project's 2nd bullet (0 = keep all)
   font_pt: { max: 10, min: 9, step: 0.5 }   # his CV is 10 pt Carlito; shrink before cutting content
   max_trim_rounds: 20             # each round re-renders locally (~1 s), no model call

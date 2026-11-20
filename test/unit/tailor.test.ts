@@ -1,5 +1,5 @@
 // The truth validator and the tailor step's retry/fallback (PLAN 8.1, P3 gate).
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 import { parseConfig } from '../../src/config.js';
@@ -171,5 +171,51 @@ describe('render helpers', () => {
       'Ahmed_Khater_Cover_Letter_IT_Support_Tier_1.pdf',
     );
     expect(fileName(profile, 'CV', 'A'.repeat(60), 'B'.repeat(60)).length).toBeLessThanOrEqual(80);
+  });
+});
+
+describe("Ahmed's CV rules (D25)", () => {
+  it('shows contact links as words with the URL behind them, and one phone', async () => {
+    const { contactLine } = await import('../../src/render/cv.js');
+    const c = contactLine(profile);
+    expect(c.filter((x) => x.href?.startsWith('http')).map((x) => x.text)).toEqual([
+      'GitHub',
+      'LinkedIn',
+      'Portfolio',
+    ]);
+    expect(c.filter((x) => /^\d{11}$/.test(x.text))).toHaveLength(1);
+  });
+
+  // .secrets-blocklist and the real profile are gitignored: this runs on Ahmed's machine, not in CI.
+  it.runIf(existsSync('.secrets-blocklist') && existsSync('profile/master_profile.yaml'))(
+    'never prints the private number (it is not in the profile at all)',
+    () => {
+      const blocklist = readFileSync('.secrets-blocklist', 'utf8')
+        .split('\n')
+        .filter((l) => /^\d+$/.test(l));
+      const text = readFileSync('profile/master_profile.yaml', 'utf8');
+      for (const n of blocklist) expect(text).not.toContain(n);
+    },
+  );
+
+  it('shows core skill titles, plus skills the job asks for; "SQL" is not hidden by "MySQL"', async () => {
+    const { orderedSkills } = await import('../../src/render/cv.js');
+    const coreOnly = orderedSkills(profile, [])
+      .map((c) => c.items)
+      .join(' | ');
+    expect(coreOnly).toContain('RHEL administration');
+    expect(coreOnly).not.toContain('Podman');
+    const withJob = orderedSkills(profile, [], 0, (_n, id) => id === 'sql' || id === 'podman')
+      .map((c) => c.items)
+      .join(' | ');
+    expect(withJob).toMatch(/(^|, |: )SQL(,|$| \|)/);
+    expect(withJob).toContain('Podman');
+  });
+
+  it('matches not-held phrases as whole words only', async () => {
+    const { notHeldRegex } = await import('../../src/tailor/validate.js');
+    expect(notHeldRegex('CKA').test('a package rollback')).toBe(false);
+    expect(notHeldRegex('CKA').test('holds the CKA')).toBe(true);
+    expect(notHeldRegex('double-entry').test('a double entry ledger')).toBe(true);
   });
 });

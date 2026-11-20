@@ -33,6 +33,8 @@ const Entry = z.strictObject({
 
 const Skill = z.strictObject({
   id,
+  /** Main title shown on every CV; other skills appear only when a job asks for them (D25). */
+  core: z.boolean().default(false),
   name: z.string(),
   level: z.enum(['strong', 'working', 'familiar']),
   evidence: z.array(id),

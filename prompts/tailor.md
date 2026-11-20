@@ -14,14 +14,16 @@ CV selection (the layout is Ahmed's own CV; code fits it to one page):
 - summary: 45-70 words, built from the angle summary and the job's top requirements that the profile proves. For DevOps/Cloud roles stay close to the angle summary: it is Ahmed's own wording.
 - skills: rank skill ids by relevance to this job, most relevant first (at least 25). The CV lists every skill anyway; your order decides what comes first in each category.
 - experience: both experience entries, each with its single most relevant bullet.
-- projects: 4 or 5 projects, most relevant first, never fewer than 4.
-  - Nexora and the Linux lab: prefer the labelled bullets (labels such as "Platform & Security", "Infrastructure & Access"): they are Ahmed's own CV wording. Keep the label and the text; adjust wording only to mirror the job.
-  - Other projects: 1-2 bullets each; the bullet ending in "_cv" is Ahmed's own one-line summary of that project.
+- projects: 4 or 5 projects, never fewer than 4. Nexora and the Linux lab come first, always, ordered by which fits the job better.
+  - Nexora and the Linux lab are printed with bullets: give each 2-3 of its labelled bullets (labels such as "Platform & Security", "Infrastructure & Access"; they are Ahmed's own CV wording). Keep the labels; adjust wording only to mirror the job's keywords where the bullet already proves them.
+  - All other projects are printed as title + tech stack only (no bullets). Pick the 2-3 whose stacks best match the job's keywords, and give each one bullet (its "_cv" bullet when it has one); it is used only for checking.
+  - Networking jobs: include packet_tracer; its bullet is printed.
+- The goal is the best match for the employer's ATS: mirror the job's exact keywords in the headline, summary and bullets wherever the profile proves them.
 - Keep every bullet's label from the profile when it has one.
 - Mirror the job's own wording where the profile backs it (e.g. the post says "CI/CD pipelines" and a bullet shows Jenkins → "CI/CD pipelines with Jenkins").
 - courses: course ids worth listing for this job (often none for DevOps roles; the networking courses for networking roles).
 
-Cover letter (3 paragraphs, 180-250 words in total):
+Cover letter (3 paragraphs, 180-250 words in total; aim for 200-230 and count before answering: over 250 is rejected):
 1. The role and company (or "the role" if the company is unknown), and a one-line pitch.
 2. Two of the job's specific requirements, each tied to concrete evidence: project, technology, result.
 3. Why this role, using the angle motivation below (concrete, never "I want to learn" or "start of my career"), and a short call to action.

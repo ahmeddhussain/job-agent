@@ -1,8 +1,9 @@
 // ATS check (PLAN 8.6, R15, D14): reads the PDF the way a parser does and blocks the
 // application on any failure. Runs before every application; there is no off switch.
+import { readFileSync } from 'node:fs';
 import type { Config } from '../config.js';
 import type { Profile } from '../profile/load.js';
-import type { Vocabulary } from '../tailor/vocab.js';
+import { profileText, type Vocabulary } from '../tailor/vocab.js';
 import { imageCount, pdfInfo, pdfText, unembeddedFonts } from './poppler.js';
 
 export interface AtsReport {
@@ -18,6 +19,14 @@ export interface AtsReport {
 }
 
 const digits = (s: string) => s.replace(/\D/g, '');
+
+/** Every URI link target in the PDF (Chrome writes link annotations uncompressed). */
+export function linkTargets(pdf: Buffer): Set<string> {
+  const text = pdf.toString('latin1');
+  return new Set(
+    [...text.matchAll(/\/URI\s*\(([^)]*)\)/g)].map((m) => (m[1] ?? '').replace(/\/$/, '')),
+  );
+}
 
 export async function atsCheck(
   pdfPath: string,
@@ -63,14 +72,20 @@ export async function atsCheck(
   for (const ph of [c.phone, c.phone_alt].filter((x): x is string => Boolean(x))) {
     if (!digits(flat).includes(digits(ph))) failures.push(`phone ${ph.slice(0, 4)}… not found`);
   }
+  // Links are words ("GitHub", "Portfolio") with the URL behind them (D25), so check the
+  // PDF's link annotations: each profile link must be a real, clickable target.
+  const uris = linkTargets(readFileSync(pdfPath));
   for (const [name, url] of Object.entries(c.links)) {
-    const host = url.replace(/^https?:\/\//, '').replace(/\/$/, '');
-    if (!flat.includes(host)) failures.push(`${name} link not found`);
+    if (!uris.has(url.replace(/\/$/, ''))) failures.push(`${name} link missing`);
   }
 
   // Keyword coverage: technologies named in backed requirements must be in the CV text.
+  // Only keywords the profile backs count: a requirement note like "Jira itself not
+  // shown" must not demand Jira (troubleshooting #13).
+  const backed = vocab.find(profileText(profile));
   const wanted = new Set<string>();
-  for (const r of backedRequirements) for (const t of vocab.find(r)) wanted.add(t);
+  for (const r of backedRequirements)
+    for (const t of vocab.find(r)) if (backed.has(t)) wanted.add(t);
   const inCv = vocab.find(text);
   const keywordsMissing = [...wanted].filter((t) => !inCv.has(t));
   const keywordCoverage =

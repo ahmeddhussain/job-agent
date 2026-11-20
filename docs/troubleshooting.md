@@ -237,3 +237,40 @@ would read it. The check was right.
 
 **Fix.** Contact items are `white-space: nowrap`, so the line breaks only between items.
 The ATS check passes on all 3.
+
+---
+
+## 12. Validator rejected Ahmed's own bullet: "CKA" inside "package"
+
+**Symptom.**
+
+```
+tailor: still invalid after fallback: bullet lab_drills: mentions "cka" (not held)
+```
+
+**Diagnosis.** The not-held check used a plain substring test. `lab_drills` says
+"a pa**cka**ge rollback", which contains "cka". Because the untouched profile text
+itself failed, the fallback could not repair it and the job crashed.
+
+**Fix.** Not-held phrases match as whole words (spaces and hyphens interchangeable).
+A self-check confirmed no profile fact trips any not-held phrase, and a test covers
+"package" vs "CKA".
+
+---
+
+## 13. Support CV at 50% keyword coverage
+
+**Symptom.**
+
+```
+FAIL 11-app-support-form [support] ... ats=fail (keyword coverage 50% < 70%)
+missing: ['ticket-based change', 'jira']
+```
+
+**Diagnosis.** Two bugs. (1) The coverage counted every tool named in the fit's
+requirement notes, including "Jira itself not shown", which the profile doesn't have.
+(2) "SQL" was hidden because the "already shown" check found it inside "MySQL" as a
+substring, and skills the fit cited as evidence ("ticket-based change") weren't added.
+
+**Fix.** Coverage counts only profile-backed keywords; the duplicate check matches whole
+words; skills cited as fit evidence are shown. Re-run: 100% on all three CVs.
