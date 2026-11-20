@@ -405,19 +405,15 @@ projects:
         text: Streamed logs to CloudWatch Logs and set four CloudWatch metric alarms that notify by email through SNS.
         tags: [cloudwatch, sns, monitoring]
 
-  - id: barq
-    name: Load-Balanced Flask Service with NGINX and PostgreSQL (Docker Compose)
-    link: https://github.com/ahmeddhussain/BARQ-Task
-    stack: Docker Compose, NGINX, Python/Flask, PostgreSQL, GitHub Actions
+  - id: ivolve_labs_repo
+    name: iVolve DevOps Labs
+    link: https://github.com/ahmeddhussain/ivolve-labs
+    stack: Gradle, Maven, Docker, Docker Compose, Kubernetes, Jenkins (agents, Shared Libraries), ArgoCD, Ansible (roles, Vault, AWS dynamic inventory)
     status: done
     bullets:
-      - id: barq_stack
-        text: Containerized a Flask API as three non-root instances behind an NGINX reverse proxy load balancer, backed by PostgreSQL on a persistent volume, with health checks on every container.
-        tags: [docker, nginx, python, postgresql, load_balancing]
-      - id: barq_resilience
-        text: Wrote a failure test that stops a backend, measures traffic continuing on the healthy instances, restores it and proves recovery, plus backup and restore of the database.
-        tags: [reliability, testing, dr, postgresql]
-
+      - id: ivlabs_cv
+        text: 30 documented hands-on labs covering Gradle and Maven builds, multi-stage Docker images and Compose, Kubernetes (StatefulSets, PV/PVC, Init Containers, NetworkPolicy, RBAC, DaemonSets), Jenkins pipelines with agents and Shared Libraries, GitOps with ArgoCD, and Ansible roles, Vault and AWS dynamic inventory.
+        tags: [docker, kubernetes, jenkins, argocd, ansible, gradle, maven]
   - id: terraform_3tier
     name: Three-Tier AWS Application
     link: https://github.com/ahmeddhussain/terraform-aws-project
@@ -540,8 +536,8 @@ skills:
     - { id: cloudformation, core: true, name: CloudFormation, level: familiar, evidence: [nexora] }
     - { id: ansible, core: true, name: Ansible, level: strong, evidence: [sysadmin_lab, cicd_pipeline, nti] }
   containers:
-    - { id: docker, core: true, name: Docker, level: strong, evidence: [cicd_pipeline, barq, ecs_fargate, nti] }
-    - { id: docker_compose, name: Docker Compose, level: working, evidence: [barq, ecs_fargate] }
+    - { id: docker, core: true, name: Docker, level: strong, evidence: [cicd_pipeline, ivolve_labs_repo, ecs_fargate, nti] }
+    - { id: docker_compose, name: Docker Compose, level: working, evidence: [ecs_fargate, ivolve_labs_repo] }
     - { id: podman, name: Podman, level: familiar, evidence: [] }
     - { id: kubernetes, core: true, name: Kubernetes, level: strong, evidence: [nexora, ivolve_gitops, cicd_pipeline, k8s_security_lab] }
     - { id: openshift, core: true, name: OpenShift, level: familiar, evidence: [openshift_wordpress] }
@@ -576,7 +572,7 @@ skills:
     - { id: kafka, core: true, name: Apache Kafka, level: working, evidence: [nexora] }
   databases:
     - { id: mysql, core: true, name: MySQL, level: working, evidence: [nexora, ivolve_gitops, terraform_3tier, ecs_fargate] }
-    - { id: postgresql, core: true, name: PostgreSQL, level: working, evidence: [barq] }
+    - { id: postgresql, core: true, name: PostgreSQL, level: working, evidence: [] }
     - { id: rds, name: Amazon RDS, level: working, evidence: [nexora, ivolve_gitops, terraform_3tier, ecs_fargate] }
     - { id: sql, name: SQL, level: working, evidence: [nexora] }
   observability:
@@ -595,10 +591,10 @@ skills:
     - { id: load_testing, name: load testing, level: working, evidence: [nexora] }
   programming:
     - { id: bash_scripting, name: Bash, level: working, evidence: [sysadmin_lab] }
-    - { id: python, core: true, name: "Python (FastAPI, Flask, Pytest)", level: working, evidence: [nexora, barq] }
+    - { id: python, core: true, name: "Python (FastAPI, Flask, Pytest)", level: working, evidence: [nexora] }
     - { id: groovy, core: true, name: Groovy, level: working, evidence: [cicd_pipeline] }
     - { id: yaml, name: YAML, level: strong, evidence: [nexora] }
-    - { id: rest_apis, name: REST APIs, level: working, evidence: [nexora, barq] }
+    - { id: rest_apis, name: REST APIs, level: working, evidence: [nexora] }
     - { id: windows_batch, name: Windows batch scripting, level: familiar, evidence: [] }   # only when a job asks for it
   testing:
     - { id: pytest_tests, core: true, name: "Pytest (async integration and concurrency tests)", level: working, evidence: [nexora] }

@@ -1,46 +1,64 @@
 {
-  "headline": "Application Support Engineer | Linux | SQL | REST APIs | AWS",
-  "summary": "Cloud and DevOps Engineer who troubleshoots from evidence: decoded a live GitHub OIDC token to fix an AWS trust-policy failure and traced an AWS AuthFailure to clock skew from blocked NTP. Operates an enterprise-style RHEL environment through tickets, runbooks and incident reports, and works with Linux, SQL, REST APIs, logs in Loki and CloudWatch, networking and AWS.",
+  "headline": "Application Support Engineer | Linux | SQL | AWS",
+  "summary": "Cloud and DevOps Engineer who troubleshoots from evidence: decoded a live GitHub OIDC token to fix an AWS trust-policy failure, traced an AWS AuthFailure to clock skew from blocked NTP, and wrote 7 incident reports with root cause and actions. Runs an enterprise-style RHEL environment through tickets and runbooks; comfortable with Linux, SQL, REST APIs, logs in Loki and AWS.",
   "skills": [
     "linux",
     "sql",
     "rest_apis",
     "incident_docs",
-    "systemd",
-    "bash",
     "mysql",
-    "postgresql",
-    "python",
     "loki",
-    "cloudwatch",
+    "bash",
+    "systemd",
+    "aws",
+    "net_fundamentals",
+    "dns",
+    "python",
     "grafana",
     "prometheus",
-    "dns",
-    "net_fundamentals",
-    "aws",
+    "alertmanager",
+    "cloudwatch",
+    "fluent_bit",
+    "promtail",
+    "rds",
+    "postgresql",
     "freeipa",
+    "user_mgmt",
+    "sudo",
     "selinux",
     "firewalld",
     "ssh_hardening",
-    "user_mgmt",
-    "sudo",
+    "nfs",
     "patching",
     "auditd",
-    "nfs",
     "vpn",
-    "squid",
     "tls",
-    "docker",
-    "kubernetes",
+    "squid",
     "git",
     "github",
+    "docker",
+    "kubernetes",
     "ansible",
     "terraform",
-    "alertmanager",
-    "fluent_bit",
-    "rds",
+    "dr",
+    "pytest_tests",
     "bash_scripting",
-    "amazon_linux"
+    "yaml",
+    "amazon_linux",
+    "openscap",
+    "aide",
+    "vpc_design",
+    "nat",
+    "subnetting",
+    "routing",
+    "ssm",
+    "sns",
+    "ebs",
+    "eks",
+    "ecr",
+    "jenkins",
+    "github_actions",
+    "argocd"
   ],
   "experience": [
     {
@@ -99,15 +117,6 @@
       ]
     },
     {
-      "id": "barq",
-      "bullets": [
-        {
-          "id": "barq_stack",
-          "text": "Containerized a Flask API as three non-root instances behind an NGINX reverse proxy load balancer, backed by PostgreSQL on a persistent volume, with health checks on every container."
-        }
-      ]
-    },
-    {
       "id": "ecs_fargate",
       "bullets": [
         {
@@ -124,18 +133,27 @@
           "text": "Modular Terraform for a 3-tier AWS app (VPC, ALBs, Auto Scaling groups, RDS) with tier-isolated security groups, deployed through a Jenkins pipeline with a manual approval gate and monitored by CloudWatch alarms."
         }
       ]
+    },
+    {
+      "id": "ivolve_gitops",
+      "bullets": [
+        {
+          "id": "ivg_cv",
+          "text": "Serverless CI/CD for a 3-service app on EKS: GitHub Actions authenticates through OIDC with no stored AWS keys, secrets sync from AWS Secrets Manager, and ArgoCD keeps the cluster in sync with Git; monitored with Prometheus and Grafana."
+        }
+      ]
     }
   ],
   "courses": [],
   "cover_letter": {
     "greeting": "Dear Hiring Team,",
     "paragraphs": [
-      "I am applying for the Application Support Engineer role at Pyramid Pay. I solve infrastructure problems methodically and document them so they stay solved. As a Cloud and DevOps Engineer in Cairo, I bring hands-on Linux, SQL, REST API and AWS experience to support work.",
-      "Troubleshooting from evidence is what I do best. Terraform failed with an AWS AuthFailure; I traced it to about 14 minutes of clock skew on a machine where outbound UDP 123 (NTP) was blocked, and corrected the time with HTTP-based sync. On the Linux side, I run an enterprise-style RHEL 10 environment on AWS with FreeIPA, a WireGuard VPN and a Squid proxy, where changes go through tickets and runbooks. My incident drills for an identity outage, a full log disk and a package rollback produced 7 incident reports with root cause and actions.",
-      "Troubleshooting is the part of the work I already do every day: reading logs, narrowing a cause with evidence, fixing it, and writing the runbook. A support role puts that skill directly in front of users and production systems. I would welcome a conversation, and my CV is attached for your review."
+      "I am applying for the Application Support Engineer role at Pyramid Pay in Cairo. I solve infrastructure problems methodically and document them so they stay solved. I bring hands-on Linux, SQL, REST APIs and AWS experience, and a habit of working from logs and evidence rather than guesswork.",
+      "The role centres on Linux, SQL, REST APIs and log analysis. In my RHEL lab I ran incident drills for an identity outage, a full log disk and a package rollback, documented in 7 incident reports with root cause and actions. I also traced a Terraform AWS AuthFailure to about 14 minutes of clock skew caused by blocked outbound UDP 123 (NTP), and fixed a GitHub Actions OIDC failure by decoding the live JWT. On the Nexora banking platform I built Python/FastAPI services on RDS MySQL, wrote Pytest integration tests, and declared 12 Prometheus alert rules each backed by a runbook.",
+      "Troubleshooting is the part of the work I already do every day: reading logs, narrowing a cause with evidence, fixing it, and writing the runbook. A support role puts that skill directly in front of users and production systems. I would welcome a conversation about how I can help your support team, and my CV is attached."
     ],
     "closing": "Best regards,"
   },
-  "email_body": "Hello,\n\nI am applying for the Application Support Engineer role at Pyramid Pay in Cairo.\nMy CV and cover letter are attached.\nI bring hands-on Linux, SQL, REST API and AWS troubleshooting experience, documented through runbooks and incident reports.\nI would welcome the chance to discuss the role.",
-  "why_this_role": "It puts the troubleshooting I already do, such as tracing an AWS AuthFailure to blocked NTP and writing 7 incident reports with root cause and actions, directly in front of users and production systems."
+  "email_body": "Dear Hiring Team,\n\nI am applying for the Application Support Engineer role at Pyramid Pay in Cairo.\nMy CV and cover letter are attached.\nI troubleshoot from logs and evidence on Linux and AWS, and I document fixes as runbooks and incident reports.\nI would be glad to talk about the role.",
+  "why_this_role": "Support work is the troubleshooting I already do: I decoded a live GitHub OIDC token to fix an AWS trust-policy failure and wrote 7 incident reports with root cause and actions in my RHEL lab."
 }
