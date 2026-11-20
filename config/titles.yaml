@@ -44,9 +44,6 @@ exclude:   # never apply
   - 'teacher|instructor|trainer'
   - 'designer'
 
-seniority_exclude:   # excluded unless years_min <= max_years_required or the post says junior/entry
-  - '\b(senior|sr\.?|lead|principal|staff|head|manager|director)\b'
-
 angles:   # which profile summary to start from
   devops:     ['dev\s?ops', 'cloud', 'platform', 'infra', '\bsre\b', 'site\s+reliability', 'ci\s?/?\s?cd', 'release', 'automation']
   support:    ['support', '\bit\b', 'help\s?desk', 'service\s+desk', 'tech\s?ops', 'integration']

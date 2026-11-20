@@ -46,9 +46,10 @@ export function insertJob(
         fingerprint: jobFingerprint(job),
         dup: duplicateOf,
         priority: decision.priority,
-        fit: decision.fit?.fit_score ?? null,
+        fit: decision.scores?.final ?? null,
         reasons: decision.fit
           ? JSON.stringify({
+              scores: decision.scores,
               matched: decision.fit.matched,
               missing: decision.fit.missing,
               summary: decision.fit.summary,

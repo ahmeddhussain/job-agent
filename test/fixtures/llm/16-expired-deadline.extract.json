@@ -5,10 +5,16 @@
       "title": "IT Engineer",
       "company": "Sinai Cloud Solutions",
       "location": null,
+      "country": null,
       "work_mode": "unknown",
       "seniority": "unknown",
       "years_min": null,
-      "requirements": ["Windows and Linux servers", "Active Directory", "Networking basics"],
+      "requirements": [
+        "Windows server administration",
+        "Linux server administration",
+        "Active Directory",
+        "Networking basics"
+      ],
       "nice_to_have": [],
       "apply_channel": "email",
       "apply_email": "it.jobs@sinaicloud.example",

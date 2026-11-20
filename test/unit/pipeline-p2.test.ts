@@ -13,7 +13,12 @@ import { ReplayLlm } from '../../src/llm/replay.js';
 import type { ExtractedJob } from '../../src/llm/schemas.js';
 import { compareWithExpected, runFixtures } from '../../src/pipeline/dry-run.js';
 import { checkExtractedJob } from '../../src/pipeline/extract.js';
-import { hardFilter, scamSignals } from '../../src/pipeline/score.js';
+import {
+  combineScores,
+  experienceScore,
+  hardFilter,
+  scamSignals,
+} from '../../src/pipeline/score.js';
 import { TitleMatcher } from '../../src/pipeline/titles.js';
 import {
   dropUnconfirmed,
@@ -57,6 +62,7 @@ const baseJob: ExtractedJob = {
   title: 'DevOps Engineer',
   company: 'Acme',
   location: 'Cairo',
+  country: 'Egypt',
   work_mode: 'onsite',
   seniority: 'unknown',
   years_min: 1,
@@ -108,13 +114,31 @@ describe('hard filters and scam rules (PLAN 5.5)', () => {
   const job = (over: Partial<ExtractedJob>) =>
     checkExtractedJob({ ...baseJob, ...over }, 'hr@acme.example');
 
-  it('skips more years than allowed, past deadlines and other cities; keeps Cairo areas and remote', () => {
+  it('skips more years than allowed, past deadlines and other countries; keeps all of Egypt and remote', () => {
     expect(hardFilter(job({ years_min: 5 }), ctx).reason).toBe('over_experience');
+    expect(hardFilter(job({ years_min: 3, seniority: 'senior' }), ctx).reason).toBeNull();
     expect(hardFilter(job({ deadline: '2026-11-01' }), ctx).reason).toBe('deadline_passed');
-    expect(hardFilter(job({ location: 'Alexandria' }), ctx).reason).toBe('location');
-    expect(hardFilter(job({ location: 'Alexandria', work_mode: 'remote' }), ctx).reason).toBeNull();
-    expect(hardFilter(job({ location: 'Maadi, Cairo' }), ctx).reason).toBeNull();
-    expect(hardFilter(job({ location: 'Smart Village' }), ctx).reason).toBeNull();
+    expect(hardFilter(job({ location: 'Riyadh', country: 'Saudi Arabia' }), ctx).reason).toBe(
+      'location',
+    );
+    expect(
+      hardFilter(job({ location: 'Riyadh', country: 'Saudi Arabia', work_mode: 'remote' }), ctx)
+        .reason,
+    ).toBeNull();
+    expect(hardFilter(job({ location: 'Alexandria', country: 'Egypt' }), ctx).reason).toBeNull();
+    expect(hardFilter(job({ location: null, country: null }), ctx).reason).toBeNull();
+  });
+
+  it('scores fresh and 0-2 year posts higher on experience, and combines it with skills (D21)', () => {
+    expect(experienceScore(job({ seniority: 'junior', years_min: null }), cfg)).toBe(100);
+    expect(experienceScore(job({ years_min: 0 }), cfg)).toBe(100);
+    expect(experienceScore(job({ years_min: 1 }), cfg)).toBe(90);
+    expect(experienceScore(job({ years_min: 2 }), cfg)).toBe(80);
+    expect(experienceScore(job({ years_min: 3 }), cfg)).toBe(60);
+    expect(experienceScore(job({ years_min: null }), cfg)).toBe(70);
+    // Same skills, fresher post ranks higher.
+    expect(combineScores(70, 100, cfg)).toBeGreaterThan(combineScores(70, 60, cfg));
+    expect(combineScores(80, 100, cfg)).toBe(86);
   });
 
   it('detects scam patterns in English and Arabic', () => {

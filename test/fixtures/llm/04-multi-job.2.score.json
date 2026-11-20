@@ -1,28 +1,27 @@
 {
-  "fit_score": 20,
+  "fit_score": 18,
   "matched": [
     {
-      "requirement": "Consuming REST APIs (backend-to-frontend integration, implied by a React frontend role)",
-      "evidence": ["rest_apis", "nexora_services"]
+      "requirement": "Consumes backend REST APIs (implied by a React frontend role)",
+      "evidence": [
+        "rest_apis",
+        "nexora_services"
+      ]
     },
     {
-      "requirement": "Git-based version control and collaboration (implied core workflow)",
-      "evidence": ["git"]
-    },
-    {
-      "requirement": "Frontend served behind NGINX (partial frontend-hosting exposure)",
-      "evidence": ["nexora_services"]
+      "requirement": "Git version control (implied for frontend development)",
+      "evidence": [
+        "git"
+      ]
     }
   ],
   "missing": [
-    "React (core framework; no React skill or project in profile)",
-    "JavaScript / TypeScript for UI development (only Node.js appears as a service language in ivg_stack, not frontend work)",
-    "Frontend build tooling (npm, Vite, Webpack or similar) for UI apps",
-    "Component, UI state and styling work (CSS, component libraries)",
-    "Frontend testing (Jest, React Testing Library or similar)",
-    "Browser-side debugging and responsive/accessibility UI delivery",
-    "Any frontend project or portfolio demonstrating React UI work"
+    "React (core requirement implied by the title; no React skill or project in the profile)",
+    "JavaScript/TypeScript frontend development (not proven; Node.js appears only as an app language in a deployment project)",
+    "HTML/CSS and responsive UI work (no evidence)",
+    "Frontend build and testing tooling such as npm, Webpack/Vite or Jest (no evidence)",
+    "Frontend project or portfolio of UI work (all projects are backend, infrastructure or DevOps)"
   ],
   "eligibility_issues": [],
-  "summary": "Profile is DevOps/cloud-focused with no React, JavaScript or frontend UI evidence; only REST API and Git exposure partially overlap."
+  "summary": "Title-only post for a React frontend role; the profile has no React or frontend UI evidence, only DevOps, backend and infrastructure work, so it is a weak fit."
 }

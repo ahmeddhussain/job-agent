@@ -1,22 +1,33 @@
 {
-  "fit_score": 66,
+  "fit_score": 62,
   "matched": [
     {
       "requirement": "Linux",
-      "evidence": ["linux", "sysadmin_lab", "lab_infra", "lab_identity"]
+      "evidence": [
+        "linux",
+        "sysadmin_lab",
+        "nti_training"
+      ]
     },
     {
       "requirement": "Ansible",
-      "evidence": ["ansible", "lab_ansible", "cicd_infra", "nti"]
+      "evidence": [
+        "ansible",
+        "lab_ansible",
+        "cicd_infra"
+      ]
     },
     {
       "requirement": "Bash",
-      "evidence": ["bash", "lab_testing"]
+      "evidence": [
+        "bash",
+        "lab_testing"
+      ]
     }
   ],
   "missing": [
-    "VMware: no VMware, vSphere or ESXi skill or fact in the profile; the Virtualization course is a course only and does not prove VMware work"
+    "VMware (vSphere/ESXi or any VMware product) is not shown anywhere in the profile; the 'Virtualization course' is a course only and does not prove VMware skills."
   ],
   "eligibility_issues": [],
-  "summary": "Strong on Linux, Ansible and Bash from the sysadmin lab and NTI training; no VMware evidence, and the role is adjacent with a 1-2 year requirement the candidate can meet."
+  "summary": "Strong on Linux, Ansible and Bash from the sysadmin lab and DevOps projects; no VMware evidence, so it is an adjacent match."
 }

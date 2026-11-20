@@ -1,0 +1,40 @@
+{
+  "fit_score": 65,
+  "matched": [
+    {
+      "requirement": "Linux",
+      "evidence": [
+        "linux",
+        "sysadmin_lab",
+        "lab_ansible",
+        "lab_compliance",
+        "systemd",
+        "selinux"
+      ]
+    },
+    {
+      "requirement": "Networking basics",
+      "evidence": [
+        "net_fundamentals",
+        "sysadmin_lab",
+        "packet_tracer",
+        "vpn",
+        "squid"
+      ]
+    },
+    {
+      "requirement": "Ticketing systems (ticket-based change and incident documentation; no named ticketing tool proven)",
+      "evidence": [
+        "incident_docs",
+        "lab_drills"
+      ]
+    }
+  ],
+  "missing": [
+    "Windows: only windows_batch at familiar level with no evidence entry (counts half); no Windows Server or Active Directory administration in production (known gap)",
+    "Named ticketing system (e.g. ServiceNow, Jira Service Desk, Zendesk) is not shown in the profile",
+    "Desktop/end-user IT support experience (helpdesk troubleshooting for users) is not shown; candidate's work is DevOps and cloud-focused"
+  ],
+  "eligibility_issues": [],
+  "summary": "Strong on Linux and networking fundamentals, partial on ticketing; Windows admin is the main gap, and the role is onsite in Alexandria while the candidate is in Cairo."
+}

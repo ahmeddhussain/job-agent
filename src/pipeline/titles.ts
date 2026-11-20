@@ -13,7 +13,6 @@ const TitlesSchema = z.strictObject({
   p1: patternList,
   p2: patternList,
   exclude: patternList,
-  seniority_exclude: patternList,
   angles: z.strictObject({
     devops: patternList,
     support: patternList,
@@ -27,20 +26,12 @@ interface Compiled {
   p1: RegExp[];
   p2: RegExp[];
   exclude: RegExp[];
-  seniority: RegExp[];
   angles: [Angle, RegExp[]][];
 }
 
 export type TitleDecision =
   | { tier: 1 | 2 | 3; angle: Angle; matched: string | null; titleNorm: string }
-  | { tier: null; excluded: 'excluded_title' | 'seniority'; matched: string; titleNorm: string };
-
-export interface TitleContext {
-  yearsMin?: number | null;
-  /** The post itself says junior / entry level / fresh graduates. */
-  juniorHint?: boolean;
-  maxYearsRequired: number;
-}
+  | { tier: null; excluded: 'excluded_title'; matched: string; titleNorm: string };
 
 function compile(list: string[], where: string): RegExp[] {
   return list.map((p) => {
@@ -61,7 +52,6 @@ export class TitleMatcher {
       p1: compile(t.p1, 'p1'),
       p2: compile(t.p2, 'p2'),
       exclude: compile(t.exclude, 'exclude'),
-      seniority: compile(t.seniority_exclude, 'seniority_exclude'),
       angles: ANGLES.map((a) => [a, compile(t.angles[a], `angles.${a}`)]),
     };
   }
@@ -71,24 +61,16 @@ export class TitleMatcher {
   }
 
   /**
-   * Order matters: the exclude list wins over everything (a "Sales Engineer – Cloud"
-   * is still sales); seniority words exclude unless the post's own years or wording
-   * say it's within reach; then P1, P2, else P3 (applied only at a high fit score).
+   * The exclude list wins over everything (a "Sales Engineer – Cloud" is still sales);
+   * then P1, P2, else P3 (applied only at a high score). Seniority words don't exclude
+   * (D21): the years a post asks for are checked separately and drive the experience score.
    */
-  classify(title: string, ctx: TitleContext): TitleDecision {
+  classify(title: string): TitleDecision {
     const titleNorm = normalizeTitle(title);
     const hit = (res: RegExp[]) => res.find((r) => r.test(titleNorm));
 
     const ex = hit(this.c.exclude);
     if (ex) return { tier: null, excluded: 'excluded_title', matched: ex.source, titleNorm };
-
-    const sen = hit(this.c.seniority);
-    const withinReach =
-      ctx.juniorHint === true ||
-      (ctx.yearsMin !== undefined && ctx.yearsMin !== null && ctx.yearsMin <= ctx.maxYearsRequired);
-    if (sen && !withinReach) {
-      return { tier: null, excluded: 'seniority', matched: sen.source, titleNorm };
-    }
 
     const p1 = hit(this.c.p1);
     if (p1) return { tier: 1, angle: this.angle(titleNorm), matched: p1.source, titleNorm };

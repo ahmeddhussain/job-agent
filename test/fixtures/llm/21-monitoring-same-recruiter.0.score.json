@@ -1,24 +1,36 @@
 {
-  "fit_score": 72,
+  "fit_score": 66,
   "matched": [
     {
-      "requirement": "Experience with Prometheus",
-      "evidence": ["prometheus", "nexora_observability", "ivolve_gitops"]
-    },
-    {
-      "requirement": "Experience with Grafana",
-      "evidence": ["grafana", "nexora_observability"]
+      "requirement": "Experience with Prometheus and Grafana",
+      "evidence": [
+        "prometheus",
+        "grafana",
+        "nexora_observability",
+        "nti_pipeline"
+      ]
     },
     {
       "requirement": "Experience with alerting",
-      "evidence": ["nexora_observability", "prometheus", "ecs_monitoring"]
+      "evidence": [
+        "nexora_observability",
+        "prometheus",
+        "ecs_monitoring",
+        "t3_delivery"
+      ]
     },
     {
       "requirement": "Experience with incident response",
-      "evidence": ["lab_drills", "incident_docs"]
+      "evidence": [
+        "lab_drills",
+        "incident_docs",
+        "nexora_dr"
+      ]
     }
   ],
-  "missing": ["Experience with Zabbix: not in the profile skills or facts; no Zabbix evidence."],
+  "missing": [
+    "Zabbix: no Zabbix skill, fact or course in the profile; the requirement names it explicitly"
+  ],
   "eligibility_issues": [],
-  "summary": "Strong on Prometheus, Grafana and alerting with runbooks; incident response shown through drills and reports; missing Zabbix, and the role is a monitoring fit overall."
+  "summary": "Strong on Prometheus, Grafana, alerting and incident response; missing Zabbix, which the posting names explicitly."
 }

@@ -5,10 +5,13 @@
       "title": "Linux System Administrator",
       "company": null,
       "location": null,
+      "country": null,
       "work_mode": "unknown",
       "seniority": "unknown",
       "years_min": 2,
-      "requirements": ["2 years of experience"],
+      "requirements": [
+        "2 years of experience"
+      ],
       "nice_to_have": [],
       "apply_channel": "email",
       "apply_email": "recruiter.mona@talentbridge.example",
@@ -24,10 +27,13 @@
       "title": "Cloud Support Engineer",
       "company": null,
       "location": null,
+      "country": null,
       "work_mode": "unknown",
       "seniority": "unknown",
       "years_min": 1,
-      "requirements": ["1 year of experience"],
+      "requirements": [
+        "1 year of experience"
+      ],
       "nice_to_have": [],
       "apply_channel": "email",
       "apply_email": "recruiter.mona@talentbridge.example",

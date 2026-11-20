@@ -1,22 +1,23 @@
 {
-  "fit_score": 30,
+  "fit_score": 28,
   "matched": [
     {
-      "requirement": "Routing and switching (OSPF, BGP)",
-      "evidence": ["net_routing_switching", "net_fundamentals", "cisco_pt"]
-    },
-    {
-      "requirement": "MPLS basics",
-      "evidence": ["mpls_vrf"]
+      "requirement": "Routing and switching (OSPF, BGP): partial only, skill is familiar level and backed by a Packet Tracer design, not production or lab configuration of OSPF or BGP",
+      "evidence": [
+        "net_routing_switching",
+        "packet_tracer",
+        "pt_design"
+      ]
     }
   ],
   "missing": [
-    "OSPF and BGP are only at familiar level (course/Packet Tracer exposure); no production or lab evidence of configuring them on real routers.",
-    "MPLS is familiar level only and has no evidence entry; no lab or project shows MPLS work.",
-    "Network back-office operations (NOC, provisioning, ticket-based network support on carrier equipment) is not shown beyond general incident and runbook experience."
+    "OSPF and BGP hands-on operation beyond familiar level; no evidence of running live routing protocols",
+    "MPLS basics: mpls_vrf is only familiar and has no supporting evidence entry",
+    "Network back office operations on physical or carrier-grade equipment is not shown; work is cloud and Linux focused",
+    "No nice-to-have requirements listed"
   ],
   "eligibility_issues": [
-    "CCNA certification required: the profile holds no CCNA certification (CCNA curriculum studied only, and CCNA is on the NOT held list)."
+    "CCNA certification required: the candidate has only studied the CCNA curriculum and has not passed the exam, so this cannot be shown"
   ],
-  "summary": "Partial networking overlap (OSPF/BGP and MPLS only at familiar level) but the required CCNA certification is not held, so this is a weak fit."
+  "summary": "Partial networking overlap (familiar OSPF/BGP, no MPLS evidence) with a cloud/DevOps focus; required CCNA certification is not held."
 }

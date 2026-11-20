@@ -5,10 +5,15 @@
       "title": "Data Analyst",
       "company": "Pyramid Pay",
       "location": null,
+      "country": null,
       "work_mode": "unknown",
       "seniority": "unknown",
       "years_min": null,
-      "requirements": ["Python", "SQL", "Power BI"],
+      "requirements": [
+        "Python",
+        "SQL",
+        "Power BI"
+      ],
       "nice_to_have": [],
       "apply_channel": "email",
       "apply_email": "data@pyramidpay.example",

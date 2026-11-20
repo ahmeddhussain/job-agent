@@ -1,54 +1,89 @@
 {
-  "fit_score": 75,
+  "fit_score": 78,
   "matched": [
     {
-      "requirement": "AWS core services (title-implied): EC2, ALB, Auto Scaling, RDS, EKS, IAM",
-      "evidence": ["aws", "ec2_alb_asg", "rds", "eks", "iam_oidc"]
+      "requirement": "AWS cloud services (implied by title 'Cloud Engineer (AWS)')",
+      "evidence": [
+        "aws",
+        "aws_networking",
+        "ec2_alb_asg",
+        "eks",
+        "rds"
+      ]
     },
     {
-      "requirement": "AWS networking (VPC, subnets, NAT, security groups)",
-      "evidence": ["aws_networking", "sysadmin_lab"]
+      "requirement": "AWS Solutions Architect Associate certification (cloud credential)",
+      "evidence": [
+        "AWS Certified Solutions Architect – Associate",
+        "AWS Certified Cloud Practitioner"
+      ]
     },
     {
-      "requirement": "Infrastructure as code on AWS (Terraform)",
-      "evidence": ["terraform", "nexora_infra", "lab_infra"]
+      "requirement": "Infrastructure as code (implied by cloud engineering role)",
+      "evidence": [
+        "terraform",
+        "ansible",
+        "ivg_terraform",
+        "nexora_infra"
+      ]
     },
     {
-      "requirement": "Configuration automation (Ansible)",
-      "evidence": ["ansible", "lab_ansible"]
+      "requirement": "Linux administration (implied core skill)",
+      "evidence": [
+        "linux",
+        "sysadmin_lab",
+        "lab_infra"
+      ]
     },
     {
-      "requirement": "Linux administration",
-      "evidence": ["linux", "sysadmin_lab"]
+      "requirement": "Networking: VPC, subnets, NAT, security groups, TCP/IP, DNS",
+      "evidence": [
+        "aws_networking",
+        "net_fundamentals",
+        "lab_infra",
+        "lab_vpn"
+      ]
     },
     {
-      "requirement": "Networking fundamentals (TCP/IP, DNS, routing, VPN)",
-      "evidence": ["net_fundamentals", "vpn"]
+      "requirement": "Cloud monitoring and alerting",
+      "evidence": [
+        "cloudwatch",
+        "prometheus",
+        "grafana",
+        "ecs_monitoring"
+      ]
     },
     {
-      "requirement": "Cloud monitoring and alerting (CloudWatch, Prometheus, Grafana)",
-      "evidence": ["cloudwatch", "prometheus", "grafana", "ecs_monitoring"]
+      "requirement": "Containers and orchestration on AWS",
+      "evidence": [
+        "kubernetes",
+        "docker",
+        "ecs",
+        "nexora_gitops"
+      ]
     },
     {
-      "requirement": "CI/CD on AWS (GitHub Actions with OIDC, Jenkins)",
-      "evidence": ["github_actions", "jenkins", "ivolve_projects"]
+      "requirement": "CI/CD automation on AWS (keyless IAM via OIDC)",
+      "evidence": [
+        "github_actions",
+        "jenkins",
+        "iam_oidc",
+        "nexora_cicd"
+      ]
     },
     {
-      "requirement": "Containers on AWS (Docker, ECS Fargate, Kubernetes)",
-      "evidence": ["docker", "ecs", "kubernetes"]
-    },
-    {
-      "requirement": "AWS Certified Solutions Architect – Associate (held)",
-      "evidence": ["aws"]
+      "requirement": "Identity and access management on AWS",
+      "evidence": [
+        "iam_oidc",
+        "secrets_manager"
+      ]
     }
   ],
   "missing": [
-    "Job lists no explicit requirements; must-haves inferred from title only, so scoring is approximate",
-    "Production experience on Azure or GCP (if the role needs multi-cloud)",
-    "Windows Server / Active Directory administration in production (known gap)",
-    "On-call support for a live production system (known gap)",
-    "Paid full-time experience beyond the internship (if the employer requires it; not a years filter)"
+    "No explicit requirements in the post; must-haves inferred from title, so exact match cannot be verified",
+    "Paid production cloud experience beyond internship (not a skill requirement, noted for context only)",
+    "Azure or GCP production experience, if the employer's stack includes them (not stated in post)"
   ],
   "eligibility_issues": [],
-  "summary": "Strong on AWS, Terraform, EKS, Linux and networking from projects and labs; the post lists no explicit requirements, so fit rests on the title, and Azure/GCP and Windows AD are gaps."
+  "summary": "Strong AWS, Terraform, EKS and Linux evidence from projects and the AWS SA-Associate cert; the post lists no explicit requirements, so the score rests on the title."
 }

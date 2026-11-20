@@ -7,6 +7,7 @@ Rules:
 - One message can list several roles. Return one job per distinct role. Roles that share a company and apply address are still separate jobs.
 - title: the role as written, in English. Translate Arabic titles (e.g. "مهندس دعم فني" → "Technical Support Engineer"). Keep qualifiers such as Junior/Senior; drop decoration, emoji and counts.
 - company: only if the post names it. "a leading company", "our client" → null. Write the company in Latin letters as the post spells it or transliterate it.
+- location and country: the city/area in English, and its country in English ("Egypt" for any Egyptian city or area, e.g. Cairo, Alexandria, Smart Village). null when the post doesn't say.
 - apply_email and apply_url: copy them character for character from the post. Never invent, complete or guess an address or link. If the post has none, use null.
 - apply_channel: email if the post gives an email to send a CV to; form if it gives a link to apply on; whatsapp_dm if it says to message a WhatsApp/phone number; unknown otherwise (e.g. Telegram only, "DM me").
 - subject_hint: only when the post requires a specific email subject; copy it exactly. "mention the role in the subject" without a fixed text → null.

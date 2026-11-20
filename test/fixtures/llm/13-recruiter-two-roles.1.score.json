@@ -1,52 +1,63 @@
 {
-  "fit_score": 72,
+  "fit_score": 76,
   "matched": [
     {
-      "requirement": "Years of experience (1 year) - checked by a separate filter; not scored",
-      "evidence": ["ivolve_general", "nti_training"]
-    },
-    {
-      "requirement": "AWS services for cloud support (EC2, VPC, RDS, ECS, EKS, IAM, CloudWatch)",
-      "evidence": ["aws", "ec2_alb_asg", "aws_networking", "rds", "eks", "cloudwatch"]
-    },
-    {
-      "requirement": "AWS certification (Solutions Architect Associate, Cloud Practitioner)",
+      "requirement": "AWS cloud services (implied by Cloud Support role)",
       "evidence": [
-        "AWS Certified Solutions Architect – Associate",
-        "AWS Certified Cloud Practitioner"
+        "aws",
+        "ec2_alb_asg",
+        "ecs_fargate",
+        "nexora_infra"
       ]
     },
     {
-      "requirement": "Linux administration and troubleshooting",
-      "evidence": ["linux", "systemd", "firewalld", "selinux", "nfs", "sysadmin_lab"]
+      "requirement": "Linux administration (implied core skill)",
+      "evidence": [
+        "linux",
+        "sysadmin_lab",
+        "lab_compliance"
+      ]
     },
     {
-      "requirement": "Networking fundamentals (TCP/IP, DNS, routing, VPN)",
-      "evidence": ["net_fundamentals", "vpn", "aws_networking", "squid"]
+      "requirement": "Networking: TCP/IP, DNS, VPC, subnets, security groups (implied core skill)",
+      "evidence": [
+        "net_fundamentals",
+        "aws_networking",
+        "lab_infra",
+        "lab_vpn"
+      ]
     },
     {
-      "requirement": "Monitoring and alerting",
-      "evidence": ["prometheus", "grafana", "loki", "ecs_monitoring", "cloudwatch"]
+      "requirement": "Monitoring and alerting (CloudWatch, Prometheus, Grafana)",
+      "evidence": [
+        "cloudwatch",
+        "prometheus",
+        "grafana",
+        "ecs_monitoring",
+        "nexora_observability"
+      ]
     },
     {
-      "requirement": "Incident handling and documentation (runbooks, incident reports, ticket-based change)",
-      "evidence": ["incident_docs", "lab_drills"]
+      "requirement": "Troubleshooting and incident handling with documented root cause and actions",
+      "evidence": [
+        "incident_docs",
+        "lab_drills",
+        "story_ntp",
+        "story_ssa"
+      ]
     },
     {
-      "requirement": "Scripting for automation and troubleshooting",
-      "evidence": ["bash", "python", "ansible"]
-    },
-    {
-      "requirement": "Infrastructure as code for cloud environments",
-      "evidence": ["terraform", "nti_pipeline"]
+      "requirement": "Infrastructure as code for supported AWS environments (implied by cloud support work)",
+      "evidence": [
+        "terraform",
+        "ivolve_gitops"
+      ]
     }
   ],
   "missing": [
-    "Customer-facing or client support experience is not shown in the profile",
-    "Paid full-time support experience beyond the internship",
-    "Windows Server / Active Directory production administration (known gap, if the role needs it)",
-    "Azure or GCP production experience (if the role needs it)"
+    "Paid customer-facing technical support or ticket-queue experience (only internship and projects shown)",
+    "Production on-call support for a live system (listed as a known gap)"
   ],
   "eligibility_issues": [],
-  "summary": "Strong on AWS, Linux, networking and monitoring for a cloud support role; lacks shown customer-facing support experience and paid full-time history."
+  "summary": "Strong on AWS, Linux, networking and monitoring with documented troubleshooting; lacks paid customer-facing support and on-call experience."
 }

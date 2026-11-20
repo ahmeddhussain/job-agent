@@ -3,7 +3,6 @@ import { TitleMatcher } from '../../src/pipeline/titles.js';
 import { loadFixtures } from '../helpers/fixtures.js';
 
 const matcher = TitleMatcher.fromFile('config/titles.yaml');
-const MAX_YEARS = 3;
 
 const cases = loadFixtures().flatMap((f) => f.expected.jobs.map((j) => ({ fixture: f.id, ...j })));
 
@@ -13,7 +12,6 @@ describe('title matcher (PLAN section 6)', () => {
     const excluded = new Set(cases.map((c) => c.excluded));
     const angles = new Set(cases.map((c) => c.angle));
     expect([...tiers].sort()).toEqual([1, 2, 3, null]);
-    expect(excluded).toContain('seniority');
     expect(excluded).toContain('excluded_title');
     for (const a of ['devops', 'support', 'monitoring', 'networking', 'systems']) {
       expect(angles).toContain(a);
@@ -21,11 +19,7 @@ describe('title matcher (PLAN section 6)', () => {
   });
 
   it.each(cases)('$fixture: "$title" → tier $tier, angle $angle', (c) => {
-    const d = matcher.classify(c.title, {
-      yearsMin: c.years_min,
-      juniorHint: c.seniority === 'junior' || c.seniority === 'intern',
-      maxYearsRequired: MAX_YEARS,
-    });
+    const d = matcher.classify(c.title);
     expect(d.tier).toBe(c.tier);
     if (d.tier === null) {
       expect(d.excluded).toBe(c.excluded);
@@ -34,22 +28,13 @@ describe('title matcher (PLAN section 6)', () => {
     }
   });
 
-  it('excludes a senior title when the post gives no years', () => {
-    expect(
-      matcher.classify('Lead Cloud Engineer', { maxYearsRequired: MAX_YEARS }).tier,
-    ).toBeNull();
-  });
-
-  it('keeps a senior title when the post itself says junior/entry', () => {
-    const d = matcher.classify('Senior Technical Support Engineer', {
-      juniorHint: true,
-      maxYearsRequired: MAX_YEARS,
-    });
-    expect(d.tier).toBe(1);
+  it('does not exclude seniority words (D21): years decide, not the title', () => {
+    expect(matcher.classify('Senior Cloud Engineer').tier).toBe(1);
+    expect(matcher.classify('Lead Technical Support Engineer').tier).toBe(1);
   });
 
   it('fails loudly on an invalid regex in titles.yaml', () => {
-    const bad = { p1: ['('], p2: ['x'], exclude: ['x'], seniority_exclude: ['x'] };
+    const bad = { p1: ['('], p2: ['x'], exclude: ['x'] };
     const angles = {
       devops: ['x'],
       support: ['x'],

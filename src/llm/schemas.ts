@@ -8,6 +8,13 @@ export const ExtractedJobSchema = z.strictObject({
   title: z.string().min(2).max(120).describe('Job title in English (translate Arabic titles)'),
   company: z.string().max(120).nullable().describe('Hiring company; null if not named'),
   location: z.string().max(120).nullable().describe('City/area in English; null if not stated'),
+  country: z
+    .string()
+    .max(60)
+    .nullable()
+    .describe(
+      'Country of the job location in English (Egypt for Egyptian cities); null if not stated',
+    ),
   work_mode: z.enum(['onsite', 'hybrid', 'remote', 'unknown']),
   seniority: z.enum(['intern', 'junior', 'mid', 'senior', 'lead', 'unknown']),
   years_min: z

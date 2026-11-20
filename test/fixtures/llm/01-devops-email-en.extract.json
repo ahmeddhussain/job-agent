@@ -5,13 +5,14 @@
       "title": "DevOps Engineer",
       "company": "Nilecode Systems",
       "location": "Cairo",
+      "country": "Egypt",
       "work_mode": "hybrid",
       "seniority": "unknown",
       "years_min": 1,
       "requirements": [
         "AWS (EC2, VPC, IAM)",
         "Terraform",
-        "Docker & Kubernetes",
+        "Docker and Kubernetes",
         "CI/CD with Jenkins or GitHub Actions",
         "Linux administration"
       ],

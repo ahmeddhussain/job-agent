@@ -1,0 +1,30 @@
+{
+  "is_job_post": true,
+  "jobs": [
+    {
+      "title": "DevOps Engineer",
+      "company": null,
+      "location": "Riyadh",
+      "country": "Saudi Arabia",
+      "work_mode": "onsite",
+      "seniority": "unknown",
+      "years_min": 1,
+      "requirements": [
+        "AWS",
+        "Kubernetes",
+        "Terraform",
+        "1-3 years of experience"
+      ],
+      "nice_to_have": [],
+      "apply_channel": "email",
+      "apply_email": "ksa.hiring@deltaware.example",
+      "apply_url": null,
+      "apply_phone": null,
+      "subject_hint": null,
+      "deadline": null,
+      "language": "en",
+      "eligibility": [],
+      "scam_signals": []
+    }
+  ]
+}

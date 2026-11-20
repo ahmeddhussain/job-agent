@@ -2,23 +2,47 @@
   "fit_score": 88,
   "matched": [
     {
-      "requirement": "RHEL",
-      "evidence": ["linux", "lab_infra", "sysadmin_lab"]
+      "requirement": "RHEL (Linux administration on Red Hat Enterprise Linux)",
+      "evidence": [
+        "linux",
+        "lab_infra",
+        "story_systemd"
+      ]
     },
     {
       "requirement": "Ansible",
-      "evidence": ["ansible", "lab_ansible", "cicd_pipeline"]
+      "evidence": [
+        "ansible",
+        "lab_ansible"
+      ]
     },
     {
       "requirement": "Bash",
-      "evidence": ["bash", "lab_testing"]
+      "evidence": [
+        "bash",
+        "lab_testing"
+      ]
     },
     {
-      "requirement": "FreeIPA",
-      "evidence": ["freeipa", "lab_identity"]
+      "requirement": "FreeIPA (identity, DNS, Kerberos, sudo rules)",
+      "evidence": [
+        "freeipa",
+        "lab_identity"
+      ]
+    },
+    {
+      "requirement": "Domain fit: Linux system administration (services, hardening, patching, networking, incident handling)",
+      "evidence": [
+        "linux",
+        "lab_services",
+        "lab_compliance",
+        "lab_patching",
+        "lab_drills",
+        "net_fundamentals"
+      ]
     }
   ],
   "missing": [],
   "eligibility_issues": [],
-  "summary": "All four listed must-haves (RHEL, Ansible, Bash, FreeIPA) are proven by lab evidence; the candidate's experience is project-based, not paid sysadmin work."
+  "summary": "Strong on RHEL, Ansible, Bash and FreeIPA, all shown in the sysadmin lab; the evidence is lab-based and in progress rather than paid production work."
 }

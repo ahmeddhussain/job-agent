@@ -103,6 +103,7 @@ export async function runFixtures(o: FixtureRunOptions): Promise<FixtureRun> {
               priority: null,
               angle: null,
               fit: null,
+              scores: null,
               tailor: false,
             }
           : await scoreJob(ctx, job, f.text, `${f.id}.${String(i)}.score`);
@@ -140,7 +141,7 @@ export interface Mismatch {
   actual: unknown;
 }
 
-const HARD_SKIPS = new Set(['seniority', 'excluded_title', 'deadline_passed', 'over_experience']);
+const HARD_SKIPS = new Set(['excluded_title', 'deadline_passed', 'over_experience', 'location']);
 
 /** Titles match when one canonical title's words are all in the other ("Frontend Developer" ⊂ "Frontend Developer React"). */
 export function titlesMatch(expected: string, actual: string): boolean {

@@ -4,7 +4,8 @@
     {
       "title": "Platform Engineer",
       "company": "Cedar Analytics",
-      "location": "Egypt",
+      "location": null,
+      "country": "Egypt",
       "work_mode": "remote",
       "seniority": "unknown",
       "years_min": null,

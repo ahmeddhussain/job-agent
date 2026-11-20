@@ -1,0 +1,30 @@
+{
+  "is_job_post": true,
+  "jobs": [
+    {
+      "title": "IT Support Engineer",
+      "company": "Nilecode Systems",
+      "location": "Alexandria (Smouha)",
+      "country": "Egypt",
+      "work_mode": "onsite",
+      "seniority": "junior",
+      "years_min": 0,
+      "requirements": [
+        "Windows",
+        "Linux",
+        "Networking basics",
+        "Ticketing systems"
+      ],
+      "nice_to_have": [],
+      "apply_channel": "email",
+      "apply_email": "alex.jobs@nilecode.example",
+      "apply_url": null,
+      "apply_phone": null,
+      "subject_hint": null,
+      "deadline": null,
+      "language": "en",
+      "eligibility": [],
+      "scam_signals": []
+    }
+  ]
+}

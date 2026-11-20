@@ -1,21 +1,44 @@
 {
-  "fit_score": 48,
+  "fit_score": 40,
   "matched": [
     {
-      "requirement": "Experience with monitoring tools (Grafana)",
-      "evidence": ["grafana", "nexora_observability", "prometheus"]
+      "requirement": "Monitoring tools (Zabbix, Grafana): Grafana",
+      "evidence": [
+        "grafana",
+        "nexora_observability",
+        "nti_training"
+      ]
     },
     {
-      "requirement": "CCNA level knowledge (networking fundamentals: TCP/IP, DNS, subnetting, routing; VLAN, STP, OSPF, BGP at familiar level)",
-      "evidence": ["net_fundamentals", "net_routing_switching", "cisco_pt", "packet_tracer"]
+      "requirement": "Monitoring tools (Zabbix, Grafana): general monitoring stack (Prometheus/Alertmanager alerting, Loki logs)",
+      "evidence": [
+        "prometheus",
+        "loki",
+        "cloudwatch"
+      ]
+    },
+    {
+      "requirement": "CCNA level knowledge (partial, studied only, no certification): networking fundamentals",
+      "evidence": [
+        "net_fundamentals",
+        "cisco_pt",
+        "vpn"
+      ]
+    },
+    {
+      "requirement": "CCNA level knowledge (partial, familiar only): VLAN, STP, OSPF, BGP, QoS",
+      "evidence": [
+        "net_routing_switching"
+      ]
     }
   ],
   "missing": [
-    "24/7 shift work: the profile does not state availability for rotating or night shifts",
-    "Zabbix experience: not shown anywhere in the profile (Prometheus and Grafana are related but not Zabbix)",
-    "CCNA level is only partly shown: CCNA is studied, not certified, and routing/switching skills are familiar level only, with no live network operations evidence",
-    "No NOC or live production on-call experience (listed as a known gap)"
+    "24/7 shift work: no evidence in the profile of shift or round-the-clock operations experience",
+    "Zabbix: not in the profile; only Prometheus and Grafana are shown",
+    "CCNA-level knowledge is only partly proven: routing and switching is familiar level, and the CCNA itself is not held (course only)",
+    "NOC operations experience (live network monitoring, incident triage on a live production network) is not shown beyond lab and internship work",
+    "No nice-to-have requirements were listed"
   ],
   "eligibility_issues": [],
-  "summary": "Adjacent fit: Grafana and networking fundamentals are covered, but Zabbix, 24/7 shift availability and CCNA-level depth are not proven."
+  "summary": "Grafana and networking fundamentals match, but Zabbix, 24/7 shift work and CCNA-level routing/switching depth are not proven, so this is a partial fit for a NOC role."
 }

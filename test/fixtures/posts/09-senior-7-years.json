@@ -1,6 +1,6 @@
 {
   "id": "09-senior-7-years",
-  "description": "Senior role needing 7 years",
+  "description": "Senior role needing 7 years: skipped for years, not for the word 'senior' (D21)",
   "source": "whatsapp",
   "source_name": "Egypt DevOps Jobs",
   "source_ref": "wa-0010",
@@ -23,10 +23,10 @@
         "subject_hint": null,
         "deadline": null,
         "language": "en",
-        "tier": null,
-        "angle": null,
-        "excluded": "seniority",
-        "skip_reason": "seniority",
+        "tier": 1,
+        "angle": "devops",
+        "excluded": null,
+        "skip_reason": "over_experience",
         "flags": []
       }
     ],

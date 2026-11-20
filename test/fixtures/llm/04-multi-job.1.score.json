@@ -1,49 +1,71 @@
 {
-  "fit_score": 50,
+  "fit_score": 48,
   "matched": [
     {
-      "requirement": "Write automated test suites in code (inferred core QA automation skill)",
-      "evidence": ["nexora_tests", "python"]
+      "requirement": "Write automated tests in code (Python/pytest)",
+      "evidence": [
+        "nexora_tests",
+        "python"
+      ]
     },
     {
-      "requirement": "Automated test scripting in Bash with verification of outcomes",
-      "evidence": ["lab_testing", "bash"]
+      "requirement": "Write automated test scripts in scripting language (Bash)",
+      "evidence": [
+        "lab_testing",
+        "bash"
+      ]
     },
     {
-      "requirement": "Test REST APIs and service behaviour (inferred from QA automation)",
-      "evidence": ["rest_apis", "nexora_services"]
+      "requirement": "API / integration-level testing of service behaviour",
+      "evidence": [
+        "nexora_tests",
+        "rest_apis"
+      ]
     },
     {
-      "requirement": "Failure and recovery testing of services",
-      "evidence": ["barq_resilience"]
+      "requirement": "Concurrency and correctness testing of transaction logic",
+      "evidence": [
+        "nexora_concurrency",
+        "nexora_tests"
+      ]
     },
     {
-      "requirement": "Performance/load testing with measured results",
-      "evidence": ["nexora_perf"]
+      "requirement": "Load / performance testing",
+      "evidence": [
+        "nexora_perf"
+      ]
     },
     {
-      "requirement": "Run automated tests and quality gates inside CI pipelines",
-      "evidence": ["cicd_jenkins", "nexora_cicd", "sonarqube"]
+      "requirement": "Run tests in CI/CD pipelines with quality gates",
+      "evidence": [
+        "nexora_cicd",
+        "cicd_jenkins",
+        "sonarqube",
+        "github_actions"
+      ]
     },
     {
-      "requirement": "SQL and database validation",
-      "evidence": ["sql", "mysql"]
+      "requirement": "Version control with Git",
+      "evidence": [
+        "git"
+      ]
     },
     {
-      "requirement": "Version control with Git for test code",
-      "evidence": ["git"]
-    },
-    {
-      "requirement": "Documented test/incident results with root cause and actions",
-      "evidence": ["lab_drills", "incident_docs"]
+      "requirement": "Defect / incident documentation with root cause",
+      "evidence": [
+        "lab_drills",
+        "incident_docs"
+      ]
     }
   ],
   "missing": [
-    "UI or browser test automation (Selenium, Cypress, Playwright) not shown in profile",
-    "Manual QA experience: test plan and test case design, defect tracking tools such as Jira or TestRail not shown",
-    "Paid QA or test-engineering role; only DevOps internship and projects are evidenced",
-    "Specific QA framework requirements could not be checked because the post lists no requirements"
+    "UI test automation framework (Selenium, Playwright, Cypress or similar) not shown",
+    "Named load-testing tool (JMeter, k6, Locust) not stated; nexora_perf names no tool",
+    "Test plan / test case design and manual QA experience not evidenced",
+    "Bug tracking / test management tools (Jira, TestRail, Zephyr) not shown",
+    "Payments or fintech QA experience not proven; nexora is a banking-style project, not a payment product",
+    "Java or JavaScript test frameworks (JUnit, TestNG, Jest) not shown"
   ],
   "eligibility_issues": [],
-  "summary": "Adjacent fit: automated testing in Pytest and Bash, API and CI test work are evidenced, but UI automation and manual QA tooling are not, and the post lists no requirements."
+  "summary": "Title-only post; partial fit via Pytest, Bash test scripts, and CI-gated pipelines, but no UI automation or named QA tooling."
 }

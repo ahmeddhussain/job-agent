@@ -46,16 +46,21 @@ llm:
   max_retries: 3
 
 filters:
-  locations: [Cairo, Giza, "New Cairo", "6th of October", "New Administrative Capital", Remote]
-  location_aliases:               # Cairo/Giza areas and country-only mentions that count as allowed
-    [Maadi, "Nasr City", Heliopolis, "Fifth Settlement", "5th Settlement", Zamalek, Dokki, Mohandessin,
-     "Smart Village", "Sheikh Zayed", October, Downtown, Mokattam, Shorouk, Obour, Katameya, "Capital", Egypt]
+  countries: [Egypt]               # anywhere in these countries is fine (Ahmed, 2026-11-20)
   allow_remote: true
-  max_years_required: 3
-  skip_seniority: [senior, lead]
+  max_years_required: 3            # more than this is skipped; no seniority-word rules (D21)
 
 scoring:
-  thresholds:                      # minimum fit score to tailor, by priority tier
+  weights:                         # final score = skills * w.skills + experience * w.experience (D21)
+    skills: 0.7                    # model: requirements, tools and domain vs the profile
+    experience: 0.3                # code: from the years the post asks for
+  experience_scores:               # 0-100 by years_min; fresh/junior/intern posts count as 0
+    "0": 100
+    "1": 90
+    "2": 80
+    "3": 60
+    unknown: 70                    # the post doesn't say
+  thresholds:                      # minimum final score to tailor, by priority tier
     p1: 45
     p2: 60
     p3: 75

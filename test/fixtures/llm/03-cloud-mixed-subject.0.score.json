@@ -2,26 +2,43 @@
   "fit_score": 55,
   "matched": [
     {
-      "requirement": "Experience with AWS (at least 1 year, per the job's AWS-and-Azure requirement)",
-      "evidence": ["aws", "nexora_infra", "ivolve_projects", "ecs_fargate", "terraform_3tier"]
+      "requirement": "Experience with AWS (requirement 'AWS and Azure', AWS half)",
+      "evidence": [
+        "aws",
+        "eks",
+        "aws_networking",
+        "terraform",
+        "nexora_infra"
+      ]
     },
     {
-      "requirement": "Infrastructure as code for cloud resources (core cloud engineering skill implied by the title)",
-      "evidence": ["terraform", "nexora_infra", "lab_infra"]
+      "requirement": "Cloud engineering core skills implied by title: infrastructure as code",
+      "evidence": [
+        "terraform",
+        "ansible",
+        "nexora_infra",
+        "ivolve_projects"
+      ]
     },
     {
-      "requirement": "AWS networking (VPC, subnets, NAT, security groups)",
-      "evidence": ["aws_networking", "lab_infra", "t3_stack"]
+      "requirement": "Cloud engineering core skills implied by title: Linux administration",
+      "evidence": [
+        "linux",
+        "sysadmin_lab"
+      ]
     },
     {
-      "requirement": "Linux administration (core cloud engineering skill implied by the title)",
-      "evidence": ["linux", "sysadmin_lab"]
+      "requirement": "Cloud engineering core skills implied by title: networking (VPC, subnets, security groups)",
+      "evidence": [
+        "aws_networking",
+        "net_fundamentals"
+      ]
     }
   ],
   "missing": [
-    "Azure experience: the job requires at least 1 year with Azure, and the profile has no Azure facts or skills (listed as a known gap: Azure or GCP production experience)",
-    "Paid full-time experience with AWS and Azure: the candidate's experience is an internship and projects, not paid work"
+    "Azure experience (requirement 'AWS and Azure', Azure half); listed as a known gap, no Azure evidence in the profile",
+    "Paid professional experience with AWS or Azure beyond the DevOps internship and projects (the profile shows project and lab work, not production employment)"
   ],
   "eligibility_issues": [],
-  "summary": "Strong AWS, Terraform and Linux match, but no Azure experience at all, which is half of the single stated requirement."
+  "summary": "Strong on AWS, Terraform, EKS and Linux; missing Azure, which the single must-have requires alongside AWS."
 }

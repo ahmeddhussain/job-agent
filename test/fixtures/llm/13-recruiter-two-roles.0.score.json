@@ -1,48 +1,89 @@
 {
-  "fit_score": 68,
+  "fit_score": 72,
   "matched": [
     {
-      "requirement": "Linux system administration (RHEL/Amazon Linux)",
-      "evidence": ["linux", "sysadmin_lab", "systemd", "selinux", "firewalld"]
+      "requirement": "Linux system administration (implied by title)",
+      "evidence": [
+        "linux",
+        "sysadmin_lab",
+        "lab_infra"
+      ]
     },
     {
-      "requirement": "Identity and access management on Linux (users, DNS, Kerberos, sudo)",
-      "evidence": ["freeipa", "lab_identity"]
+      "requirement": "systemd service management (implied by Linux admin)",
+      "evidence": [
+        "systemd",
+        "story_systemd"
+      ]
     },
     {
-      "requirement": "Shared storage and file services (NFS, autofs, quotas, ACLs)",
-      "evidence": ["nfs", "lab_services"]
+      "requirement": "SELinux and firewalld host security (implied by Linux admin)",
+      "evidence": [
+        "selinux",
+        "firewalld",
+        "lab_ansible"
+      ]
     },
     {
-      "requirement": "Security hardening and compliance (SSH hardening, OpenSCAP CIS, auditd, AIDE)",
-      "evidence": ["ssh_hardening", "openscap", "lab_compliance"]
+      "requirement": "Centralized identity, users, sudo and DNS management (implied by Linux admin)",
+      "evidence": [
+        "freeipa",
+        "lab_identity"
+      ]
     },
     {
-      "requirement": "Patch management and incident handling",
-      "evidence": ["patching", "lab_patching", "lab_drills", "incident_docs"]
+      "requirement": "NFS, autofs, quotas and ACLs for file services (implied by Linux admin)",
+      "evidence": [
+        "nfs",
+        "lab_services"
+      ]
     },
     {
-      "requirement": "Networking fundamentals (TCP/IP, DNS, routing, VPN, proxy)",
-      "evidence": ["net_fundamentals", "vpn", "squid", "packet_tracer"]
+      "requirement": "Patch management and hardening/compliance (implied by Linux admin)",
+      "evidence": [
+        "patching",
+        "openscap",
+        "lab_patching",
+        "lab_compliance"
+      ]
     },
     {
-      "requirement": "Scripting for admin automation (Bash, Ansible)",
-      "evidence": ["bash", "lab_testing", "ansible"]
+      "requirement": "Bash scripting for automation (implied by Linux admin)",
+      "evidence": [
+        "bash",
+        "lab_testing"
+      ]
     },
     {
-      "requirement": "Cloud and infrastructure hosting of Linux systems (AWS EC2, VPC)",
-      "evidence": ["aws", "aws_networking", "lab_infra"]
+      "requirement": "TCP/IP, DNS, routing and VPN networking (implied by Linux admin)",
+      "evidence": [
+        "net_fundamentals",
+        "vpn",
+        "squid"
+      ]
     },
     {
-      "requirement": "Monitoring and logging of systems",
-      "evidence": ["prometheus", "grafana", "cloudwatch", "lab_services"]
+      "requirement": "Monitoring and logging of hosts and services (implied by Linux admin)",
+      "evidence": [
+        "prometheus",
+        "grafana",
+        "loki",
+        "nexora_observability"
+      ]
+    },
+    {
+      "requirement": "Backup/restore and incident documentation (implied by Linux admin)",
+      "evidence": [
+        "lab_drills",
+        "incident_docs"
+      ]
     }
   ],
   "missing": [
-    "Windows Server / Active Directory administration in production (known gap)",
+    "Windows Server / Active Directory administration in production (known gap; only relevant if the employer's stack is Windows-based)",
     "On-call support for a live production system (known gap)",
-    "Paid full-time system administration experience beyond the internship; Linux admin work is lab-based and the sysadmin lab is still in progress"
+    "Paid full-time Linux administration in production (only the lab and an internship are evidenced; experience is scored in code, not here)"
   ],
   "eligibility_issues": [],
-  "summary": "Strong on Linux administration, FreeIPA, hardening, NFS, networking and automation; gaps are Windows/AD production work, on-call duty and paid sysadmin experience."
+  "summary": "Strong Linux, identity, networking and hardening lab evidence (RHEL, FreeIPA, SELinux, OpenSCAP, NFS); gaps are Windows/AD and live-production on-call, and the post lists only a title and experience."
 }

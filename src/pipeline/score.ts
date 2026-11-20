@@ -17,6 +17,8 @@ export interface Decision {
   priority: 1 | 2 | 3 | null;
   angle: Angle | null;
   fit: FitResult | null;
+  /** Final score = skills (model) and experience (code), weighted (D21). */
+  scores: { skills: number; experience: number; final: number } | null;
   /** True when the job goes to the tailor queue (status new and above threshold). */
   tailor: boolean;
 }
@@ -54,37 +56,43 @@ export interface ScoreContext {
 
 function locationOk(job: CheckedJob, cfg: Config): boolean {
   if (job.work_mode === 'remote' && cfg.filters.allow_remote) return true;
-  if (!job.location) return true;
-  const loc = job.location.toLowerCase();
-  return [...cfg.filters.locations, ...cfg.filters.location_aliases].some((l) =>
-    loc.includes(l.toLowerCase()),
-  );
+  if (!job.country) return true; // not stated: don't lose the job over it
+  const c = job.country.toLowerCase();
+  return cfg.filters.countries.some((x) => c.includes(x.toLowerCase()));
 }
 
-/** Hard filters that need no model: returns a skip reason or null. */
+/** Hard filters that need no model: returns a skip reason or null. No seniority-word rules (D21). */
 export function hardFilter(
   job: CheckedJob,
   ctx: Pick<ScoreContext, 'cfg' | 'matcher' | 'runDate'>,
 ): { reason: string | null; priority: 1 | 2 | 3 | null; angle: Angle | null } {
-  const max = ctx.cfg.filters.max_years_required;
-  const junior = job.seniority === 'junior' || job.seniority === 'intern';
-  const d = ctx.matcher.classify(job.title, {
-    yearsMin: job.years_min,
-    juniorHint: junior,
-    maxYearsRequired: max,
-  });
+  const d = ctx.matcher.classify(job.title);
   if (d.tier === null) return { reason: d.excluded, priority: null, angle: null };
   const base = { priority: d.tier, angle: d.angle };
-
-  if (job.years_min !== null && job.years_min > max) return { reason: 'over_experience', ...base };
-  const seniorWords = ctx.cfg.filters.skip_seniority as string[];
-  if (seniorWords.includes(job.seniority) && !(job.years_min !== null && job.years_min <= max)) {
-    return { reason: 'seniority', ...base };
+  if (job.years_min !== null && job.years_min > ctx.cfg.filters.max_years_required) {
+    return { reason: 'over_experience', ...base };
   }
   if (job.deadline !== null && job.deadline < ctx.runDate)
     return { reason: 'deadline_passed', ...base };
   if (!locationOk(job, ctx.cfg)) return { reason: 'location', ...base };
   return { reason: null, ...base };
+}
+
+/**
+ * Experience score, 0-100, from what the post asks for: fresh/junior/intern posts and
+ * 0 years score highest, then 1, 2, 3 years; not stated sits in between (D21).
+ */
+export function experienceScore(job: CheckedJob, cfg: Config): number {
+  const t = cfg.scoring.experience_scores;
+  if (job.seniority === 'junior' || job.seniority === 'intern') return t['0'];
+  if (job.years_min === null) return t.unknown;
+  const y = Math.min(Math.max(job.years_min, 0), 3);
+  return t[String(y) as '0' | '1' | '2' | '3'];
+}
+
+export function combineScores(skills: number, experience: number, cfg: Config): number {
+  const w = cfg.scoring.weights;
+  return Math.round(skills * w.skills + experience * w.experience);
 }
 
 /** Known ids the model may cite as evidence: facts, entries and skills. */
@@ -107,9 +115,8 @@ export async function fitScore(
     title: job.title,
     company: job.company,
     location: job.location,
+    country: job.country,
     work_mode: job.work_mode,
-    seniority: job.seniority,
-    years_min: job.years_min,
     requirements: job.requirements,
     nice_to_have: job.nice_to_have,
     eligibility: job.eligibility,
@@ -146,7 +153,7 @@ export async function scoreJob(
 ): Promise<Decision> {
   const flags = [...job.flags];
   const hf = hardFilter(job, ctx);
-  const base = { priority: hf.priority, angle: hf.angle, fit: null, tailor: false };
+  const base = { priority: hf.priority, angle: hf.angle, fit: null, scores: null, tailor: false };
   if (hf.reason) return { ...base, status: 'skipped', skip_reason: hf.reason, flags };
 
   const scam = scamSignals(rawText);
@@ -158,7 +165,13 @@ export async function scoreJob(
 
   const { fit, dropped } = await fitScore(ctx, job, key);
   if (dropped > 0) flags.push('fit_evidence_dropped');
-  const withFit = { ...base, fit };
+  const experience = experienceScore(job, ctx.cfg);
+  const scores = {
+    skills: fit.fit_score,
+    experience,
+    final: combineScores(fit.fit_score, experience, ctx.cfg),
+  };
+  const withFit = { ...base, fit, scores };
 
   if (fit.eligibility_issues.length > 0) {
     flags.push('eligibility');
@@ -166,7 +179,7 @@ export async function scoreJob(
   }
   const tier = hf.priority ?? 3;
   const threshold = ctx.cfg.scoring.thresholds[`p${tier}`];
-  if (fit.fit_score < threshold)
+  if (scores.final < threshold)
     return { ...withFit, status: 'skipped', skip_reason: 'low_fit', flags };
 
   const hasTarget =

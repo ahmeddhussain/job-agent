@@ -5,10 +5,16 @@
       "title": "Platform Engineer",
       "company": "Cedar Analytics",
       "location": null,
+      "country": null,
       "work_mode": "remote",
       "seniority": "unknown",
       "years_min": 2,
-      "requirements": ["Kubernetes", "Terraform", "GitOps (ArgoCD)", "Observability"],
+      "requirements": [
+        "Kubernetes",
+        "Terraform",
+        "GitOps (ArgoCD)",
+        "Observability"
+      ],
       "nice_to_have": [],
       "apply_channel": "form",
       "apply_email": null,

@@ -5,38 +5,54 @@
       "requirement": "AWS (EC2, VPC, IAM)",
       "evidence": [
         "aws",
-        "ec2_alb_asg",
         "aws_networking",
+        "ec2_alb_asg",
         "iam_oidc",
-        "terraform_3tier",
-        "nexora_infra"
+        "nexora_infra",
+        "t3_stack"
       ]
     },
     {
       "requirement": "Terraform",
-      "evidence": ["terraform", "ivg_terraform", "nexora_infra", "lab_infra"]
+      "evidence": [
+        "terraform",
+        "nexora_infra",
+        "ivg_terraform",
+        "ecs_stack"
+      ]
     },
     {
-      "requirement": "Docker & Kubernetes",
+      "requirement": "Docker and Kubernetes",
       "evidence": [
         "docker",
         "kubernetes",
-        "nexora_gitops",
-        "ivolve_projects",
-        "k8s_security_lab",
-        "ecs_fargate"
+        "nexora_services",
+        "k8s_sec",
+        "ivolve_projects"
       ]
     },
     {
       "requirement": "CI/CD with Jenkins or GitHub Actions",
-      "evidence": ["jenkins", "github_actions", "cicd_jenkins", "nexora_cicd", "ivg_stack"]
+      "evidence": [
+        "jenkins",
+        "github_actions",
+        "cicd_jenkins",
+        "ivg_stack",
+        "ecs_cicd"
+      ]
     },
     {
       "requirement": "Linux administration",
-      "evidence": ["linux", "sysadmin_lab", "lab_compliance", "lab_identity", "lab_services"]
+      "evidence": [
+        "linux",
+        "sysadmin_lab",
+        "lab_ansible",
+        "lab_compliance",
+        "nti_training"
+      ]
     }
   ],
   "missing": [],
   "eligibility_issues": [],
-  "summary": "Strong on AWS, Terraform, Docker/Kubernetes, Jenkins/GitHub Actions and Linux, all backed by projects and labs; only gap is paid full-time experience beyond the internship, which the job does not require."
+  "summary": "Covers all five listed requirements (AWS EC2/VPC/IAM, Terraform, Docker/Kubernetes, Jenkins and GitHub Actions, Linux) with strong project evidence; no nice-to-haves listed and the Linux lab is still in progress."
 }

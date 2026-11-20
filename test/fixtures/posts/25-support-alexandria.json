@@ -1,0 +1,35 @@
+{
+  "id": "25-support-alexandria",
+  "description": "Support role in Alexandria: anywhere in Egypt is fine",
+  "source": "whatsapp",
+  "source_name": "IT Jobs Egypt",
+  "source_ref": "wa-0025",
+  "posted_at": "2026-11-19T20:30:00Z",
+  "text": "IT Support Engineer – Alexandria (Smouha)\nNilecode Systems branch office\nFresh graduates welcome\nWindows, Linux, networking basics, ticketing\nSend your CV to alex.jobs@nilecode.example",
+  "media": null,
+  "expected": {
+    "is_job_post": true,
+    "jobs": [
+      {
+        "title": "IT Support Engineer",
+        "company": "Nilecode Systems",
+        "location": "Alexandria",
+        "work_mode": "onsite",
+        "seniority": "junior",
+        "years_min": 0,
+        "apply_channel": "email",
+        "apply_email": "alex.jobs@nilecode.example",
+        "apply_url": null,
+        "subject_hint": null,
+        "deadline": null,
+        "language": "en",
+        "tier": 2,
+        "angle": "support",
+        "excluded": null,
+        "skip_reason": null,
+        "flags": []
+      }
+    ],
+    "dedupe": null
+  }
+}

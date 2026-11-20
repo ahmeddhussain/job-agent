@@ -118,3 +118,14 @@ D1 to D10 come from `PLAN.md` section 3 (full reasoning there); new decisions ar
 - **Choice:** `agent run --dry-run --fixtures --record` saves each validated structured output to `test/fixtures/llm/<fixture>.<stage>.json`; `npm test` replays them (`ReplayLlm`) through the real pipeline, against the committed example profile.
 - **Alternatives:** mock the model per test (tests the mocks, not the pipeline); call Claude in CI (needs a token in CI, costs usage, and results change run to run).
 - **Why:** CI never needs a Claude token and is deterministic, yet still exercises the real prompts' outputs end to end. Re-record after changing a prompt.
+
+## D21: No seniority rules; Egypt-wide; score = skills + experience level (Ahmed, 2026-11-20)
+
+- **Choice:**
+  - Seniority words (senior, lead, manager…) no longer exclude a job. Only the years a post asks for do: more than `max_years_required` (3) is skipped.
+  - Location: anywhere in `filters.countries` (Egypt) or remote. Extraction now returns `country`; a job with no stated country is kept.
+  - Final score = `skills × 0.7 + experience × 0.3`. The model scores skills and domain only (its rubric no longer mentions seniority); code scores experience from the post: fresh/junior/0 years 100, 1 year 90, 2 years 80, 3 years 60, not stated 70. Thresholds (P1 45, P2 60, P3 75) apply to the final score. Both parts are stored in `fit_reasons.scores` and shown in the run table as `skl/exp`.
+- **Alternatives:** keep seniority words as a hard rule (drops "Senior X (2 years)" posts that Ahmed can get); let the model weigh experience inside one score (opaque, and it penalized experience inconsistently in D19); add experience as a hard tier (too coarse).
+- **Why:** Ahmed wants fresh and 0–2 year roles ranked higher for any role, combined with skills. Splitting the two makes each part testable and tunable in config, and the model can't double-count experience.
+- **Effect (live run, 28 fixtures):** Senior DevOps (7 years) → `over_experience`; Riyadh onsite → `location`; Alexandria IT Support (fresh) → 65/100 = 76, queued; fresh Technical Support → 42/100 = 59, queued (it was 78 under the old rubric, because skills are now scored without the experience points).
+- **Trade-off:** a "Senior" post with no years stated now gets experience 70 and is applied to when the skills fit. That was Ahmed's call.

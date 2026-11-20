@@ -3,20 +3,44 @@
   "matched": [
     {
       "requirement": "Prometheus",
-      "evidence": ["prometheus", "nexora_observability", "nexora_gitops"]
+      "evidence": [
+        "prometheus",
+        "nexora_observability",
+        "ivolve_gitops",
+        "cicd_pipeline"
+      ]
     },
     {
       "requirement": "Grafana",
-      "evidence": ["grafana", "nexora_observability"]
+      "evidence": [
+        "grafana",
+        "nexora_observability",
+        "nti_training"
+      ]
     },
     {
       "requirement": "Kubernetes",
-      "evidence": ["kubernetes", "nexora_gitops", "k8s_sec"]
+      "evidence": [
+        "kubernetes",
+        "nexora_gitops",
+        "ivolve_projects",
+        "k8s_security_lab"
+      ]
+    },
+    {
+      "requirement": "Domain fit: SRE work close to DevOps, cloud, Kubernetes, monitoring and incident handling",
+      "evidence": [
+        "nexora_observability",
+        "nexora_dr",
+        "lab_drills",
+        "incident_docs",
+        "aws"
+      ]
     }
   ],
   "missing": [
-    "On-call rotation participation: the profile lists on-call for a live production system as a known gap, and no production on-call work is shown."
+    "On-call rotation participation: the profile lists on-call for a live production system as a known gap; only incident drills and runbooks are shown, not a live rotation"
   ],
   "eligibility_issues": [],
-  "summary": "Strong on Prometheus, Grafana and Kubernetes from Nexora and lab projects; missing on-call rotation experience, and seniority is mid-level with no paid full-time work beyond the internship."
+  "summary": "Strong on Prometheus, Grafana and Kubernetes with SRE-adjacent monitoring and DR work; missing proven on-call rotation experience."
 }

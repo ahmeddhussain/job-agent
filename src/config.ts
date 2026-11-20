@@ -61,13 +61,21 @@ export const ConfigSchema = z.strictObject({
     max_retries: z.number().int().min(0).max(10),
   }),
   filters: z.strictObject({
-    locations: z.array(realString).min(1),
-    location_aliases: z.array(realString),
+    countries: z.array(realString).min(1),
     allow_remote: z.boolean(),
     max_years_required: z.number().int().min(0),
-    skip_seniority: z.array(z.enum(['intern', 'junior', 'mid', 'senior', 'lead'])),
   }),
   scoring: z.strictObject({
+    weights: z
+      .strictObject({ skills: ratio, experience: ratio })
+      .refine((w) => Math.abs(w.skills + w.experience - 1) < 1e-9, 'weights must add up to 1'),
+    experience_scores: z.strictObject({
+      '0': z.number().int().min(0).max(100),
+      '1': z.number().int().min(0).max(100),
+      '2': z.number().int().min(0).max(100),
+      '3': z.number().int().min(0).max(100),
+      unknown: z.number().int().min(0).max(100),
+    }),
     thresholds: z.strictObject({
       p1: z.number().int().min(0).max(100),
       p2: z.number().int().min(0).max(100),

@@ -5,10 +5,17 @@
       "title": "Infrastructure Engineer",
       "company": "Deltaware",
       "location": null,
+      "country": null,
       "work_mode": "unknown",
       "seniority": "unknown",
       "years_min": 1,
-      "requirements": ["VMware", "Linux", "Ansible", "Bash", "1-2 years of experience"],
+      "requirements": [
+        "VMware",
+        "Linux",
+        "Ansible",
+        "Bash",
+        "1-2 years of experience"
+      ],
       "nice_to_have": [],
       "apply_channel": "email",
       "apply_email": "infra@deltaware.example",

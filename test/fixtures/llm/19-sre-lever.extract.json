@@ -2,9 +2,10 @@
   "is_job_post": true,
   "jobs": [
     {
-      "title": "Site Reliability Engineer (SRE)",
+      "title": "Site Reliability Engineer",
       "company": "Cedar Analytics",
       "location": null,
+      "country": null,
       "work_mode": "remote",
       "seniority": "unknown",
       "years_min": 2,

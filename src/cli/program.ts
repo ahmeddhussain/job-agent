@@ -105,7 +105,7 @@ export function buildProgram(io: Io): Command {
       io.out(`config OK: ${configPath()}`);
       io.out(`  apply.mode=${cfg.apply.mode}  cv.max_pages=${cfg.cv.max_pages}`);
       io.out(`  models: extract=${cfg.llm.extract_model} tailor=${cfg.llm.tailor_model}`);
-      io.out(`  locations: ${cfg.filters.locations.join(', ')}`);
+      io.out(`  countries: ${cfg.filters.countries.join(', ')}`);
       io.out(`  whatsapp groups allowlisted: ${cfg.whatsapp.groups.length}`);
     });
 

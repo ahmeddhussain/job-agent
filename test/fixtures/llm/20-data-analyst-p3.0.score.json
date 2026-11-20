@@ -1,18 +1,25 @@
 {
-  "fit_score": 50,
+  "fit_score": 45,
   "matched": [
     {
       "requirement": "Python",
-      "evidence": ["python", "nexora_services", "barq_stack"]
+      "evidence": [
+        "python",
+        "nexora_tests",
+        "barq_stack"
+      ]
     },
     {
       "requirement": "SQL",
-      "evidence": ["sql", "mysql", "postgresql"]
+      "evidence": [
+        "sql",
+        "nexora_outbox"
+      ]
     }
   ],
   "missing": [
-    "Power BI: no profile skill, fact or project mentions it; Grafana dashboards (nexora_observability) are not a substitute"
+    "Power BI: no skill, project, or fact in the profile mentions it"
   ],
   "eligibility_issues": [],
-  "summary": "Python and SQL are proven through Nexora and the Barq/MySQL work; Power BI is missing and the role's daily analytics work is adjacent to the candidate's cloud/DevOps focus."
+  "summary": "Python and SQL are proven through Nexora and Barq work, but Power BI is absent and the role is an adjacent stretch from DevOps."
 }

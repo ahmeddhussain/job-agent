@@ -1,27 +1,51 @@
 {
-  "fit_score": 62,
+  "fit_score": 60,
   "matched": [
     {
       "requirement": "SQL",
-      "evidence": ["sql", "nexora"]
+      "evidence": [
+        "sql",
+        "mysql",
+        "nexora_services"
+      ]
     },
     {
       "requirement": "Linux",
-      "evidence": ["linux", "sysadmin_lab"]
+      "evidence": [
+        "linux",
+        "sysadmin_lab",
+        "lab_infra"
+      ]
     },
     {
       "requirement": "REST APIs",
-      "evidence": ["rest_apis", "nexora_services", "barq_stack"]
+      "evidence": [
+        "rest_apis",
+        "nexora_services",
+        "barq_stack"
+      ]
     },
     {
-      "requirement": "Log analysis (partial: centralized logs, Loki/Grafana, incident root-cause reports)",
-      "evidence": ["loki", "nexora_observability", "lab_services", "lab_drills"]
+      "requirement": "Ticketing systems (Jira): ticket-based change process only, Jira itself not shown",
+      "evidence": [
+        "incident_docs"
+      ]
+    },
+    {
+      "requirement": "Log analysis (partial): centralized log shipping and dashboards, not support-style triage",
+      "evidence": [
+        "loki",
+        "nexora_observability",
+        "ecs_monitoring"
+      ]
     }
   ],
   "missing": [
-    "Ticketing systems (Jira): profile shows only generic ticket-based change (incident_docs), with no Jira experience stated",
-    "Shift-based work: no shift or rotating-schedule experience in the profile"
+    "Jira ticketing system not shown; only generic ticket-based change process is evidenced",
+    "Support-style log analysis for troubleshooting live application issues is not directly shown; evidence is log shipping and dashboards",
+    "Shift-based work (rotations, on-call shifts) not shown; known gap: no on-call for a live production system",
+    "No paid application support experience; only an internship and labs"
   ],
   "eligibility_issues": [],
-  "summary": "Strong on Linux, SQL and REST APIs with log tooling; missing Jira experience and shift-based work, and the role is support-focused rather than DevOps."
+  "summary": "Strong on Linux, SQL and REST APIs with a DevOps-leaning background; missing Jira, shift work and direct production support log analysis."
 }

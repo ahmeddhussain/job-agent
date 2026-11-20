@@ -85,7 +85,7 @@ function pad(s: string | number | null | undefined, n: number): string {
 function printRun(run: FixtureRun, io: Io): void {
   io.out(`run: ${run.status}${run.stopReason ? ` (${run.stopReason})` : ''}`);
   io.out(
-    `${pad('fixture', 30)} ${pad('title', 34)} ${pad('channel', 11)} ${pad('P', 2)} ${pad('fit', 4)} ${pad('status', 13)} reason / flags`,
+    `${pad('fixture', 30)} ${pad('title', 34)} ${pad('channel', 11)} ${pad('P', 2)} ${pad('score', 5)} ${pad('skl/exp', 7)} ${pad('status', 13)} reason / flags`,
   );
   for (const o of run.outcomes) {
     if (o.notReached) {
@@ -100,7 +100,7 @@ function printRun(run: FixtureRun, io: Io): void {
     for (const j of o.jobs) {
       const d = j.decision;
       io.out(
-        `${pad(o.fixture.id, 30)} ${pad(j.job.title, 34)} ${pad(j.job.apply_channel, 11)} ${pad(d.priority, 2)} ${pad(d.fit?.fit_score, 4)} ${pad(d.status, 13)} ${[...new Set([d.skip_reason, ...d.flags])].filter(Boolean).join(', ')}`,
+        `${pad(o.fixture.id, 30)} ${pad(j.job.title, 34)} ${pad(j.job.apply_channel, 11)} ${pad(d.priority, 2)} ${pad(d.scores?.final, 4)} ${pad(d.scores ? `${String(d.scores.skills)}/${String(d.scores.experience)}` : null, 7)} ${pad(d.status, 13)} ${[...new Set([d.skip_reason, ...d.flags])].filter(Boolean).join(', ')}`,
       );
     }
   }
