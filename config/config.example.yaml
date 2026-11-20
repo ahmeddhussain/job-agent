@@ -6,7 +6,6 @@ timezone: Africa/Cairo
 paths:
   db: data/agent.db
   profile: profile/master_profile.yaml
-  media_dir: data/media
   titles: config/titles.yaml
 
 run:
@@ -19,8 +18,6 @@ whatsapp:
   groups: []                       # allowlist of group names or ids; fill from `agent wa:groups` (P4)
   fetch_limit: 500                 # per group per run
   settle_seconds: 20               # wait after `ready` for history sync
-  download_media: [image, document]
-  media_retention_days: 30
 
 alerts:
   gmail_label: job-alerts          # Gmail filter puts LinkedIn/Wuzzuf/Bayt/Indeed alerts here
@@ -35,13 +32,13 @@ ats:
 llm:
   provider: claude_cli             # headless Claude Code on the Pro subscription (D17)
   cli:
-    binary: claude
-    pinned_version: "2.1.317"      # tested version; a different version logs a warning
+    binary: claude                 # use an absolute path in config.yaml (no PATH lookup)
+    pinned_version: "2.1.317"      # tested version (D17); a different version logs a warning
   extract_model: claude-haiku-5-5
   score_model: claude-haiku-5-5
-  tailor_model: claude-sonnet-5-5
-  max_jobs_per_run: 40             # extraction cap (shares Pro usage limits)
-  max_tailor_per_run: 8            # CV + cover letter cap (shares Pro usage limits)
+  tailor_model: claude-sonnet-5-5  # all writing: CV, cover letter, email
+  max_jobs_per_run: null           # null = no cap: run until the subscription usage limit (R18)
+  max_tailor_per_run: null         # null = no cap; best matches are tailored first
   timeout_seconds: 90
   max_retries: 3
 

@@ -15,7 +15,7 @@ Read `PLAN.md` fully before writing any code. It is the spec: requirements (sect
 
 ## Hard rules for this project
 
-1. **WhatsApp is read-only.** Use only `getChats`, `fetchMessages`, `downloadMedia` and `destroy`, through the `ReadOnlyWhatsApp` facade. Never call `sendMessage`, `sendSeen`, `react`, any `join*`, `setStatus`, or `logout`. A grep test enforces this.
+1. **WhatsApp is read-only.** Use only `getChats`, `fetchMessages` and `destroy` (text posts only; no media), through the `ReadOnlyWhatsApp` facade. Never call `sendMessage`, `sendSeen`, `react`, any `join*`, `setStatus`, or `logout`. A grep test enforces this.
 2. **No invented CV content.** `profile/master_profile.yaml` is the only source of facts. The validator (PLAN.md 8.1) must pass before any CV or cover letter is saved or emailed. Never weaken the validator to make a test pass.
 3. **Default `apply.mode` is `draft`.** Never send email unless the config says `send` and every send guard passes.
 4. **Never commit personal data or secrets:** `profile/master_profile.yaml`, `config/config.yaml`, `.env`, `secrets/`, `data/` (includes the WhatsApp session), `output/`, `backups/`. Check `.gitignore` before the first commit.

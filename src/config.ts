@@ -20,7 +20,6 @@ export const ConfigSchema = z.strictObject({
   paths: z.strictObject({
     db: realString,
     profile: realString,
-    media_dir: realString,
     titles: realString,
   }),
   run: z.strictObject({
@@ -33,8 +32,6 @@ export const ConfigSchema = z.strictObject({
     groups: z.array(realString),
     fetch_limit: positiveInt,
     settle_seconds: z.number().int().min(0),
-    download_media: z.array(z.enum(['image', 'document'])),
-    media_retention_days: positiveInt,
   }),
   alerts: z.strictObject({
     gmail_label: realString,
@@ -55,8 +52,8 @@ export const ConfigSchema = z.strictObject({
     extract_model: realString,
     score_model: realString,
     tailor_model: realString,
-    max_jobs_per_run: positiveInt,
-    max_tailor_per_run: positiveInt,
+    max_jobs_per_run: positiveInt.nullable(), // null = no cap (R18)
+    max_tailor_per_run: positiveInt.nullable(),
     timeout_seconds: positiveInt,
     max_retries: z.number().int().min(0).max(10),
   }),

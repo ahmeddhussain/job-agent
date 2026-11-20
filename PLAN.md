@@ -38,14 +38,14 @@ From Ahmed's brief (explicit + implied). Re-check every item before calling the 
 |---|---|---|
 | R1 | **First run** processes every job posted in the **last 24 hours** | 5.1 |
 | R2 | Every later run processes everything **since the last successful run** (per source) | 5.1 |
-| R3 | Sources: **WhatsApp job groups** (primary), **LinkedIn**, **company websites** (+ Egyptian job boards via alerts) | 5.1 |
+| R3 | Sources: **WhatsApp job groups** (primary), **LinkedIn**, **company websites** (+ Egyptian job boards via alerts). **Text posts only**: image flyers are out of scope (decided 2026-11-20) | 5.1 |
 | R4 | Priority titles: DevOps Engineer, Cloud Engineer, IT Engineer, Infrastructure Engineer, Technical Support, Application Support, Platform Engineer, Monitoring Engineer | 6 |
 | R5 | Also apply to **any other job he is qualified for** (lower priority) | 6 |
 | R6 | **Tailor the CV** per job from his real skills and projects — never invent anything | 8 |
 | R7 | **Cover letter** per job, attached with the application | 8 |
 | R8 | **Apply through Gmail** for email jobs; prepare packages for form-only jobs (LinkedIn / company sites) | 9 |
 | R9 | **Never re-apply** to the same job (cross-group forwards, reposts, cross-source duplicates) | 7 |
-| R10 | Runs **once a day** on a timer | 11 |
+| R10 | Runs **once a day, started manually** by Ahmed (`agent run`); the systemd timer is optional | 11 |
 | R11 | **Simple tracker dashboard** for all jobs and their status | 10 |
 | R12 | WhatsApp is **read-only** — the agent never sends, reacts, marks read, or joins anything | 5.1, 12 |
 | R13 | README in the ivolve-GitOps style (no screenshots index), `docs/decisions.md`, troubleshooting log | 14 (P10) |
@@ -53,6 +53,8 @@ From Ahmed's brief (explicit + implied). Re-check every item before calling the 
 | R15 | **ATS check** passes before any application is drafted, sent or packaged (always for form jobs and for email that lands in an ATS; the agent runs it on every application) | 8.6 |
 | R16 | A **new cover letter is drafted for every application**, never reused | 8.2, 8.4 |
 | R17 | CV content is **only facts** from the master profile; commits carry **no AI attribution** | 8.1, CLAUDE.md |
+| R18 | **No per-run caps**: a run processes every available job until the Claude subscription's usage limit is reached; what's left continues on the next run | D6, 5.5 |
+| R19 | **Security:** the VM, the Claude subscription token, Gmail and WhatsApp sessions can't be taken over through the agent; no secret or private data ever reaches Git | 12, `docs/security.md` |
 
 **Out of scope (on purpose):** automatic form submission on LinkedIn / company sites, logging into LinkedIn with Ahmed's account, sending any WhatsApp message.
 
@@ -64,7 +66,7 @@ From Ahmed's brief (explicit + implied). Re-check every item before calling the 
                          ┌──────────────────── daily run (systemd timer → docker compose run agent) ────────────────────┐
                          │                                                                                               │
  WhatsApp groups ──► [collect:whatsapp] ─┐                                                                               │
- (whatsapp-web.js,      text + images    │                                                                               │
+ (whatsapp-web.js,      text only        │                                                                               │
   allowlisted groups)                    │    ┌──────────┐   ┌─────────┐   ┌────────┐   ┌───────┐   ┌────────┐   ┌──────┐ │
  Gmail label           [collect:alerts] ─┼──► │normalize │──►│ extract │──►│ dedupe │──►│ score │──►│ tailor │──►│apply │ │
  "job-alerts" ───────►  LinkedIn/Wuzzuf/ │    │ + split  │   │ (Haiku) │   │4 layers│   │tiers +│   │(Sonnet)│   │route │ │
@@ -84,7 +86,7 @@ From Ahmed's brief (explicit + implied). Re-check every item before calling the 
 
 | Component | Technology | Responsibility |
 |---|---|---|
-| `collect:whatsapp` | whatsapp-web.js (headless Chromium) | Read new messages from allowlisted groups since the watermark; download image/PDF media |
+| `collect:whatsapp` | whatsapp-web.js (headless Chromium) | Read new text messages and captions from allowlisted groups since the watermark (no media download) |
 | `collect:alerts` | Gmail API (`gmail.readonly`) | Read job-alert emails under the `job-alerts` label |
 | `collect:ats` | HTTPS + public ATS JSON feeds | Pull open roles from target companies |
 | `extract` | `claude -p` — `claude-haiku-5-5`, `--json-schema` structured output | Turn raw text/images into structured jobs (one post can hold several jobs) |
@@ -140,7 +142,7 @@ From Ahmed's brief (explicit + implied). Re-check every item before calling the 
 - **Alternatives:** the Anthropic API with an API key (the original choice; needs paid API credits); the Agent SDK (same subscription auth, but a second runtime dependency); a local model (weak on structured extraction and CV writing).
 - **Why:** `claude -p` draws from the Pro subscription. Each call is `claude -p --model <id> --output-format json --json-schema <schema> --tools ""` with the job post in a delimited block; the CLI returns the result in `structured_output`, and the code validates it again with zod. `--tools ""` means an injected instruction in a job post has nothing to run. Extraction and scoring → `claude-haiku-5-5`; CV and cover letters → `claude-sonnet-5-5`.
 - **Auth guard:** never set `ANTHROPIC_API_KEY` on the machine (in `-p` mode an API key always wins over the subscription). Never use `--bare` (it never reads OAuth). Every run starts with a preflight call; if its `init` event's `apiKeySource` is anything but `none`, or the call fails, the run stops with a failure digest. The CLI version is pinned in the image.
-- **Usage limits:** Pro has a 5-hour session limit and a weekly limit shared with Ahmed's interactive use, so caps are low: `max_tailor_per_run: 8`, `max_jobs_per_run: 40`. Token usage per call is still recorded in `llm_calls`.
+- **Usage limits, no caps (R18):** Pro has a 5-hour session limit and a weekly limit shared with Ahmed's interactive use. Ahmed chose no per-run caps: the run processes everything until the CLI reports the usage limit. Then the run stops calling the model, finishes as `partial`, keeps the unprocessed items `new` (their watermarks don't advance), and the digest says how many are left. The next run continues. Token usage per call is recorded in `llm_calls`.
 - Model IDs live in config, never hardcoded.
 
 ### D7 — CV rendering: HTML template → PDF with Puppeteer
@@ -152,7 +154,8 @@ From Ahmed's brief (explicit + implied). Re-check every item before calling the 
 - **Alternatives:** always auto-send; always manual.
 - **Why:** Ahmed wants the applications done. Drafts give him finished applications that take ~30 seconds each to check and send, and they protect him from the agent's worst failures: a wrong recipient pulled from a messy post, a role he'd never want, or a CV detail he'd want to fix. `apply.mode: send` is one config line and enforces `auto_send_min_score` and `daily_send_cap`. **Recommended:** run in `draft` mode for the first 2 weeks, then turn on `send` for priority-1 jobs above the score threshold once the outputs have earned trust.
 
-### D9 — Daily run: Docker + systemd timer
+### D9 — Daily run: started manually; Docker; systemd timer optional
+*Revised 2026-11-20: Ahmed runs the agent himself once a day (`agent run`, or `docker compose run --rm agent run`). The timer below stays available but is not installed by default.*
 - **Alternatives:** cron; Windows Task Scheduler; ECS scheduled task / Lambda; GitHub Actions cron.
 - **Why:** a systemd timer with `Persistent=true` catches up after the machine was off (cron can't). Docker pins Chromium and Node. ECS/Lambda would need the WhatsApp session on EFS, and Chromium on Lambda is painful. GitHub Actions has no persistent session. The same container runs on the laptop (Linux or WSL2), a VPS, or a `t4g.small` EC2 instance.
 - **Windows alternative:** a Task Scheduler task running `docker compose run --rm agent run` (document it in the README).
@@ -282,8 +285,8 @@ CREATE TABLE status_history (
 1. Start the client with `LocalAuth({ dataPath: 'data/wa-session' })`. Wait for `ready`, then a short settle delay so history sync completes (configurable, default 20 s).
 2. `getChats()` → keep `isGroup` chats whose name or id is in `whatsapp.groups` (the allowlist; `agent wa:groups` prints all groups with ids so Ahmed can choose).
 3. For each group: `chat.fetchMessages({ limit: whatsapp.fetch_limit (500) })` → keep `timestamp` within the window. If the oldest fetched message is still inside the window, log a warning (the limit was too small).
-4. Keep text, captions, and media of type image / document (PDF). `downloadMedia()` → save to `data/media/<sha256>.<ext>`. Skip stickers, audio, video.
-5. Pre-filter cheaply before any LLM call: drop messages under 40 characters that have no media and no email/URL (greetings, "thanks", "interested").
+4. Keep text and captions only. Media (images, PDFs, stickers, audio, video) is never downloaded: flyers are out of scope (R3), and not handling files removes a whole class of parser and storage risk. A message with no text is dropped.
+5. Pre-filter cheaply before any LLM call: drop messages under 40 characters that have no email/URL (greetings, "thanks", "interested").
 6. `client.destroy()` in a `finally` block. Never log out (that would force a new QR).
 
 **Alert emails (`collect:alerts`)**
@@ -300,7 +303,7 @@ CREATE TABLE status_history (
 - Run **dedupe L1/L2 here, before extraction** — most WhatsApp duplicates are forwards, and catching them before the LLM saves tokens.
 
 ### 5.3 Extract (Haiku, tool use)
-Input: the original text, OCR-free images passed directly to the vision model, PDF text if any. Output schema (array — one post may list several roles):
+Input: the original text (text posts only, R3). Output schema (array — one post may list several roles):
 
 ```json
 { "is_job_post": true,
@@ -331,7 +334,7 @@ Post-validation (code, not the model):
    - P3 → tailor if `fit ≥ 75`
    - otherwise `skipped` (`low_fit`). Thresholds live in config.
 5. **Scam / safety flags → `needs_review`, never auto-applied:** asks for any fee/deposit/training payment; asks for national ID, bank details or a photo up front; "earn $X/day" or crypto/forex/"investment"; Telegram-only contact; a salary far above market with no company named; a free-mail address plus no company plus vague duties.
-6. Order the tailor queue by `priority ASC, fit_score DESC`; cut at `llm.max_tailor_per_run`. Jobs beyond the cap stay `new` and are picked up next run.
+6. Order the tailor queue by `priority ASC, fit_score DESC` so the best matches are done first if the usage limit is hit. Optional caps (`llm.max_jobs_per_run`, `llm.max_tailor_per_run`) default to `null` = no cap (R18); jobs not reached stay `new` and are picked up next run.
 
 ### 5.6 Tailor & render — section 8
 ### 5.7 Apply — section 9
@@ -512,12 +515,14 @@ The result (score, missing keywords, failures) is stored in `applications.ats_re
 
 ## 12. Security, Privacy & Safety
 
+> The full threat model, every control with its status, and the host checklist are in **`docs/security.md`** (R19). The points below are the original summary.
+
 - **Secrets:** `.env` (Anthropic key) and `secrets/` (Gmail OAuth client + token) are gitignored and mounted read-only. **`data/wa-session/` is equivalent to a logged-in WhatsApp** — gitignored, `chmod 700`, never copied into images.
 - **The repo can be public; the data can't:** `profile/master_profile.yaml` (phone, email), `data/`, `output/` and `config/config.yaml` are gitignored. Commit `*.example.yaml` versions with fake data.
 - **Gmail scopes:** `gmail.readonly` + `gmail.compose` only. Set the OAuth consent screen to **"In production"** (unverified is fine for personal use) — apps left in "Testing" get refresh tokens that **expire after 7 days**, which would silently break the daily run.
 - **Prompt injection:** job posts are untrusted text. They go in a clearly delimited `<job_post>` block, with system instructions saying it's data. The model's output is schema-validated, recipients must appear literally in the source (5.3), and the model can never choose files, paths or extra recipients.
-- **WhatsApp read-only enforcement:** wrap the client in a `ReadOnlyWhatsApp` facade exposing only `getChats`, `fetchMessages`, `downloadMedia`, `destroy`. A unit test fails if any `send*`/`react`/`join*`/`sendSeen`/`setStatus` call appears in `src/` (grep test).
-- **Third-party privacy:** other group members' phone numbers are stored only as salted hashes (`author`), enough to count "same poster" and nothing more. Media is deleted after 30 days.
+- **WhatsApp read-only enforcement:** wrap the client in a `ReadOnlyWhatsApp` facade exposing only `getChats`, `fetchMessages`, `destroy` (no media download, R3). A unit test fails if any `send*`/`react`/`join*`/`sendSeen`/`setStatus` call appears in `src/` (grep test).
+- **Third-party privacy:** other group members' phone numbers are stored only as salted hashes (`author`), enough to count "same poster" and nothing more. No media is stored.
 - **Dashboard:** bound to localhost only. If it's ever exposed, put it behind a reverse proxy with auth — never open the port.
 
 ---
@@ -529,7 +534,7 @@ These go beyond the brief; each one prevents a specific failure:
 1. **Truth-checked CVs** (8.1) — one invented certification in an application can end a candidacy. The `not_held` list exists because exactly this kind of mix-up has happened before.
 2. **Drafts first, sending later** (D8) — earn trust in the outputs before removing the human check.
 3. **Gmail Sent check** (L4) — protects against re-applying to companies Ahmed contacted manually.
-4. **Images are first-class** — many WhatsApp job posts are flyers. Passing images to the vision model catches jobs a text-only agent would miss entirely.
+4. **Text only, on purpose** — image flyers are out of scope (Ahmed's call, 2026-11-20): most jobs he applies to are text posts, and skipping media removes file parsing and storage from the attack surface.
 5. **Multi-job posts are split** — "We're hiring DevOps, QA and Frontend" becomes three jobs; only the relevant one gets an application.
 6. **Required subjects honored** — ignoring "use subject X" gets applications auto-filtered by HR.
 7. **Scam filter** — job groups always carry some fee-based "training" and fake-job posts; they never get an application.
@@ -556,7 +561,7 @@ Logic first, accounts last: phases 1–3 run entirely on fixtures, so WhatsApp a
 | **P6 — ATS** | `companies.yaml`, Greenhouse/Lever/Ashby/SmartRecruiters/Workable adapters, `html` change-detector, `ats:detect` | Jobs fetched from 2 real boards; a second run with no changes creates 0 new jobs |
 | **P7 — Orchestrator** | `agent run` end to end, per-source watermarks, the lock file, run records, caps, error isolation per source (one source failing → run `partial`, others continue) | **The first real run**: 24 h lookback, `draft` mode. Ahmed reviews every draft; the issues found are fixed before the next run. The second run picks up only new items |
 | **P8 — Dashboard & API** | Fastify routes (section 10), static serving, status history, file streaming | The dashboard shows real jobs; a status change persists after reload; CV/cover links open; path traversal on `/files` is rejected (test) |
-| **P9 — Container & timer** | Dockerfile (non-root, pinned, healthcheck), compose, systemd units, `scripts/install-timer.sh`, the Windows Task Scheduler alternative, `scripts/backup.sh` | `hadolint Dockerfile` clean; `trivy image` has no HIGH/CRITICAL findings that can be fixed; `systemctl list-timers` shows the timer; one timer-triggered run succeeds (`journalctl -u job-agent`) |
+| **P9 — Container & (optional) timer** | Dockerfile (non-root, pinned, read-only rootfs, no capabilities, healthcheck), compose, `scripts/backup.sh`; systemd units and the Windows task documented as optional | `hadolint Dockerfile` clean; `trivy image` has no HIGH/CRITICAL findings that can be fixed; one manual `docker compose run --rm agent run` succeeds; container security settings verified with `docker inspect` |
 | **P10 — Hardening & docs** | README (ivolve-GitOps structure, no screenshots index), `docs/decisions.md` (D1–D10 + any new ones), `docs/troubleshooting.md` (Symptom / Diagnosis / Fix for every real issue hit), GitHub Actions CI (lint → typecheck → test → build → trivy) with `actionlint` | The section 1 checklist re-checked item by item with pass/fail; CI green |
 
 ---
@@ -567,7 +572,6 @@ Logic first, accounts last: phases 1–3 run entirely on fixtures, so WhatsApp a
   - an English DevOps post with an email
   - an Arabic post (and a mixed Arabic/English one)
   - a multi-job post
-  - a flyer image only
   - the same post forwarded 3× with emoji differences
   - the same job on WhatsApp and in a LinkedIn alert
   - a senior role needing 7 years

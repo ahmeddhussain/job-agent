@@ -120,3 +120,27 @@ input. It's the same class of problem as `ssh` in the lab scripts needing a clos
 
 **Fix.** The LLM wrapper spawns the CLI with stdin closed (`stdio: ['ignore', 'pipe', 'pipe']`);
 by hand, add `< /dev/null`. The rerun printed no warning.
+
+---
+
+## 6. Secret scanner printed `BLOCKED` but still reported "clean"
+
+**Symptom.** New tests for `scripts/check-secrets.sh` failed on content rules while
+the path rules passed:
+
+```
+× blocks a Claude OAuth token and never prints it
+AssertionError: expected +0 to be 1
+```
+
+A `bash -x` trace showed `report a.md 'blocklisted literal'`, `findings=1`, and then
+`check-secrets: clean (staged)`.
+
+**Diagnosis.** The content check ran as the last command of a pipeline
+(`git diff ... | sed ... | scan_text`). Bash runs every pipeline stage in a subshell,
+so the `findings` counter was incremented in a copy that was thrown away. Path checks
+ran in the main shell, which is why they worked. The first `--history` scan's "clean"
+result could not be trusted either.
+
+**Fix.** Feed `scan_text` through process substitution (`scan_text "$f" < <(git diff ...)`)
+so it runs in the main shell. All 8 tests pass, and the history was re-scanned: clean.

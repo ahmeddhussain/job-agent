@@ -83,3 +83,13 @@ D1 to D10 come from `PLAN.md` section 3 (full reasoning there); new decisions ar
 - **Limits:** Pro has a 5-hour session limit and a weekly limit shared with Ahmed's own Claude use. Caps: `max_tailor_per_run: 8`, `max_jobs_per_run: 40`. `llm_calls` records tokens per call so the caps can be tuned from data.
 - **Not verified from the docs (honest gaps):** that personal automation is explicitly allowed (the docs read say setup-token is "for CI pipelines and scripts"; the Agent SDK page says third parties may not *offer* claude.ai login in their products, which this is not); whether `--bare` will become the default for `-p` (the pin and the preflight cover it either way); how to pass flyer images with tools disabled (to be tested in P2 with `--input-format stream-json` image blocks).
 - **Production would add:** the API with a dedicated key and spend limits, so the agent doesn't compete with a person's interactive usage.
+
+## D18: Scope and run-mode changes from Ahmed (2026-11-20)
+
+| Change | Was | Now | Why / trade-off |
+|---|---|---|---|
+| Per-run caps | 40 extractions, 8 tailored | `null` (no cap); stop cleanly at the subscription usage limit, finish `partial`, continue next run (R18) | Ahmed wants every available job processed. The best matches are tailored first, so hitting the limit cuts the weakest jobs. Trade-off: a big run can use up the Pro session limit he'd otherwise use interactively |
+| Scheduling | systemd timer at 08:00 | Ahmed starts `agent run` manually once a day; the timer is optional (R10) | He wants control over when his subscription is used. Trade-off: no catch-up if he forgets; the stale-run tile still warns after 36 h |
+| Image flyers | Vision extraction of images and PDFs | Text posts only; no media downloaded (R3) | Most of his target posts are text. Removes file parsing and media storage from the attack surface, and the untested image path through `claude -p` |
+| Writing model | `claude-sonnet-5-5` for tailoring | Unchanged, and confirmed for all writing: CV, cover letter, email | Haiku stays on extraction and scoring, where volume is high and the task is simple |
+| Private data | Whole profile gitignored | Unchanged; additionally, one phone number is blocklisted from Git everywhere (G2) and the rest of the portfolio contact data is not treated as secret | Ahmed's call: everything already public on his portfolio is fine; only one number stays private |
