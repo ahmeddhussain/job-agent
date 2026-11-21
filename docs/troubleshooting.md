@@ -306,3 +306,36 @@ command failed Waiting failed: 30000ms exceeded
 - **Progress:** `wa:login` prints `authenticated` → `loading N%` → `ready`.
 - **Timeout:** `whatsapp.auth_timeout_seconds: 60`.
 - **Clean-up:** the broken session folders were deleted (none were linked).
+
+---
+
+## 15. WhatsApp collection found 0 posts: the VM clock was 18 hours slow
+
+**Symptom.** The P4 dry run fetched messages but kept none:
+
+```
+✧Career✧Chance✧: since 2026-11-19T22:28:51Z fetched=15 in-window=0 kept=0 new=0
+  [messages 2026-11-20T22:37:57Z .. 2026-11-21T14:26:15Z]
+```
+
+**Diagnosis.** Every message was dated after the window's end ("now"), so all of them
+looked like they came from the future.
+
+```
+VM clock (UTC):   2026-11-20 22:29:03
+Google HTTP Date: Sat, 21 Nov 2026 16:37:04 GMT
+$ timedatectl     -> System clock synchronized: no   NTP service: active
+$ chronyc tracking -> System time : 65280.613281250 seconds slow of NTP time
+```
+
+chrony was running and reaching its sources, but RHEL's default `makestep 1.0 3` only
+steps the clock during the first three updates; after that it slews, which can't close an
+18-hour gap (typical after a VM suspend/resume). The same skew broke AWS signatures in the
+lab before (story_ntp).
+
+**Hypothesis, not yet proven:** the intermittent `Waiting failed` socket timeouts from
+WhatsApp Web (#14) may come from the same skew. To be re-tested after the clock is fixed.
+
+**Fix.**
+- **Host (Ahmed, root):** `sudo chronyc makestep` once. To make it permanent on a VM that suspends, set `makestep 1.0 -1` in `/etc/chrony.conf` (step whenever the offset exceeds 1 s) and `sudo systemctl restart chronyd`.
+- **Code:** the collector now fetches first and refuses to write anything if the newest message is more than 10 minutes in the future. It reports the measured offset and the fix, so a wrong clock can never again silently produce "0 new posts" (test added).

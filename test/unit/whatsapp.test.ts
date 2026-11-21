@@ -208,6 +208,24 @@ describe('collectWhatsApp', () => {
     expect(res.warnings.join('\n')).toMatch(/Gone Group/);
   });
 
+  it('refuses to collect when the system clock is far behind (messages from the future)', async () => {
+    const future = {
+      ...msg('f1', 0, JOB),
+      timestamp: Math.floor((NOW.getTime() + 18 * 3_600_000) / 1000),
+    };
+    await expect(
+      collectWhatsApp({
+        wa: new FakeReader(chats, { 'g1@g.us': [future] }),
+        db,
+        cfg,
+        now: NOW,
+        salt: 's',
+        log,
+      }),
+    ).rejects.toThrow(/clock is about 18\.0 h behind/);
+    expect(db.prepare('SELECT COUNT(*) FROM source_state').pluck().get()).toBe(0);
+  });
+
   it('pre-filter and allowlist helpers', () => {
     expect(worthKeeping('interested', 40)).toBe(false);
     expect(worthKeeping('CV: a@b.example', 40)).toBe(true);

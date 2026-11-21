@@ -81,6 +81,7 @@ changed except `chmod 600 .env`.
 | H7 | `~/.git-credentials` holds a GitHub token in plain text | Account compromise = push access to every repo | Replace it with a **fine-grained** token limited to your repos with an expiry date, or SSH with a passphrase-protected key |
 | H8 | No disk encryption on the VM | A copied VM disk exposes every token | Make sure the host laptop's disk is encrypted (the VM files live there) |
 | H9 | GitHub account | Repo takeover | 2FA on; in `job-agent` → Settings → Code security: enable **Secret scanning** and **Push protection** |
+| H11 | VM clock 18 h slow; chrony not stepping (`makestep 1.0 3`) | Breaks AWS signatures, OAuth token validity, TLS checks, and WhatsApp collection windows | `sudo chronyc makestep`; permanent: `makestep 1.0 -1` in `/etc/chrony.conf`, restart chronyd |
 | H10 | Claude account | Subscription takeover | Protect the login email (Gmail 2FA), since Claude sign-in goes through it |
 
 ## 6. If something leaks

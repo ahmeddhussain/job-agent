@@ -167,7 +167,7 @@ export async function collectWhatsAppCommand(
       });
       for (const g of res.groups) {
         io.out(
-          `${g.name}: since ${g.since} fetched=${String(g.fetched)} in-window=${String(g.inWindow)} kept=${String(g.kept)} new=${String(g.inserted)}${g.limitHit ? ' (LIMIT HIT)' : ''}`,
+          `${g.name}: since ${g.since} fetched=${String(g.fetched)} in-window=${String(g.inWindow)} kept=${String(g.kept)} new=${String(g.inserted)}${g.limitHit ? ' (LIMIT HIT)' : ''} [messages ${g.oldest ?? '-'} .. ${g.newest ?? '-'}]`,
         );
       }
       for (const w of res.warnings) io.out(`warning: ${w}`);

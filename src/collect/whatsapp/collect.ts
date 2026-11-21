@@ -65,6 +65,9 @@ export interface GroupResult {
   kept: number;
   inserted: number;
   limitHit: boolean;
+  /** Date range of what WhatsApp returned (ISO), to tell a quiet group from a bug. */
+  oldest: string | null;
+  newest: string | null;
 }
 
 export interface CollectResult {
@@ -88,6 +91,13 @@ export interface CollectOptions {
 }
 
 const watermarkKey = (groupId: string) => `whatsapp:${groupId}`;
+
+/** Messages may be a little ahead of a correct clock (their servers vs ours); hours are not. */
+const CLOCK_TOLERANCE_MS = 10 * 60_000;
+
+export class ClockSkewError extends Error {
+  override name = 'ClockSkewError';
+}
 
 function windowStart(db: Db, cfg: Config, groupId: string, now: Date, override?: Date): Date {
   if (override) return override;
@@ -114,9 +124,22 @@ export async function collectWhatsApp(o: CollectOptions): Promise<CollectResult>
     warnings.push('whatsapp.groups is empty: nothing to collect (run: agent wa:groups)');
 
   const groups: GroupResult[] = [];
+  // Fetch first, check the clock, then write: a clock that is behind makes every new post
+  // look like it's from the future, and the window silently drops all of them
+  // (troubleshooting #15).
+  const fetched = new Map<string, WaMessage[]>();
+  for (const chat of chosen)
+    fetched.set(chat.id, await o.wa.fetchMessages(chat.id, cfg.whatsapp.fetch_limit));
+  const newest = Math.max(0, ...[...fetched.values()].flat().map((m) => m.timestamp)) * 1000;
+  const skewMs = newest - o.now.getTime();
+  if (skewMs > CLOCK_TOLERANCE_MS) {
+    throw new ClockSkewError(
+      `system clock is about ${(skewMs / 3_600_000).toFixed(1)} h behind (newest WhatsApp message is dated ${new Date(newest).toISOString()}, clock says ${o.now.toISOString()}). Nothing was collected. Fix the clock: sudo chronyc makestep`,
+    );
+  }
   for (const chat of chosen) {
     const since = windowStart(db, cfg, chat.id, o.now, o.since);
-    const msgs: WaMessage[] = await o.wa.fetchMessages(chat.id, cfg.whatsapp.fetch_limit);
+    const msgs: WaMessage[] = fetched.get(chat.id) ?? [];
     const inWindow = msgs.filter(
       (m) => m.timestamp * 1000 >= since.getTime() && m.timestamp * 1000 <= o.now.getTime(),
     );
@@ -163,6 +186,12 @@ export async function collectWhatsApp(o: CollectOptions): Promise<CollectResult>
       kept: kept.length,
       inserted,
       limitHit,
+      oldest: msgs.length
+        ? new Date(Math.min(...msgs.map((x) => x.timestamp)) * 1000).toISOString()
+        : null,
+      newest: msgs.length
+        ? new Date(Math.max(...msgs.map((x) => x.timestamp)) * 1000).toISOString()
+        : null,
     });
     o.log.info(
       { group: chat.name, fetched: msgs.length, kept: kept.length, inserted },

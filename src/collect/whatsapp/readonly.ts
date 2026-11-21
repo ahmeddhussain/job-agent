@@ -88,7 +88,7 @@ export class ReadOnlyWhatsApp implements WhatsAppReader {
     ready.catch(() => undefined);
     // Lifecycle visibility: scan → authenticated → loading_screen % → ready.
     client.on('authenticated', () => {
-      o.onProgress?.('authenticated (QR accepted), loading WhatsApp Web');
+      o.onProgress?.('authenticated, loading WhatsApp Web');
       o.log.info('whatsapp authenticated');
     });
     client.on('loading_screen', (percent: string | number, message: string) => {
