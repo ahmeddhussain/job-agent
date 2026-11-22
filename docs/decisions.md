@@ -289,3 +289,51 @@ repo, commit 1769845).
 - **Choice:** Fastify 5.12.8 serving `dashboard/index.html` and the API of PLAN 10 on `127.0.0.1:8080` (`agent dashboard`). The page shows real jobs, status edits (written to `status_history` as `ahmed`), notes, and links to the CV, the cover letter (plain text), the package and the company site. It also lists the polled boards (config and discovered) and applications per day (from status changes to `applied`).
 - **Security:** see `docs/security.md` A11. Loopback only, Host allowlist against DNS rebinding, JSON-only writes with an Origin check against CSRF, a strict CSP, and files by job id and kind only, inside `output/` with symlinks resolved.
 - **Alternatives:** Node's `http` module (fewer dependencies but hand-written validation and routing; Fastify's `inject` also makes the API testable without a port); a React app (a build step for a one-person tracker).
+
+## D33: Applying on web forms, and the parts Ahmed finishes (Ahmed, 2026-11-22)
+
+- **Ahmed's requirement:** the agent applies to everything except email jobs by itself. Email drafts are reviewed in Gmail and then sent all at once. Whatever the agent can't finish appears in one place with the link and the documents ready. LinkedIn Easy Apply must still be possible.
+- **What real forms look like** (inspected 2026-11-22): Ashby (Thndr) and Greenhouse (Careem) use **reCAPTCHA Enterprise**; Lever (Palantir) uses **hCaptcha**. They exist to stop automated submissions.
+- **Choice:**
+  1. **Try every eligible form** (https; not a board that needs an account: LinkedIn, Wuzzuf, Indeed, Bayt, Glassdoor). A separate headless Chrome (JavaScript on, a fresh profile per run, downloads off, private addresses blocked) fills the form:
+     - **standard fields** (name, email, phone, links, location, the CV upload, cover letter boxes) from the profile in code;
+     - **every other question** from one Haiku call that may use only the profile, the ready answers and the cover letter, and must choose from the options shown (options are checked in code);
+     - a **required question without a truthful answer** stops the submission. Seen live: Thndr's form asks for the current salary, which the profile doesn't state.
+  2. **Submitted** only when the company's confirmation shows (text such as "Thank you for applying", or a move to a thank-you page). Screenshots before and after are kept.
+  3. **Everything else becomes "Apply yourself"** (`applications.mode = manual`) with the reason: captcha, sign-in, open questions, or no confirmation. The dashboard section lists these with the link, CV, letter and the filled-form screenshot.
+  4. **`agent assist` (`./agent.sh apply`)** opens them one by one in a visible Chrome with a persistent profile (`data/browser-profile`). Company forms come pre-filled for Ahmed to check and submit. LinkedIn Easy Apply and board pages open on the job (signed in once by Ahmed in that profile), with the cover letter on the clipboard and the CV path shown; he clicks Easy Apply.
+  5. **`agent send-drafts` (`./agent.sh send`)** lists the email drafts still in Gmail, asks once, and sends them as they are now (his edits kept, deleted ones skipped), pausing `apply.send_all_interval_seconds` between sends.
+- **What the agent will not do:**
+  - **Solve, bypass or hide from a captcha.** A captcha-protected form is submitted normally, and if the site doesn't confirm, it goes to Apply yourself.
+  - **Log in, or drive LinkedIn Easy Apply with Ahmed's account.** Automated use breaks LinkedIn's terms and risks the account; Ahmed clicks there himself.
+- **Why:** the agent does all the searching, writing, filling and uploading; Ahmed's part is one click per captcha or Easy Apply job and one confirmation for all emails. Nothing false is sent to an employer, and his accounts aren't put at risk.
+- **Alternatives:**
+  - Captcha-solving services or a stealth browser: evasion, against the sites' terms, and it risks the email being flagged as spam at that company.
+  - The ATS application APIs: they need the employer's API key.
+  - Asking Ahmed about every unknown question during the run: it would block the daily run; open questions show in the dashboard instead.
+- **Also:** a job Ahmed moves from Skipped back to **New** in the dashboard is prepared on the next run (scored first if it never was); `./agent.sh redo <id>` does it at once.
+
+### D33 addendum: first live run (2026-11-22, run 1)
+
+`./agent.sh run --since 2026-11-15T00:00:00Z`: the WhatsApp group, one week of job alerts, and 2 company boards. 49 minutes; status **SUCCESS**.
+
+| Stage | Result |
+|---|---|
+| Collected | WhatsApp 15 new posts; 27 alert emails (8 were not job lists: application receipts); boards 0 new; plus 12 stored earlier: **54 items** |
+| Read | 54 processed, 3 raw duplicates, 0 failed, 0 left |
+| Jobs | **162**:<br>• **skipped 118**: duplicate 42, over 3 years 37, low fit 27, excluded title 9, deadline passed 3<br>• **needs review 19**: eligibility 16, suspicious 3<br>• **ready 25** |
+| Enrichment | 72 jobs got the full description (LinkedIn logged-out pages, Wuzzuf schema.org data); 23 on Indeed/Bayt not fetched by design |
+| Discovery | 4 company boards found from job links (Overjet and Take In on Ashby; Foodics and Ghanem on Workable), now polled every run. Their jobs this week all asked for more than 3 years, so none was applied to |
+| Applications | 25 one-page CVs, all passing the ATS check (keyword coverage 96–100%):<br>• **1 Gmail draft** (IT Specialist, HIG Development);<br>• **24 "Apply yourself"**: 13 LinkedIn "company website", 4 LinkedIn Easy Apply, 6 Indeed/Bayt, 2 Wuzzuf |
+| Forms submitted | **0**: no ready job had a company form this week. The filler was verified on Thndr's real Ashby form in fill-only mode instead |
+| Model | 216 Claude calls, 0 failed, 446,668 output tokens; the digest emailed to Ahmed |
+
+**Found and fixed from this run** (troubleshooting #27):
+
+- Wuzzuf links kept long tracking parameters.
+- A job page's country wasn't used when the alert omitted it.
+- The same job twice in one alert was enriched twice.
+- Easy Apply jobs skipped the company-board search.
+- A duplicate that carried the company's own form link didn't pass it to the original job.
+
+**Open:** whether every LinkedIn page without the "apply on company website" marker is Easy Apply is still an assumption. After about 70 page requests in the run, LinkedIn answered 429 (rate limit) to the check.

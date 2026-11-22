@@ -49,6 +49,8 @@ Threat model and controls for `job-agent` (requirement R19). Status values:
 | A16 | Personal tokens in alert links (Bayt `userToken`, `email_name`) are stripped before anything is stored; click-tracker wrappers are decoded offline (no request to the tracker) | A login-capable token stored in the DB, the digest or the tracker | done (P7), tested |
 | A17 | A board guessed from a company name is added only when it lists the same job title; discovered boards that fail 5 runs are switched off | Polling (and applying through) an unrelated company with the same name | done (P7), tested |
 | A18 | `agent run` takes an exclusive pid lock; a lock held by a live process of another user counts as held (EPERM) | Two runs drafting the same applications twice | done (P7), tested |
+| A19 | Web forms (D33) run in a separate Chrome: a fresh profile per run (no saved sign-ins), downloads denied, every request https-only and to public addresses only; form questions are untrusted text fenced for the model, answers must be profile facts and allowed options (checked in code); the agent never logs in, never solves or bypasses captchas | SSRF through a form page; a page stealing sessions; an injected question extracting data or making false statements; account bans | done (P7), tested on local pages (private address blocked, unanswerable required question blocks the submit, captcha → apply yourself) |
+| A20 | The assisted browser (`agent assist`) uses its own persistent profile `data/browser-profile` (owner-only, gitignored under `data/`) where Ahmed signs in to LinkedIn himself; the agent only fills company forms there and never clicks submit or Easy Apply | LinkedIn session exposure; automated use of Ahmed's accounts | done (P7) |
 
 ## 4. Controls in Git
 
@@ -86,6 +88,7 @@ changed except `chmod 600 .env`.
 | H8 | No disk encryption on the VM | A copied VM disk exposes every token | Make sure the host laptop's disk is encrypted (the VM files live there) |
 | H9 | GitHub account | Repo takeover | 2FA on; in `job-agent` → Settings → Code security: enable **Secret scanning** and **Push protection** |
 | H11 | VM clock 18 h slow; chrony not stepping (`makestep 1.0 3`) | Breaks AWS signatures, OAuth token validity, TLS checks, and WhatsApp collection windows | `sudo chronyc makestep`; permanent: `makestep 1.0 -1` in `/etc/chrony.conf`, restart chronyd |
+| H12 | `data/browser-profile` holds your LinkedIn session once you sign in there | Anyone with the VM account can use it | Same protection as the WhatsApp session: keep the VM account locked; delete the folder to sign out everywhere |
 | H10 | Claude account | Subscription takeover | Protect the login email (Gmail 2FA), since Claude sign-in goes through it |
 
 ## 6. If something leaks

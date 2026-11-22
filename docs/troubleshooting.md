@@ -537,3 +537,75 @@ ATSs one after another for up to three name variants.
 The five ATS hosts are asked in parallel for each name variant, each host still paced. Same results
 on the same three jobs; slowest job 59 s → 8 s. Real boards are still listed through the normal
 client with retries (#19).
+
+---
+
+## 24. `ReferenceError: __name is not defined` inside the browser
+
+**Symptom.** Inspecting real application forms with `page.evaluate(() => { … })` run through `tsx`:
+
+```
+===== https://jobs.ashbyhq.com/thndr/…/application ERR ReferenceError: __name is not defined
+```
+
+**Diagnosis.** esbuild (used by `tsx`) wraps named inner functions in a `__name(...)` helper so
+`Function.name` survives. The function is serialized and run inside the page, where that helper
+doesn't exist.
+
+**Fix.** Code that runs in the page is a plain JavaScript string (`SCAN` in `src/apply/forms.ts`),
+passed to `page.evaluate(string)`. It is the same in `tsx`, the compiled build and Vitest.
+
+---
+
+## 25. A consent checkbox came through as its field name
+
+**Symptom.** Form test: `required questions the profile can't answer: consent`. The real label was
+"I agree to the privacy policy".
+
+**Diagnosis.** For an input wrapped in its own `<label>`, the label finder searched *inside* that
+label for a heading, found none, and fell back to the `name` attribute.
+
+**Fix.** When the nearest container is the element's own `<label>`, its text is the label.
+
+---
+
+## 26. A page that never confirmed counted as submitted
+
+**Symptom.** Form test: a captcha-protected page that shows nothing after Submit was reported as
+`submitted`.
+
+**Diagnosis.** Success also accepted a URL containing `thank|confirm|success|submitted`. The test
+page's own address contained `submitted` (its script did), and so can a real careers URL. The
+URL had not changed at all.
+
+**Fix.** The URL only counts when it **changed** after the click and is a real page. Confirmation
+text on the page remains the main signal.
+
+---
+
+## 27. First live run: links, countries and the company form lost to a duplicate
+
+**Symptom.** Live run 1 (D33 addendum):
+
+```
+READY Mid DevOps Engineer · Vertex Technologies · apply yourself: https://wuzzuf.net/jobs/p/vt9q66w4fv2b-…?a=Nancy+Weekly+jobs+Aug26+%2F+Recommended+Jobs…&l=rje&o=1&t=JRrj&v=nwaug26
+READY DevOps Engineer - Associate · PwC Brasil · …
+READY Senior DevOps/Infrastructure Engineer · Thndr · apply yourself (Easy Apply on LinkedIn …)
+enriched "Staff Software Engineer" · OVERJET: company site …   (twice)
+```
+
+**Diagnosis.**
+
+- **Wuzzuf links:** Wuzzuf adds its own tracking parameters (`a`, `l`, `o`, `t`, `v`), not `utm_*`, so they survived canonicalization.
+- **PwC Brasil:** the alert line gave no country. The job page did ("…, Brazil"), but that was used only when the description was re-extracted.
+- **Thndr:** the job was both on LinkedIn (alert) and in Thndr's Ashby feed. The LinkedIn copy was processed first and became the original; the Ashby copy, which has the company form, became its duplicate and was dropped. Also, Easy Apply jobs never searched for a company board.
+- **Overjet:** the alert listed the same job twice; L3 only compares with stored jobs, not with jobs from the same item.
+
+**Fix.**
+
+- Wuzzuf and Bayt job URLs keep only their path.
+- The job page's country fills a missing country.
+- A duplicate from a company feed (or traced to a company form) gives the original its `apply_url_direct`.
+- Easy Apply jobs are searched for a company board too.
+- Repeated jobs within one item are dropped before enrichment.
+- Each change has a test.

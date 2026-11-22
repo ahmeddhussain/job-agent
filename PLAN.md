@@ -43,7 +43,7 @@ From Ahmed's brief (explicit + implied). Re-check every item before calling the 
 | R5 | Also apply to **any other job he is qualified for** (lower priority) | 6 |
 | R6 | **Tailor the CV** per job from his real skills and projects — never invent anything | 8 |
 | R7 | **Cover letter** per job, sent as the **email body** (only the CV is attached; no cover-letter PDF). Form jobs get it as paste-ready text | 8, D28 |
-| R8 | **Apply through Gmail** for email jobs; prepare packages for form-only jobs (LinkedIn / company sites) | 9 |
+| R8 | **Apply through Gmail** for email jobs (drafts; `./agent.sh send` sends the reviewed ones); **submit company web forms** when confirmed; everything else pre-filled for one click (D33) | 9 |
 | R9 | **Never re-apply** to the same job (cross-group forwards, reposts, cross-source duplicates) | 7 |
 | R10 | Runs **once a day, started manually** by Ahmed (`agent run`); the systemd timer is optional | 11 |
 | R11 | **Simple tracker dashboard** for all jobs and their status | 10 |
@@ -56,7 +56,7 @@ From Ahmed's brief (explicit + implied). Re-check every item before calling the 
 | R18 | **No per-run caps**: a run processes every available job until the Claude subscription's usage limit is reached; what's left continues on the next run | D6, 5.5 |
 | R19 | **Security:** the VM, the Claude subscription token, Gmail and WhatsApp sessions can't be taken over through the agent; no secret or private data ever reaches Git | 12, `docs/security.md` |
 
-**Out of scope (on purpose):** automatic form submission on LinkedIn / company sites, logging into LinkedIn with Ahmed's account, sending any WhatsApp message.
+**Out of scope (on purpose):** logging into LinkedIn or any job board with Ahmed's account, automating LinkedIn Easy Apply, solving or bypassing captchas, sending any WhatsApp message. *Changed 2026-11-22 (D33):* company web forms **are** filled and submitted when every answer is known and the site confirms; the rest go to an "Apply yourself" queue, pre-filled.
 
 ---
 

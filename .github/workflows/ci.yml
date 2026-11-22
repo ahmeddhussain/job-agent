@@ -1,0 +1,33 @@
+# CI: lint, typecheck, tests (real PDF rendering needs poppler + puppeteer's Chrome),
+# build, shellcheck for the scripts, and a dependency audit. No secrets are used.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: System packages (PDF checks)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - name: shellcheck
+        run: shellcheck agent.sh scripts/*.sh .githooks/pre-commit
+      - name: Audit (production dependencies, high and above)
+        run: npm audit --omit=dev --audit-level=high || echo "::warning::npm audit findings (see docs/decisions.md D22 for accepted ones)"
