@@ -42,7 +42,7 @@ From Ahmed's brief (explicit + implied). Re-check every item before calling the 
 | R4 | Priority titles: DevOps Engineer, Cloud Engineer, IT Engineer, Infrastructure Engineer, Technical Support, Application Support, Platform Engineer, Monitoring Engineer | 6 |
 | R5 | Also apply to **any other job he is qualified for** (lower priority) | 6 |
 | R6 | **Tailor the CV** per job from his real skills and projects — never invent anything | 8 |
-| R7 | **Cover letter** per job, attached with the application | 8 |
+| R7 | **Cover letter** per job, sent as the **email body** (only the CV is attached; no cover-letter PDF). Form jobs get it as paste-ready text | 8, D28 |
 | R8 | **Apply through Gmail** for email jobs; prepare packages for form-only jobs (LinkedIn / company sites) | 9 |
 | R9 | **Never re-apply** to the same job (cross-group forwards, reposts, cross-source duplicates) | 7 |
 | R10 | Runs **once a day, started manually** by Ahmed (`agent run`); the systemd timer is optional | 11 |

@@ -36,7 +36,6 @@ export const TailorOutputSchema = z.strictObject({
     paragraphs: z.array(z.string().min(40).max(1400)).length(3),
     closing: z.string().max(80),
   }),
-  email_body: z.string().min(40).max(900).describe('3-5 short lines, no signature'),
   why_this_role: z.string().min(20).max(300),
 });
 export type TailorOutput = z.infer<typeof TailorOutputSchema>;

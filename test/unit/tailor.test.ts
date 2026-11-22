@@ -163,12 +163,12 @@ describe('render helpers', () => {
     expect(s.startsWith('Terraform')).toBe(true);
   });
 
-  it('names files {First}_{Last}_CV_{Company}_{Role}.pdf, sanitized, at most 80 chars', () => {
+  it('names the CV {First}_{Last}_CV_{Company}_{Role}.pdf, sanitized, at most 80 chars', () => {
     expect(fileName(profile, 'CV', 'Nilecode Systems', 'DevOps Engineer')).toBe(
       'Ahmed_Khater_CV_Nilecode_Systems_DevOps_Engineer.pdf',
     );
-    expect(fileName(profile, 'Cover_Letter', null, 'IT / Support (Tier 1)')).toBe(
-      'Ahmed_Khater_Cover_Letter_IT_Support_Tier_1.pdf',
+    expect(fileName(profile, 'CV', null, 'IT / Support (Tier 1)')).toBe(
+      'Ahmed_Khater_CV_IT_Support_Tier_1.pdf',
     );
     expect(fileName(profile, 'CV', 'A'.repeat(60), 'B'.repeat(60)).length).toBeLessThanOrEqual(80);
   });
@@ -217,5 +217,25 @@ describe("Ahmed's CV rules (D25)", () => {
     expect(notHeldRegex('CKA').test('a package rollback')).toBe(false);
     expect(notHeldRegex('CKA').test('holds the CKA')).toBe(true);
     expect(notHeldRegex('double-entry').test('a double entry ledger')).toBe(true);
+  });
+});
+
+describe('the cover letter is the email body (D28)', () => {
+  it('body = greeting, paragraphs, closing, then name and contacts; no cover-letter attachment', async () => {
+    const { emailBody, coverLetterText } = await import('../../src/apply/email.js');
+    const letter = {
+      greeting: 'Dear Hiring Team,',
+      paragraphs: ['First.', 'Second.', 'Third.'],
+      closing: 'Best regards,',
+    };
+    const body = emailBody(profile, letter);
+    expect(
+      body.startsWith(
+        'Dear Hiring Team,\n\nFirst.\n\nSecond.\n\nThird.\n\nBest regards,\nAhmed Khater\n',
+      ),
+    ).toBe(true);
+    expect(body).toContain('GitHub: https://github.com/ahmeddhussain');
+    expect(body.match(/Best regards/g)).toHaveLength(1);
+    expect(coverLetterText(profile, letter)).not.toContain('GitHub:');
   });
 });

@@ -10,8 +10,7 @@ export interface JobContext {
   company: string | null;
 }
 
-export type Field =
-  'headline' | 'summary' | 'cover_letter' | 'email_body' | 'why_this_role' | 'selection';
+export type Field = 'headline' | 'summary' | 'cover_letter' | 'why_this_role' | 'selection';
 
 export interface ValidationResult {
   ok: boolean;
@@ -128,7 +127,6 @@ export function validateTailor(
         '\n',
       ),
     ],
-    ['email_body', out.email_body],
     ['why_this_role', out.why_this_role],
   ];
   for (const [f, text] of free) {
@@ -145,7 +143,7 @@ export function validateTailor(
   const letter = out.cover_letter.paragraphs.join(' ');
   const n = words(letter);
   if (n < 180 || n > 250) addField('cover_letter', `body is ${String(n)} words; must be 180-250`);
-  const lowerLetter = `${letter} ${out.email_body}`.toLowerCase();
+  const lowerLetter = letter.toLowerCase();
   for (const c of CLICHES)
     if (lowerLetter.includes(c)) addField('cover_letter', `uses the phrase "${c}"`);
   if (job.company === null && !/^dear hiring team/i.test(out.cover_letter.greeting.trim())) {

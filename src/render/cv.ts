@@ -391,12 +391,7 @@ export function renderContextFor(
 }
 
 /** `{First}_{Last}_CV_{Company}_{Role}.pdf`, sanitized, at most 80 characters. */
-export function fileName(
-  p: Profile,
-  kind: 'CV' | 'Cover_Letter',
-  company: string | null,
-  role: string,
-): string {
+export function fileName(p: Profile, kind: 'CV', company: string | null, role: string): string {
   const clean = (s: string) =>
     s
       .normalize('NFKD')
@@ -410,21 +405,4 @@ export function fileName(
 export function ensureDir(dir: string): string {
   mkdirSync(dir, { recursive: true, mode: 0o700 });
   return dir;
-}
-
-export function coverLetterHtml(
-  p: Profile,
-  out: TailorOutput,
-  company: string | null,
-  date: string,
-): string {
-  return renderTemplate('cover_letter', {
-    name: p.candidate.full_name,
-    contact: contactLine(p),
-    date,
-    recipient: company ? `Hiring Team, ${company}` : null,
-    greeting: out.cover_letter.greeting,
-    paragraphs: out.cover_letter.paragraphs,
-    closing: out.cover_letter.closing,
-  });
 }

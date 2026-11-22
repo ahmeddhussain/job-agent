@@ -30,7 +30,7 @@ Cover letter (3 paragraphs, 180-250 words in total; aim for 200-230 and count be
 - Greeting: "Dear Hiring Team," unless a hiring manager is named in the post. Closing: "Best regards,".
 - No cliches: never "I am writing to express my interest", "team player", "passionate about technology", "hard-working".
 
-Email body: 3-5 short lines saying which role he applies for and that the CV and cover letter are attached. No signature (it is added in code).
+The cover letter IS the email: it is sent as the body of the application email, with only the CV attached as a PDF. So never write "please find my cover letter attached"; "My CV is attached" is fine. End with the closing "Best regards," only; Ahmed's name and contact lines are added in code.
 
 why_this_role: one sentence linking this role to concrete work he has done; he will reuse it in interviews.
 

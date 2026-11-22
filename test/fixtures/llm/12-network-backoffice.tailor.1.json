@@ -1,39 +1,41 @@
 {
   "headline": "Network & Cloud Engineer | Routing & Switching | AWS | Linux",
-  "summary": "Electronics and Communications Engineering graduate with networking depth (CCNA curriculum and Huawei HCIA-Datacom course) applied in the cloud: multi-AZ VPC design, private subnets behind NAT, default-deny security groups, a WireGuard VPN with per-team ranges and a Squid proxy. Designed a two-floor building network in Cisco Packet Tracer; familiar with OSPF, BGP and MPLS concepts.",
+  "summary": "Electronics and Communications Engineering graduate with networking depth (CCNA curriculum and Huawei HCIA-Datacom course, studied) applied in the cloud: multi-AZ VPC design, private subnets behind NAT, default-deny security groups, a WireGuard VPN with per-team address ranges and a Squid proxy. Designed a two-floor building network in Cisco Packet Tracer; familiar with routing and switching (OSPF, BGP) and MPLS.",
   "skills": [
     "net_routing_switching",
+    "mpls_vrf",
     "routing",
     "net_fundamentals",
     "cisco_pt",
-    "mpls_vrf",
     "subnetting",
+    "dns",
     "vpc_design",
     "nat",
     "vpn",
-    "dns",
     "tls",
     "squid",
-    "firewalld",
     "linux",
+    "firewalld",
     "ssh_hardening",
-    "systemd",
-    "bash",
-    "incident_docs",
     "aws",
     "ha",
     "terraform",
     "ansible",
+    "bash",
     "netpol",
     "mtls",
     "istio",
-    "auditd",
-    "selinux",
-    "nfs",
-    "freeipa",
-    "patching",
-    "git",
+    "incident_docs",
     "dr",
+    "systemd",
+    "selinux",
+    "freeipa",
+    "auditd",
+    "openscap",
+    "kubernetes",
+    "ingress",
+    "cilium",
+    "git",
     "prometheus",
     "grafana"
   ],
@@ -70,11 +72,6 @@
           "id": "lab_cv_identity",
           "label": "Identity & Team Policy",
           "text": "FreeIPA centralizes users, DNS, Kerberos, HBAC and sudo rules per team; the utility server runs a Squid proxy with per-team internet rules, NFS home directories, centralized logging and backups."
-        },
-        {
-          "id": "lab_cv_ops",
-          "label": "Automation & Operations",
-          "text": "Idempotent Ansible roles (EC2 dynamic inventory) handle SSH hardening, SELinux, firewalld, chrony and fleet patching; Bash scripts rebuild and test the lab, with tickets, runbooks and incident reports documenting changes."
         }
       ]
     },
@@ -87,8 +84,9 @@
           "text": "Five Python/FastAPI banking microservices and an NGINX frontend on EKS, built for financial correctness (fencing tokens, row-lock ordering). Versioned Terraform modules deploy through GitHub Actions (OIDC) and ArgoCD App-of-Apps, secured with default-deny NetworkPolicies, Istio mTLS, Gateway API and External Secrets Operator (IRSA)."
         },
         {
-          "id": "nexora_infra",
-          "text": "Provisioned the VPC, EKS and RDS MySQL from versioned Terraform modules, with environment definitions on Terraform 1.10+ native S3 state locking."
+          "id": "nexora_cv_delivery",
+          "label": "Delivery, Streaming & Reliability",
+          "text": "Trivy-scanned, Cosign-signed images are promoted by GitOps PRs and released as Argo Rollouts canaries gated on Prometheus metrics. Strimzi Kafka (KRaft, TLS/SCRAM, ACLs, dead-letter queue) carries events; Pytest concurrency tests, Prometheus/Grafana/Loki observability, and a disaster recovery drill rebuilt the cluster in 23 min 50 s with Multi-AZ RDS."
         }
       ]
     },
@@ -123,17 +121,17 @@
   "courses": [
     "ccna_curriculum",
     "hcia_datacom",
-    "scu_netsec"
+    "scu_netsec",
+    "nti_accelerator"
   ],
   "cover_letter": {
     "greeting": "Dear Hiring Team,",
     "paragraphs": [
-      "I am applying for the Network Back Office Engineer role at Orbitel Networks. I combine network fundamentals from my engineering degree with hands-on cloud network design, and I would like to bring that to your network operations team.",
-      "Your posting asks for routing and switching with OSPF and BGP, and MPLS basics. My foundation is the CCNA curriculum and the Huawei HCIA-Datacom course, and I designed a two-floor building network in Cisco Packet Tracer with routers and switches. I am familiar with OSPF, BGP and MPLS concepts, though I have not run them on live carrier equipment, and I would rather say so plainly. On the practical side, I built a Linux lab on AWS where hosts sit in private subnets behind a NAT gateway with default-deny security groups, reachable only through a WireGuard VPN with per-team ranges, plus a Squid proxy with per-team rules. I documented every change with tickets, runbooks and incident reports.",
-      "My degree and networking courses gave me the fundamentals; building VPNs, proxies and segmented VPCs on AWS showed me how much of reliability and security is decided in the network. A back office role is where that discipline of careful, documented change matters every day. I would welcome a conversation about the role, and my CV is attached."
+      "I am applying for the Network Back Office Engineer role at Orbitel Networks. I combine network fundamentals from my engineering degree with hands-on cloud network design, and I would like to apply both to the day-to-day running of your network.",
+      "On routing and switching, my base is the CCNA curriculum and the Huawei HCIA-Datacom course, which I studied, plus a two-floor building network I designed in Cisco Packet Tracer with routers, switches and end devices. My working level with OSPF, BGP and MPLS (L2/L3 VPN, VRF) is familiar rather than production, and I say so plainly. The hands-on side is in my Linux lab on AWS: private subnets behind a NAT gateway, default-deny security groups per role, and a WireGuard VPN carried inside TLS on TCP 443 with per-team ranges that reach only what each team's policy allows. A Squid proxy applies per-team internet rules on top.",
+      "My degree and networking courses gave me the fundamentals; building VPNs, proxies and segmented VPCs on AWS showed me how much of reliability and security is decided in the network. The lab also taught me to document changes through tickets, runbooks and incident reports, which fits back office work. My CV is attached, and I would welcome a conversation about how I can contribute."
     ],
     "closing": "Best regards,"
   },
-  "email_body": "I am applying for the Network Back Office Engineer role at Orbitel Networks.\nMy CV and cover letter are attached.\nI bring networking fundamentals (CCNA curriculum, Huawei HCIA-Datacom course) and hands-on VPN, NAT and VPC work on AWS.\nI would be glad to discuss the role.",
-  "why_this_role": "It builds on the networks I have already built: a Cisco Packet Tracer building design, and a WireGuard VPN, NAT-fronted private subnets and a Squid proxy with per-team rules on AWS."
+  "why_this_role": "Designing a two-floor network in Packet Tracer and then building a WireGuard VPN, NAT and segmented VPCs on AWS showed me that network reliability and security start with solid routing and switching fundamentals."
 }

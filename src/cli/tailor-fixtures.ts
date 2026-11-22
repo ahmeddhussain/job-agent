@@ -10,10 +10,9 @@ import { RecordingLlm, ReplayLlm } from '../llm/replay.js';
 import type { Llm, LlmCallRecord } from '../llm/types.js';
 import { runFixtures } from '../pipeline/dry-run.js';
 import { TitleMatcher } from '../pipeline/titles.js';
-import { loadProfile, type Profile } from '../profile/load.js';
+import { loadProfile } from '../profile/load.js';
 import { atsCheck, type AtsReport } from '../render/ats.js';
 import {
-  coverLetterHtml,
   cvMarkdown,
   buildCvModel,
   ensureDir,
@@ -24,6 +23,7 @@ import {
 import { Renderer } from '../render/renderer.js';
 import { tailorJob, type TailorJob } from '../tailor/tailor.js';
 import { vocabularyFor } from '../tailor/vocab.js';
+import { coverLetterText, emailBody, emailSubject } from '../apply/email.js';
 import { loadDotEnv } from '../util/env.js';
 import { logger } from '../util/logger.js';
 import type { Io } from './program.js';
@@ -36,20 +36,6 @@ export interface TailorFlags {
   replay?: boolean;
   out?: string;
   profile?: string;
-}
-
-function emailSubject(p: Profile, title: string, hint: string | null): string {
-  return hint ?? `Application – ${title} – ${p.candidate.first_name} ${p.candidate.last_name}`;
-}
-
-function signature(p: Profile): string {
-  const c = p.candidate;
-  return [
-    'Best regards,',
-    `${c.first_name} ${c.last_name}`,
-    [c.phone, c.phone_alt].filter(Boolean).join(' | '),
-    ...Object.entries(c.links).map(([k, u]) => `${k[0]?.toUpperCase() ?? ''}${k.slice(1)}: ${u}`),
-  ].join('\n');
 }
 
 function liveLlm(cfg: Config, calls: LlmCallRecord[]): ClaudeCli {
@@ -140,30 +126,18 @@ export async function tailorFixturesCommand(
       const fitRep = await renderOnePageCv(renderer, profile, t.output, cfg, cvPath, ctx);
       const ats: AtsReport = await atsCheck(cvPath, cfg, profile, vocab, tj.matched);
 
-      const coverPath = join(dir, fileName(profile, 'Cover_Letter', job.company, job.title));
-      const date = new Date(`${FIXTURE_RUN_DATE}T12:00:00Z`).toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      });
+      // D28: no cover-letter PDF. The letter is the email body; forms get it as plain text.
       writeFileSync(
-        coverPath,
-        await renderer.pdf(coverLetterHtml(profile, fitRep.output, job.company, date)),
+        join(dir, 'cover_letter.txt'),
+        coverLetterText(profile, fitRep.output.cover_letter),
       );
-      const coverText = [
-        fitRep.output.cover_letter.greeting,
-        ...fitRep.output.cover_letter.paragraphs,
-        fitRep.output.cover_letter.closing,
-        `${profile.candidate.first_name} ${profile.candidate.last_name}`,
-      ].join('\n\n');
-      writeFileSync(join(dir, 'cover_letter.txt'), `${coverText}\n`);
       writeFileSync(
         join(dir, 'cv.md'),
         cvMarkdown(buildCvModel(profile, fitRep.output, fitRep.layout, ctx)),
       );
       writeFileSync(
         join(dir, 'email.txt'),
-        `Subject: ${emailSubject(profile, job.title, job.subject_hint)}\n\n${fitRep.output.email_body}\n\n${signature(profile)}\n`,
+        `Subject: ${emailSubject(profile, job.title, job.subject_hint)}\n\n${emailBody(profile, fitRep.output.cover_letter)}`,
       );
       writeFileSync(
         join(dir, 'report.json'),

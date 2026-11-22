@@ -224,3 +224,11 @@ repo, commit 1769845).
   One model-altered URL was dropped and flagged `url_unverified` by the post-validation.
 - Fixes found on the way: #17 (Gmail API disabled in the project, unreadable errors), #18 (alert
   noise and size).
+
+## D28: The cover letter is the email body (Ahmed, 2026-11-22)
+
+- **Choice:** for email applications, the tailored cover letter (greeting, 3 paragraphs, "Best regards,") is the body of the email, followed by Ahmed's name, public phone and links. Only the CV PDF is attached. No cover-letter PDF is produced. Form jobs get the same letter as `cover_letter.txt` for paste boxes.
+- **Removed:** the separate 3–5 line `email_body` field (schema, prompt, validator) and the cover-letter template and PDF.
+- **Alternatives:** a short body plus a cover-letter PDF (the original plan; recruiters often don't open a second attachment); both (duplicated text).
+- **Why:** the recruiter reads the letter without opening anything, it's one fewer file for an ATS to parse, and the email stays tailored to the job. The truth validator's cover-letter rules (180–250 words, no clichés, facts only) now protect the email body directly.
+- **Verified live:** 3 re-tailored fixtures pass (198–220 words); the test draft to Ahmed has the letter as its body and one attachment, the CV, byte-identical (77,484 bytes).

@@ -1,61 +1,50 @@
 {
-  "headline": "Application Support Engineer | Linux | SQL | AWS",
-  "summary": "Cloud and DevOps Engineer who troubleshoots from evidence: decoded a live GitHub OIDC token to fix an AWS trust-policy failure, traced an AWS AuthFailure to clock skew from blocked NTP, and wrote 7 incident reports with root cause and actions. Runs an enterprise-style RHEL environment through tickets and runbooks; comfortable with Linux, SQL, REST APIs, logs in Loki and AWS.",
+  "headline": "Application Support Engineer | Linux | SQL | REST APIs | AWS",
+  "summary": "Cloud and DevOps Engineer who troubleshoots from evidence: decoded a live GitHub OIDC token to fix an AWS trust-policy failure and traced an AWS AuthFailure to clock skew from blocked NTP. Operates an enterprise-style RHEL environment through tickets, runbooks and 7 incident reports with root cause and actions. Works with Linux, SQL, REST APIs, Loki logs, containers and AWS.",
   "skills": [
     "linux",
     "sql",
     "rest_apis",
     "incident_docs",
-    "mysql",
     "loki",
     "bash",
+    "bash_scripting",
+    "python",
+    "mysql",
+    "rds",
     "systemd",
     "aws",
+    "freeipa",
     "net_fundamentals",
     "dns",
-    "python",
+    "vpn",
+    "squid",
+    "nfs",
+    "firewalld",
+    "selinux",
+    "ssh_hardening",
+    "user_mgmt",
+    "sudo",
+    "patching",
+    "auditd",
     "grafana",
     "prometheus",
     "alertmanager",
-    "cloudwatch",
     "fluent_bit",
+    "cloudwatch",
     "promtail",
-    "rds",
-    "postgresql",
-    "freeipa",
-    "user_mgmt",
-    "sudo",
-    "selinux",
-    "firewalld",
-    "ssh_hardening",
-    "nfs",
-    "patching",
-    "auditd",
-    "vpn",
-    "tls",
-    "squid",
-    "git",
-    "github",
     "docker",
     "kubernetes",
     "ansible",
     "terraform",
-    "dr",
+    "git",
+    "github",
     "pytest_tests",
-    "bash_scripting",
-    "yaml",
-    "amazon_linux",
-    "openscap",
-    "aide",
-    "vpc_design",
-    "nat",
+    "tls",
     "subnetting",
-    "routing",
-    "ssm",
-    "sns",
-    "ebs",
-    "eks",
-    "ecr",
+    "nat",
+    "vpc_design",
+    "dr",
     "jenkins",
     "github_actions",
     "argocd"
@@ -105,23 +94,14 @@
       "id": "nexora",
       "bullets": [
         {
-          "id": "nexora_cv_delivery",
-          "label": "Delivery, Streaming & Reliability",
-          "text": "Trivy-scanned, Cosign-signed images are promoted by GitOps PRs and released as Argo Rollouts canaries gated on Prometheus metrics. Strimzi Kafka (KRaft, TLS/SCRAM, ACLs, dead-letter queue) carries events; Pytest concurrency tests, Prometheus/Grafana/Loki observability, and a disaster recovery drill rebuilt the cluster in 23 min 50 s with Multi-AZ RDS."
-        },
-        {
           "id": "nexora_cv_platform",
           "label": "Platform & Security",
           "text": "Five Python/FastAPI banking microservices and an NGINX frontend on EKS, built for financial correctness (fencing tokens, row-lock ordering). Versioned Terraform modules deploy through GitHub Actions (OIDC) and ArgoCD App-of-Apps, secured with default-deny NetworkPolicies, Istio mTLS, Gateway API and External Secrets Operator (IRSA)."
-        }
-      ]
-    },
-    {
-      "id": "ecs_fargate",
-      "bullets": [
+        },
         {
-          "id": "ecs_monitoring",
-          "text": "Streamed logs to CloudWatch Logs and set four CloudWatch metric alarms that notify by email through SNS."
+          "id": "nexora_cv_delivery",
+          "label": "Delivery, Streaming & Reliability",
+          "text": "Trivy-scanned, Cosign-signed images are promoted by GitOps PRs and released as Argo Rollouts canaries gated on Prometheus metrics. Strimzi Kafka (KRaft, TLS/SCRAM, ACLs, dead-letter queue) carries events; Pytest concurrency tests, Prometheus/Grafana/Loki observability, and a disaster recovery drill rebuilt the cluster in 23 min 50 s with Multi-AZ RDS."
         }
       ]
     },
@@ -131,6 +111,15 @@
         {
           "id": "t3_cv",
           "text": "Modular Terraform for a 3-tier AWS app (VPC, ALBs, Auto Scaling groups, RDS) with tier-isolated security groups, deployed through a Jenkins pipeline with a manual approval gate and monitored by CloudWatch alarms."
+        }
+      ]
+    },
+    {
+      "id": "ecs_fargate",
+      "bullets": [
+        {
+          "id": "ecs_monitoring",
+          "text": "Streamed logs to CloudWatch Logs and set four CloudWatch metric alarms that notify by email through SNS."
         }
       ]
     },
@@ -148,12 +137,11 @@
   "cover_letter": {
     "greeting": "Dear Hiring Team,",
     "paragraphs": [
-      "I am applying for the Application Support Engineer role at Pyramid Pay in Cairo. I solve infrastructure problems methodically and document them so they stay solved. I bring hands-on Linux, SQL, REST APIs and AWS experience, and a habit of working from logs and evidence rather than guesswork.",
-      "The role centres on Linux, SQL, REST APIs and log analysis. In my RHEL lab I ran incident drills for an identity outage, a full log disk and a package rollback, documented in 7 incident reports with root cause and actions. I also traced a Terraform AWS AuthFailure to about 14 minutes of clock skew caused by blocked outbound UDP 123 (NTP), and fixed a GitHub Actions OIDC failure by decoding the live JWT. On the Nexora banking platform I built Python/FastAPI services on RDS MySQL, wrote Pytest integration tests, and declared 12 Prometheus alert rules each backed by a runbook.",
-      "Troubleshooting is the part of the work I already do every day: reading logs, narrowing a cause with evidence, fixing it, and writing the runbook. A support role puts that skill directly in front of users and production systems. I would welcome a conversation about how I can help your support team, and my CV is attached."
+      "I am applying for the Application Support Engineer role at Pyramid Pay in Cairo. I solve infrastructure problems methodically and document them so they stay solved. My CV is attached.",
+      "Two of your requirements are Linux and log-driven troubleshooting. I run an enterprise-style RHEL environment on AWS with FreeIPA, a WireGuard VPN, a Squid proxy and NFS shares, and I ran incident drills for an identity outage, a full log disk and a package rollback, documented in 7 incident reports with root cause and actions. When Terraform failed with an AWS AuthFailure, I traced it to about 14 minutes of clock skew on a machine where outbound UDP 123 was blocked, and fixed it with HTTP-based sync. For SQL and REST APIs, I built Nexora, a banking platform of Python/FastAPI services on Amazon RDS MySQL, with Pytest integration tests.",
+      "Troubleshooting is the part of the work I already do every day: reading logs, narrowing a cause with evidence, fixing it, and writing the runbook. A support role puts that skill directly in front of users and production systems. I would welcome a conversation about how I can help your support team."
     ],
     "closing": "Best regards,"
   },
-  "email_body": "Dear Hiring Team,\n\nI am applying for the Application Support Engineer role at Pyramid Pay in Cairo.\nMy CV and cover letter are attached.\nI troubleshoot from logs and evidence on Linux and AWS, and I document fixes as runbooks and incident reports.\nI would be glad to talk about the role.",
-  "why_this_role": "Support work is the troubleshooting I already do: I decoded a live GitHub OIDC token to fix an AWS trust-policy failure and wrote 7 incident reports with root cause and actions in my RHEL lab."
+  "why_this_role": "Application support is the daily loop I already practise in my RHEL lab: trace a failure from logs to root cause, such as the NTP clock-skew AuthFailure, fix it, and write the incident report."
 }

@@ -1,4 +1,5 @@
-// Email applications (PLAN 9): MIME with the CV and cover letter, then a Gmail draft
+// Email applications (PLAN 9, D28): the cover letter is the email body, the CV the only
+// attachment; then a Gmail draft
 // (default) or, in send mode, a send. Recipients come only from the validated job
 // (apply_email copied literally from the post); the model never chooses them.
 import { readFileSync } from 'node:fs';
@@ -11,6 +12,7 @@ export function emailSubject(p: Profile, title: string, hint: string | null): st
   return hint ?? `Application – ${title} – ${p.candidate.first_name} ${p.candidate.last_name}`;
 }
 
+/** Name and contact lines under the letter's closing (one public phone, links in full). */
 export function signature(p: Profile): string {
   const c = p.candidate;
   const label: Record<string, string> = {
@@ -19,19 +21,34 @@ export function signature(p: Profile): string {
     portfolio: 'Portfolio',
   };
   return [
-    'Best regards,',
     `${c.first_name} ${c.last_name}`,
     [c.phone, c.phone_alt].filter(Boolean).join(' | '),
     ...Object.entries(c.links).map(([k, u]) => `${label[k] ?? k}: ${u}`),
   ].join('\n');
 }
 
+export interface Letter {
+  greeting: string;
+  paragraphs: string[];
+  closing: string;
+}
+
+/** The application email body: the tailored cover letter, then the signature (D28). */
+export function emailBody(p: Profile, letter: Letter): string {
+  return `${[letter.greeting, ...letter.paragraphs, letter.closing].map((x) => x.trim()).join('\n\n')}\n${signature(p)}\n`;
+}
+
+/** Plain cover-letter text for form applications' paste boxes (no signature block). */
+export function coverLetterText(p: Profile, letter: Letter): string {
+  return `${[letter.greeting, ...letter.paragraphs, letter.closing, `${p.candidate.first_name} ${p.candidate.last_name}`].map((x) => x.trim()).join('\n\n')}\n`;
+}
+
 export interface EmailApplication {
   to: string;
   subject: string;
+  /** Final body text (emailBody()). */
   body: string;
   cvPath: string;
-  coverPath: string;
 }
 
 export class WrongAccountError extends Error {
@@ -44,12 +61,14 @@ function mime(p: Profile, a: EmailApplication): string {
     fromEmail: p.candidate.email,
     to: a.to,
     subject: a.subject,
-    text: `${a.body.trim()}\n\n${signature(p)}\n`,
-    attachments: [a.cvPath, a.coverPath].map((path) => ({
-      filename: basename(path),
-      contentType: 'application/pdf',
-      content: readFileSync(path),
-    })),
+    text: a.body,
+    attachments: [
+      {
+        filename: basename(a.cvPath),
+        contentType: 'application/pdf',
+        content: readFileSync(a.cvPath),
+      },
+    ],
   });
 }
 

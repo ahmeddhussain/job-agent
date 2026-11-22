@@ -106,18 +106,16 @@ export async function collectAlertsCommand(
   }
 }
 
-/** P5 gate: one real draft to Ahmed himself with a fixture's tailored CV and cover letter. */
+/** P5 gate: one real draft to Ahmed himself: the fixture's cover letter as the body, the CV attached. */
 export async function testDraftCommand(cfg: Config, fixture: string, io: Io): Promise<void> {
   const dir = join(cfg.apply.output_dir, 'fixtures', fixture);
   if (!existsSync(dir))
     throw new Error(`${dir} not found: run  npm run agent -- tailor:fixtures ${fixture} --replay`);
-  const files = readdirSync(dir);
-  const cv = files.find((f) => f.includes('_CV_') && f.endsWith('.pdf'));
-  const cover = files.find((f) => f.includes('_Cover_Letter_') && f.endsWith('.pdf'));
-  if (!cv || !cover) throw new Error(`CV or cover letter PDF missing in ${dir}`);
+  const cv = readdirSync(dir).find((f) => f.includes('_CV_') && f.endsWith('.pdf'));
+  if (!cv) throw new Error(`CV PDF missing in ${dir}`);
   const email = readFileSync(join(dir, 'email.txt'), 'utf8');
   const subject = /^Subject: (.*)$/m.exec(email)?.[1] ?? 'Application';
-  const body = email.split('\n\n').slice(1).join('\n\n').split('\nBest regards,')[0] ?? '';
+  const body = email.slice(email.indexOf('\n\n') + 2);
   const profile = loadProfile(cfg.paths.profile);
   const g = facade(cfg);
   const me = await g.myAddress();
@@ -126,10 +124,9 @@ export async function testDraftCommand(cfg: Config, fixture: string, io: Io): Pr
     subject: `[TEST] ${subject}`,
     body,
     cvPath: join(dir, cv),
-    coverPath: join(dir, cover),
   });
   io.out(`draft created to ${me}: ${draftUrl(d.messageId)}`);
-  io.out(`attachments: ${cv}, ${cover}`);
+  io.out(`attachment: ${cv} (the cover letter is the email body)`);
 }
 
 export async function syncCommand(cfg: Config, io: Io): Promise<void> {

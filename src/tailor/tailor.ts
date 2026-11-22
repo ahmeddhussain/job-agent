@@ -144,7 +144,7 @@ export async function tailorJob(
     new Set(v.bullets.keys()),
     new Set(v.fields.keys()),
   );
-  const needsReview = (['cover_letter', 'email_body', 'why_this_role'] as const)
+  const needsReview = (['cover_letter', 'why_this_role'] as const)
     .filter((f) => v.fields.has(f))
     .flatMap((f) => (v.fields.get(f) ?? []).map((m) => `${f}: ${m}`));
 
@@ -152,10 +152,7 @@ export async function tailorJob(
   // fields routed to review.
   const final = validateTailor(output, profile, vocab, job);
   const leftover = describe(final).filter(
-    (e) =>
-      !e.startsWith('cover_letter') &&
-      !e.startsWith('email_body') &&
-      !e.startsWith('why_this_role'),
+    (e) => !e.startsWith('cover_letter') && !e.startsWith('why_this_role'),
   );
   if (leftover.length > 0)
     throw new Error(`tailor: still invalid after fallback: ${leftover.join('; ')}`);
