@@ -46,12 +46,40 @@ mv ~/Downloads/client_secret_*.json ~/job-agent/secrets/gmail_client.json && chm
 
 ## 4. Job-alert label (Gmail filter)
 
-1. In Gmail, open one LinkedIn job-alert email and note the sender (usually `jobalerts-noreply@linkedin.com`). Do the same for Wuzzuf, Bayt and Indeed alerts if you use them.
-2. Gmail → Settings (gear) → **See all settings → Filters and Blocked Addresses → Create a new filter**.
-3. **From:** the senders joined with `OR`, for example:
-   `jobalerts-noreply@linkedin.com OR jobs-noreply@linkedin.com`
-4. **Create filter** → tick **Apply the label** → **New label** `job-alerts` → tick **Also apply filter to matching conversations** → Create. ("Skip the Inbox" is optional.)
-5. On LinkedIn: search for a role (for example "DevOps Engineer", location Egypt), then **Set alert → Daily**. Repeat for "Cloud Engineer", "Technical Support", "Linux Administrator".
+### 4a. Turn the alerts on first
+
+| Site | How | Frequency |
+|---|---|---|
+| LinkedIn | Jobs → search a title (e.g. "DevOps Engineer", location Egypt) → **Set alert** → Manage alerts: **Email**, **Daily** | one alert per title: DevOps, Cloud, Platform, Technical Support, Application Support, Linux/System Administrator, NOC/Monitoring, IT Engineer |
+| Wuzzuf | search a title → **Get job alerts** / **Save search** with email notifications | daily |
+| Bayt | search a title → **Create job alert** → email, daily (max 15 alerts) | daily |
+| Indeed (eg.indeed.com) | search a title + "Egypt" → **Get new jobs by email** | daily |
+| Glassdoor (optional) | search → **Create job alert** | daily |
+
+### 4b. One filter for all of them
+
+Gmail → Settings → **See all settings → Filters and Blocked Addresses → Create a new filter**.
+Paste into **From**:
+
+```
+jobalerts-noreply@linkedin.com OR jobs-noreply@linkedin.com OR jobs-listings@linkedin.com OR wuzzuf.net OR bayt.com OR indeed.com OR glassdoor.com
+```
+
+→ **Create filter** → tick **Apply the label** → **New label** `job-alerts` → tick **Also apply filter to
+matching conversations** → **Create filter**. Leave **Skip the Inbox unticked**: these domains also send
+employer messages and application updates you must see.
+
+Why it is shaped this way:
+- **LinkedIn by exact address.** linkedin.com also sends messages and notifications that are not jobs.
+  `jobalerts-noreply@` is the job-alert sender; the other two send job recommendations.
+- **Wuzzuf, Bayt, Glassdoor by domain.** They publish no alert sender address, so the whole domain is
+  matched (a domain also matches its subdomains, e.g. `mail.wuzzuf.net`). Their newsletters get the
+  label too; extraction marks them "not a job post", which costs a few tokens and nothing else.
+- **Indeed by its main domain** (`indeed.com`). Indeed also sends from `indeedemail.com` and
+  `indeedmail.com`; those are left out because they relay employer messages.
+
+After the first alerts arrive, open one from each site and check **From**. If an address isn't matched,
+add it to the filter (edit the filter, then re-apply it to existing mail).
 
 ### "You will need to submit your app for verification"
 
