@@ -11,6 +11,7 @@ import { migrate, openDb, type Db } from '../../src/db/index.js';
 import type { GmailWriter, MailSummary } from '../../src/gmail/client.js';
 import { buildMime, encodeHeader } from '../../src/gmail/mime.js';
 import { syncGmail } from '../../src/gmail/sync.js';
+import { explainGmailError, GmailAuthError } from '../../src/gmail/auth.js';
 import { buildDigest, sendDigest } from '../../src/pipeline/digest.js';
 
 const raw = parse(readFileSync('config/config.example.yaml', 'utf8')) as Record<
@@ -348,5 +349,23 @@ describe('sync:gmail and digest', () => {
     await expect(sendDigest(new FakeGmail('someone-else@example.com'), cfg, d)).rejects.toThrow(
       /own Gmail address/,
     );
+  });
+});
+
+describe('expired or revoked Gmail authorization', () => {
+  it('turns invalid_grant into one clear instruction', () => {
+    const err = Object.assign(new Error('invalid_grant'), {
+      response: { data: { error: 'invalid_grant' } },
+    });
+    expect(() => explainGmailError(err)).toThrow(GmailAuthError);
+    expect(() => explainGmailError(err)).toThrow(/gmail:auth/);
+    expect(() => explainGmailError(Object.assign(new Error('x'), { code: 401 }))).toThrow(
+      /expired or was revoked/,
+    );
+  });
+
+  it('passes other errors through unchanged (e.g. a 404 for a sent draft)', () => {
+    const notFound = Object.assign(new Error('Not Found'), { code: 404 });
+    expect(() => explainGmailError(notFound)).toThrow(notFound);
   });
 });

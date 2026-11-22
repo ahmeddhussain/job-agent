@@ -53,11 +53,14 @@ export function gmailAuthClient(cfg: Config): OAuth2Client {
   if (!existsSync(cfg.gmail.token_file)) {
     throw new GmailAuthError(`not authorized yet: run  npm run agent -- gmail:auth`);
   }
-  const stored = JSON.parse(readFileSync(cfg.gmail.token_file, 'utf8')) as Credentials;
+  const { authorized_at: authorizedAt, ...stored } = JSON.parse(
+    readFileSync(cfg.gmail.token_file, 'utf8'),
+  ) as Credentials & { authorized_at?: string };
   const client = new OAuth2Client({ clientId, clientSecret });
   client.setCredentials(stored);
   client.on('tokens', (t) => {
     saveToken(cfg.gmail.token_file, {
+      ...(authorizedAt ? { authorized_at: authorizedAt } : {}),
       ...stored,
       ...t,
       refresh_token: t.refresh_token ?? stored.refresh_token ?? null,
@@ -133,9 +136,37 @@ export async function authorize(
         'Google returned no refresh token; remove the app at myaccount.google.com/permissions and retry',
       );
     }
-    saveToken(cfg.gmail.token_file, tokens);
+    saveToken(cfg.gmail.token_file, {
+      ...tokens,
+      authorized_at: new Date().toISOString(),
+    } as Credentials);
     out(`Authorized. Token saved to ${cfg.gmail.token_file} (owner-only).`);
   } finally {
     server.close();
   }
+}
+
+/** Days since `gmail:auth` (Testing-mode apps get tokens that expire after 7 days). */
+export function tokenAgeDays(cfg: Config, now = new Date()): number | null {
+  if (!existsSync(cfg.gmail.token_file)) return null;
+  const at = (JSON.parse(readFileSync(cfg.gmail.token_file, 'utf8')) as { authorized_at?: string })
+    .authorized_at;
+  return at ? (now.getTime() - Date.parse(at)) / 86_400_000 : null;
+}
+
+const REAUTH =
+  'Gmail authorization expired or was revoked. Run:  npm run agent -- gmail:auth   (an app in Testing mode gets tokens that Google expires every 7 days)';
+
+/** Turns Google's token errors into one clear instruction; other errors pass through. */
+export function explainGmailError(err: unknown): never {
+  const e = err as {
+    message?: string;
+    code?: number | string;
+    response?: { data?: { error?: string } };
+  };
+  const text = `${e.message ?? ''} ${e.response?.data?.error ?? ''}`;
+  if (/invalid_grant|invalid_token|unauthorized_client/i.test(text) || e.code === 401) {
+    throw new GmailAuthError(REAUTH, { cause: err });
+  }
+  throw err;
 }

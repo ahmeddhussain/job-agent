@@ -5,7 +5,7 @@ import type { Config } from '../config.js';
 import { collectAlerts } from '../collect/alerts.js';
 import { draftApplication } from '../apply/email.js';
 import { migrate, openDb } from '../db/index.js';
-import { authorize, gmailAuthClient, SCOPES } from '../gmail/auth.js';
+import { authorize, gmailAuthClient, SCOPES, tokenAgeDays } from '../gmail/auth.js';
 import { draftUrl, GmailFacade } from '../gmail/client.js';
 import { syncGmail } from '../gmail/sync.js';
 import { buildDigest, sendDigest } from '../pipeline/digest.js';
@@ -29,6 +29,12 @@ export async function gmailCheckCommand(cfg: Config, io: Io): Promise<void> {
   const info = await auth.getTokenInfo((await auth.getAccessToken()).token ?? '');
   const alerts = await g.search(`label:"${cfg.alerts.gmail_label}"`, 500);
   io.out(`account: ${me}`);
+  const age = tokenAgeDays(cfg);
+  if (age !== null) {
+    io.out(
+      `authorized ${age.toFixed(1)} days ago${age > 6 ? '  <- if the app is in Testing mode, Google expires it at 7 days: run gmail:auth now' : ''}`,
+    );
+  }
   io.out(
     `scopes: ${SCOPES.every((s) => info.scopes.includes(s)) ? 'gmail.readonly + gmail.compose (ok)' : `MISSING (${info.scopes.join(' ')})`}`,
   );

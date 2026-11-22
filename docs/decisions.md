@@ -199,3 +199,15 @@ An immediate second run stored 0 new posts. Fixes found on the way: lock and cle
 - **Alerts:** one raw item per alert email; HTML becomes text with link targets kept as `text (url)`, images dropped, capped at `gmail.max_alert_chars`. Extraction splits it into jobs; LinkedIn `/comm/jobs/view/<id>` links canonicalize as before. Watermark `alerts` advances with the commit (as in D26).
 - **L4 guard:** the same role to the same address within 60 days → skipped. A different role to an address that got an application in the last 14 days → review (one combined email may be better). An address Ahmed emailed by hand (`in:sent to:<addr> newer_than:60d`) → review, not skip, because that email may have been about something else.
 - **Alternatives:** IMAP with an app password (wider access than two scopes, and app passwords need 2-step verification changes); the full `googleapis` package (much larger); sending immediately (D8 keeps drafts first).
+
+### D27 addendum: restricted scopes and verification (2026-11-22)
+
+Google classifies `gmail.readonly` and `gmail.compose` as restricted. Verification needs a paid
+security assessment, which isn't proportionate for a single-user tool. The agent therefore supports
+running unverified: published (lifetime cap of 100 users, warning screen) or Testing (Ahmed as the test
+user, token expires every 7 days). For Testing, the token records when it was authorized,
+`gmail:check` warns after 6 days, and every Gmail call turns `invalid_grant`/401 into one clear
+instruction instead of a raw Google error. Alternative considered: IMAP with an app password (no
+expiry, but full-mailbox access instead of two scopes, so less safe). Rejected.
+The consent-screen privacy policy is live at https://ahmeddhussain.github.io/privacy.html (portfolio
+repo, commit 1769845).

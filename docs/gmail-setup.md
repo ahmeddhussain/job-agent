@@ -53,11 +53,19 @@ mv ~/Downloads/client_secret_*.json ~/job-agent/secrets/gmail_client.json && chm
 4. **Create filter** → tick **Apply the label** → **New label** `job-alerts` → tick **Also apply filter to matching conversations** → Create. ("Skip the Inbox" is optional.)
 5. On LinkedIn: search for a role (for example "DevOps Engineer", location Egypt), then **Set alert → Daily**. Repeat for "Cloud Engineer", "Technical Support", "Linux Administrator".
 
-### If Google won't publish the app
+### "You will need to submit your app for verification"
 
-Fallback: leave it in **Testing** and add your own Gmail under **Audience → Test users**. Everything
-works the same, but Google expires the refresh token after **7 days**, so `gmail:auth` must be run
-again weekly. When it expires, `gmail:check` and every Gmail step fail with `invalid_grant` and say so.
+`gmail.readonly` and `gmail.compose` are **restricted** scopes. Verifying an app that uses them
+needs a paid third-party security assessment, which isn't worth it for a personal tool. Two ways on,
+without verification:
+
+1. **Published but unverified** (if the console lets the status become *In production*): you see
+   a "Google hasn't verified this app" screen when you authorize (Advanced → Go to job-agent), and the
+   project is capped at 100 users for its lifetime, which is fine for one user. Tokens don't expire weekly.
+2. **Testing** (if publishing is blocked): **Audience → Test users → Add users** → your Gmail. Same
+   features, but Google expires the authorization after **7 days**, so run `gmail:auth` again weekly.
+   `gmail:check` shows the token's age and warns after 6 days. An expired token makes every Gmail step
+   stop with: *"Gmail authorization expired or was revoked. Run: npm run agent -- gmail:auth"*.
 
 ## 5. Authorize the agent
 

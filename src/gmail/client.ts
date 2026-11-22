@@ -4,6 +4,7 @@
 // trash, label change, filter or settings call anywhere; a test enforces it.
 import { gmail, type gmail_v1 } from '@googleapis/gmail';
 import type { OAuth2Client } from 'google-auth-library';
+import { explainGmailError } from './auth.js';
 
 export interface MailSummary {
   id: string;
@@ -65,7 +66,7 @@ export class GmailFacade implements GmailWriter {
 
   async myAddress(): Promise<string> {
     if (this.address) return this.address;
-    const r = await this.api.users.getProfile({ userId: 'me' });
+    const r = await this.api.users.getProfile({ userId: 'me' }).catch(explainGmailError);
     this.address = (r.data.emailAddress ?? '').toLowerCase();
     return this.address;
   }
@@ -74,12 +75,14 @@ export class GmailFacade implements GmailWriter {
     const ids: string[] = [];
     let pageToken: string | undefined;
     do {
-      const r = await this.api.users.messages.list({
-        userId: 'me',
-        q: query,
-        maxResults: Math.min(100, max),
-        ...(pageToken ? { pageToken } : {}),
-      });
+      const r = await this.api.users.messages
+        .list({
+          userId: 'me',
+          q: query,
+          maxResults: Math.min(100, max),
+          ...(pageToken ? { pageToken } : {}),
+        })
+        .catch(explainGmailError);
       for (const m of r.data.messages ?? []) if (m.id) ids.push(m.id);
       pageToken = r.data.nextPageToken ?? undefined;
     } while (pageToken && ids.length < max);
@@ -87,7 +90,9 @@ export class GmailFacade implements GmailWriter {
   }
 
   async getMessage(id: string): Promise<MailSummary> {
-    const r = await this.api.users.messages.get({ userId: 'me', id, format: 'full' });
+    const r = await this.api.users.messages
+      .get({ userId: 'me', id, format: 'full' })
+      .catch(explainGmailError);
     const m = r.data;
     const h = m.payload?.headers;
     const b = bodies(m.payload, { html: null, text: null });
@@ -105,10 +110,12 @@ export class GmailFacade implements GmailWriter {
   }
 
   async createDraft(raw: string) {
-    const r = await this.api.users.drafts.create({
-      userId: 'me',
-      requestBody: { message: { raw } },
-    });
+    const r = await this.api.users.drafts
+      .create({
+        userId: 'me',
+        requestBody: { message: { raw } },
+      })
+      .catch(explainGmailError);
     return {
       draftId: r.data.id ?? '',
       messageId: r.data.message?.id ?? '',
@@ -118,7 +125,9 @@ export class GmailFacade implements GmailWriter {
 
   async draftExists(draftId: string): Promise<boolean> {
     try {
-      await this.api.users.drafts.get({ userId: 'me', id: draftId, format: 'minimal' });
+      await this.api.users.drafts
+        .get({ userId: 'me', id: draftId, format: 'minimal' })
+        .catch(explainGmailError);
       return true;
     } catch (err) {
       if ((err as { code?: number }).code === 404) return false;
@@ -127,12 +136,14 @@ export class GmailFacade implements GmailWriter {
   }
 
   async threadMessages(threadId: string) {
-    const r = await this.api.users.threads.get({
-      userId: 'me',
-      id: threadId,
-      format: 'metadata',
-      metadataHeaders: ['From'],
-    });
+    const r = await this.api.users.threads
+      .get({
+        userId: 'me',
+        id: threadId,
+        format: 'metadata',
+        metadataHeaders: ['From'],
+      })
+      .catch(explainGmailError);
     return (r.data.messages ?? []).map((m) => ({
       id: m.id ?? '',
       labelIds: m.labelIds ?? [],
@@ -142,12 +153,16 @@ export class GmailFacade implements GmailWriter {
   }
 
   async sendRaw(raw: string) {
-    const r = await this.api.users.messages.send({ userId: 'me', requestBody: { raw } });
+    const r = await this.api.users.messages
+      .send({ userId: 'me', requestBody: { raw } })
+      .catch(explainGmailError);
     return { messageId: r.data.id ?? '', threadId: r.data.threadId ?? '' };
   }
 
   async sendDraft(draftId: string) {
-    const r = await this.api.users.drafts.send({ userId: 'me', requestBody: { id: draftId } });
+    const r = await this.api.users.drafts
+      .send({ userId: 'me', requestBody: { id: draftId } })
+      .catch(explainGmailError);
     return { messageId: r.data.id ?? '', threadId: r.data.threadId ?? '' };
   }
 }
