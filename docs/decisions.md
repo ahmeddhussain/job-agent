@@ -211,3 +211,16 @@ instruction instead of a raw Google error. Alternative considered: IMAP with an 
 expiry, but full-mailbox access instead of two scopes, so less safe). Rejected.
 The consent-screen privacy policy is live at https://ahmeddhussain.github.io/privacy.html (portfolio
 repo, commit 1769845).
+
+### D27 addendum: P5 gate result (2026-11-22)
+
+- `gmail:check`: account `ahmedkhater2611@gmail.com`, both scopes, Testing mode (7-day token).
+- `gmail:test-draft`: a real draft to Ahmed himself. Read back through the API: labels `DRAFT`;
+  subject `[TEST] Application – DevOps Engineer – Ahmed Khater` (RFC 2047 round-trips); both PDFs
+  attached with byte sizes identical to the files on disk (77,957 and 29,323); signature with the
+  public phone only.
+- `collect alerts --dry-run --extract`: 5 labelled emails in 24 h. 3 were skipped as not job lists;
+  2 real alerts (LinkedIn, Indeed) yielded 20 jobs with titles, companies, locations and apply links.
+  One model-altered URL was dropped and flagged `url_unverified` by the post-validation.
+- Fixes found on the way: #17 (Gmail API disabled in the project, unreadable errors), #18 (alert
+  noise and size).

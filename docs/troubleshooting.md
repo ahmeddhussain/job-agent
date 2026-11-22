@@ -413,3 +413,28 @@ exit=77
 
 Note: the token showed `refresh_token_expires_in: 604799` (7 days), so the app is in Testing mode and
 `gmail:auth` must be re-run weekly (D27 addendum).
+
+---
+
+## 18. Real job-alert emails: confirmations labelled as alerts, and truncated text
+
+**Symptom.** First real `collect alerts --dry-run`: 5 emails, including
+`Ahmed, your application was sent to HiredBuddy` and two `Your job alert for … is now active`.
+Three emails were exactly 20,012 characters, i.e. cut at the 20,000 cap.
+
+**Diagnosis.**
+- `jobs-noreply@linkedin.com` also sends application confirmations. Extracting jobs from them would
+  prepare applications for jobs Ahmed had already applied to.
+- Indeed's activation notices contain no jobs.
+- Size: a probe on one Indeed email gave `full length 23803 | urls 31 | url chars 19984`. Every link
+  is an opaque click tracker (`engage.indeed.com/f/a/…`) or a ~600-character `rc/clk?…&jk=<id>…`
+  link, and the preheader is padded with zero-width characters.
+
+**Fix.**
+- `alerts.skip_subjects` (config, regex) skips application-status emails and activation notices.
+- Links are canonicalized before the cap: LinkedIn → `linkedin.com/jobs/view/<id>`, Indeed →
+  `<host>/viewjob?jk=<id>`. That also makes the same job get the same URL in every alert, which L3
+  dedupe needs. Zero-width padding is stripped; the cap is now 60,000 characters.
+- Result: LinkedIn alert 20,012 → 10,444 characters, Indeed alert 12,177 → 5,705.
+- Still open: opaque `engage.indeed.com` trackers carry no job key. Resolving them needs an HTTP
+  request to Indeed (with the SSRF guard, A8), so it is planned for P7.

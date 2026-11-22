@@ -45,6 +45,12 @@ export function canonicalizeUrl(raw: string): string | null {
     return `https://linkedin.com/jobs/view/${liParam}`;
   }
 
+  // Indeed links (rc/clk, viewjob, pagead…) carry the job key `jk`; the rest is tracking.
+  const jk = url.searchParams.get('jk');
+  if (/(^|\.)indeed\.com$/.test(url.hostname) && jk && /^[a-f0-9]{8,32}$/i.test(jk)) {
+    return `https://${url.hostname}/viewjob?jk=${jk.toLowerCase()}`;
+  }
+
   for (const key of [...url.searchParams.keys()]) {
     const k = key.toLowerCase();
     if (k.startsWith('utm_') || TRACKING_PARAMS.has(k)) url.searchParams.delete(key);

@@ -7,6 +7,7 @@ import type { Config } from '../config.js';
 import type { Db } from '../db/index.js';
 import type { GmailReader, MailSummary } from '../gmail/client.js';
 import { insertRawItem, prepareRawItem } from '../pipeline/dedupe.js';
+import { canonicalizeUrl } from '../util/url.js';
 
 /** Email → text, keeping link targets "(https://…)" so apply links survive extraction. */
 export function alertToText(m: MailSummary, maxChars: number): string {
@@ -20,7 +21,14 @@ export function alertToText(m: MailSummary, maxChars: number): string {
         ],
       })
     : (m.text ?? '');
-  const text = `Subject: ${m.subject}\nFrom: ${m.from}\n\n${body}`
+  // Tracking-heavy links ("…/jobs/view/123/?trackingId=…&refId=…&trk=…") are reduced to
+  // their canonical form first, so the size cap cuts fewer jobs (troubleshooting #18).
+  const slim = body
+    .replace(/https?:\/\/[^\s)]+/g, (u) => canonicalizeUrl(u) ?? u)
+    // Zero-width and invisible padding (Indeed fills preheaders with U+200C / U+034F).
+    .replace(/(?:[\u200b-\u200f\u2060\ufeff\u00ad]|\u034f)+/g, '')
+    .replace(/[ \t]+\n/g, '\n');
+  const text = `Subject: ${m.subject}\nFrom: ${m.from}\n\n${slim}`
     .replace(/\n{3,}/g, '\n\n')
     .trim();
   return text.length > maxChars ? `${text.slice(0, maxChars)}\n[truncated]` : text;
@@ -28,6 +36,8 @@ export function alertToText(m: MailSummary, maxChars: number): string {
 
 export interface AlertsResult {
   found: number;
+  /** Not job lists: application status or alert activation (alerts.skip_subjects); not stored. */
+  skipped: string[];
   inserted: number;
   items: { id: string; subject: string; from: string; text: string; posted_at: string }[];
 }
@@ -57,8 +67,14 @@ export async function collectAlerts(o: {
   const q = `label:"${cfg.alerts.gmail_label.replace(/"/g, '')}" after:${String(Math.floor(since.getTime() / 1000))}`;
   const ids = await o.gmail.search(q, 200);
   const items: AlertsResult['items'] = [];
+  const skipped: string[] = [];
+  const skipRes = cfg.alerts.skip_subjects.map((p) => new RegExp(p, 'i'));
   for (const id of ids) {
     const m = await o.gmail.getMessage(id);
+    if (skipRes.some((re) => re.test(m.subject))) {
+      skipped.push(m.subject);
+      continue;
+    }
     items.push({
       id,
       subject: m.subject,
@@ -88,5 +104,5 @@ export async function collectAlerts(o: {
     })();
   }
   o.log.info({ query: q, found: items.length, inserted }, 'alerts collected');
-  return { found: items.length, inserted, items };
+  return { found: items.length, skipped, inserted, items };
 }

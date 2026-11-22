@@ -30,10 +30,17 @@ whatsapp:
 gmail:
   client_file: secrets/gmail_client.json   # Desktop OAuth client (docs/gmail-setup.md)
   token_file: secrets/gmail_token.json     # written by `agent gmail:auth`, owner-only
-  max_alert_chars: 20000           # cap on one alert email's text sent to extraction
+  max_alert_chars: 60000           # cap per alert; Indeed links are ~650-char click trackers (#18)
 
 alerts:
   gmail_label: job-alerts          # Gmail filter puts LinkedIn/Wuzzuf/Bayt/Indeed alerts here
+  skip_subjects:                   # labelled emails that are about YOUR applications, not new jobs
+    - 'your application (was|has been) (sent|viewed|submitted|received)'
+    - 'application (submitted|received|viewed|update|status)'
+    - 'thank(s| you) for (applying|your application)'
+    - 'we (have )?received your application'
+    - 'تم (إرسال|استلام) طلبك'
+    - 'job alert (for .+ )?is now active'   # Indeed's activation notice: no jobs in it
   fetch_linkedin_public_page: true # logged-out, no cookies, ≤ 1 req / 5 s
   linkedin_min_interval_seconds: 5
 

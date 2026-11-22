@@ -67,6 +67,7 @@ export async function collectAlertsCommand(
     io.out(
       `alert emails: ${String(res.found)} found, ${opts.dryRun ? 'dry run: nothing stored' : `${String(res.inserted)} new stored`}`,
     );
+    for (const sub of res.skipped) io.out(`  skipped (not a job list): ${sub}`);
     for (const it of res.items)
       io.out(
         `  ${it.posted_at.slice(0, 16)}  ${it.from}  |  ${it.subject}  (${String(it.text.length)} chars)`,

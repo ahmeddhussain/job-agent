@@ -48,6 +48,7 @@ export const ConfigSchema = z.strictObject({
   }),
   alerts: z.strictObject({
     gmail_label: realString,
+    skip_subjects: z.array(z.string().min(3)),
     fetch_linkedin_public_page: z.boolean(),
     linkedin_min_interval_seconds: z.number().min(5),
   }),

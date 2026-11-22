@@ -184,12 +184,25 @@ describe('alerts', () => {
 
   it('keeps link targets as text and drops images', () => {
     const t = alertToText(alert, 20000);
-    expect(t).toContain(
-      'DevOps Engineer (https://www.linkedin.com/comm/jobs/view/4123456789/?trk=x)',
-    );
+    expect(t).toContain('DevOps Engineer (https://linkedin.com/jobs/view/4123456789)');
     expect(t).toContain('Acme · Cairo');
     expect(t).not.toContain('x.png');
     expect(alertToText(alert, 40)).toMatch(/\[truncated\]$/);
+  });
+
+  it('skips emails about your own applications and shortens tracking links', async () => {
+    const g = new FakeGmail();
+    g.messages.set('a1', alert);
+    g.messages.set('a2', {
+      ...alert,
+      id: 'a2',
+      subject: 'Ahmed, your application was sent to HiredBuddy',
+    });
+    const r = await collectAlerts({ gmail: g, db, cfg, now: NOW, log, dryRun: true });
+    expect(r.skipped).toEqual(['Ahmed, your application was sent to HiredBuddy']);
+    expect(r.items.map((i) => i.id)).toEqual(['a1']);
+    expect(r.items[0]?.text).toContain('(https://linkedin.com/jobs/view/4123456789)');
+    expect(r.items[0]?.text).not.toContain('trk=');
   });
 
   it('queries the label since the watermark, stores each email once, advances the watermark', async () => {

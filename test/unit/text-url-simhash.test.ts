@@ -80,6 +80,14 @@ describe('canonicalizeUrl', () => {
     );
   });
 
+  it('reduces Indeed alert links to the job key (same job, same URL in every alert)', () => {
+    const a =
+      'https://eg.indeed.com/rc/clk/dl?alid=6a79&bb=0aNP5F&from=ja&jk=72ccb8546403b0b5&qd=RnZh&tk=1k7v';
+    const b = 'https://eg.indeed.com/viewjob?jk=72CCB8546403B0B5&from=serp&tk=zzz';
+    expect(canonicalizeUrl(a)).toBe('https://eg.indeed.com/viewjob?jk=72ccb8546403b0b5');
+    expect(canonicalizeUrl(b)).toBe(canonicalizeUrl(a));
+  });
+
   it('strips ATS-board tracking params (Greenhouse, Lever)', () => {
     expect(canonicalizeUrl('https://boards.greenhouse.io/acme/jobs/1?gh_src=wa#app')).toBe(
       'https://boards.greenhouse.io/acme/jobs/1',
