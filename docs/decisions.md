@@ -337,3 +337,41 @@ repo, commit 1769845).
 - A duplicate that carried the company's own form link didn't pass it to the original job.
 
 **Open:** whether every LinkedIn page without the "apply on company website" marker is Easy Apply is still an assumption. After about 70 page requests in the run, LinkedIn answered 429 (rate limit) to the check.
+
+## D34: A job's own posting date, and a maximum age (Ahmed, 2026-11-23)
+
+- **Ahmed's finding:** the dashboard showed jobs from about three months ago after the live run.
+- **Cause:** the collection window was right (every stored post and alert email was from 15–22 November). But alert emails such as LinkedIn's "New jobs similar to…" recommend jobs posted weeks or months earlier, and the agent dated each job by the email.
+- **Choice:**
+  - **The real posting date is kept** in `jobs.job_posted_at`. It comes from the job page (LinkedIn's "N days ago", schema.org `datePosted` on Wuzzuf and careers sites) or from the ATS feed.
+  - **Older jobs are skipped:** a job older than `filters.max_job_age_days` (30) is skipped as `stale` before any scoring call. Unknown dates are not skipped.
+  - **Jobs prepared before this change:** `agent recheck-dates` (`./agent.sh recheck`) read the dates of 37 of them. 9 were older than 30 days (up to 365) and moved to skipped.
+- **Alternatives:** trusting the email date (the bug); dropping recommendation emails altogether (they also carry fresh jobs).
+
+## D35: Questions forms ask, answered once (Ahmed, 2026-11-23)
+
+- **Ahmed's requirement:** when a form asks something the profile doesn't hold, warn him, tell him how to add it, and never ask twice.
+- **Choice:**
+  - **Recorded once:** each required question the filler can't answer truthfully is stored in `form_questions`, normalized and counted.
+  - **Warned three ways:**
+    - at the end of the run's output ("FORMS ASKED N QUESTIONS YOUR PROFILE DOESN'T ANSWER");
+    - in the digest email;
+    - in the dashboard (**Needs action** and **Profile**, with a badge).
+  - **Answered once:** the answer is written into `profile/master_profile.yaml` → `application_answers` under a readable key (`current_salary`). The YAML file stays the single source of truth: comments are kept, the whole profile is validated first, the old file is kept as `.bak`, and the write is atomic.
+  - **Retried:** forms that stopped only on questions answered since are filled and submitted again on the next run (`./agent.sh retry` does it at once).
+  - **Edited in the dashboard:** the ready answers themselves (add, change, remove), and the cover letter of any prepared, not yet sent application (saved to the database and the package's `cover_letter.txt`).
+- **Not editable from the dashboard:** CV facts, projects and skills. Every CV is checked against them, so they're edited in the profile file on purpose.
+- **Alternatives:** a separate answers file (two sources of truth); asking during the run (it would block the daily run).
+
+## D36: Dashboard in sections (Ahmed, 2026-11-23)
+
+- **Sections:**
+  - **Today:** what needs you, tiles, last-run health, the funnel from jobs seen to interviews, and applications per day.
+  - **Needs action:** questions, email drafts, apply yourself, needs review, queued.
+  - **Applied:** a board (Applied → Interview → Offer / Rejected) to drag cards on.
+  - **Skipped:** grouped by reason, with "Prepare anyway".
+  - **All jobs:** search, filters and sorting.
+  - **Profile:** contact, answers, pending questions, CV headlines.
+  - **Companies** and **Runs** (history).
+- **Job detail panel:** fit breakdown, matched and missing requirements, what the form filler entered, the letter editor, notes, the original post.
+- **Security as before (A11):** every text from a post is escaped, links are rendered only for http(s), writes are JSON-only and same-origin. Still one static file, no build step (D10).

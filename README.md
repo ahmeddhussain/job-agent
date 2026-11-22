@@ -37,9 +37,9 @@ A daily job-application agent for one person, run from the command line. It read
 | Apply                | Gmail drafts (you send them all with one command), web forms submitted when confirmed, everything else pre-filled for one click                                             | `src/apply/`                                            |
 | Orchestrator         | One run record around every stage; stops cleanly at the Claude usage limit and continues next time                                                                          | `src/run/orchestrator.ts`                               |
 | Dashboard            | Tracker on 127.0.0.1: what to finish, drafts waiting, every job and its status                                                                                              | `src/dashboard/`, `dashboard/index.html`                |
-| `agent.sh`           | The daily commands: `run`, `dashboard`, `apply`, `send`, `skipped`                                                                                                          | `agent.sh`                                              |
+| `agent.sh`           | The daily commands: `run`, `dashboard`, `apply`, `send`, `skipped` (and `retry`, `recheck`, `redo`, `dry-run`)                                                              | `agent.sh`                                              |
 
-The decisions behind each part, with alternatives, are in [`docs/decisions.md`](docs/decisions.md) (D1–D33). The original spec is [`PLAN.md`](PLAN.md).
+The decisions behind each part, with alternatives, are in [`docs/decisions.md`](docs/decisions.md) (D1–D36). The original spec is [`PLAN.md`](PLAN.md).
 
 ---
 
@@ -194,7 +194,7 @@ npm run agent -- companies
 
 - **Score:** 0.7 × skills fit (Haiku; every matched requirement must cite profile evidence) plus 0.3 × experience level in code (0 years = 100 … 3 years = 60).
 - **Thresholds by title tier:** P1 target titles ≥ 45, P2 adjacent ≥ 60, P3 anything else ≥ 75.
-- **Skipped without a model call:** excluded titles, more than 3 years required, outside Egypt and not remote, or a passed deadline.
+- **Skipped without a model call:** excluded titles, more than 3 years required, outside Egypt and not remote, a passed deadline, or posted more than 30 days ago (D34: alerts also recommend old jobs).
 - **Needs review:** scam patterns (fees, Telegram-only, "earn $X/day") and eligibility conditions.
 
 **Commands.**
@@ -251,7 +251,12 @@ The agent never solves or bypasses a captcha, never logs in to your accounts, ne
 
 **What and why.** One page to see what's done and what's left.
 
-**How it's wired** (D32): Fastify on `127.0.0.1:8080` serves `dashboard/index.html` and a small JSON API. Status edits are written to `status_history`. Files are served by job id only, from inside `output/`.
+**How it's wired** (D32, D36): Fastify on `127.0.0.1:8080` serves `dashboard/index.html` and a small JSON API.
+
+- **Sections:** Today, Needs action, Applied (a drag-and-drop board), Skipped (by reason, with "Prepare anyway"), All jobs, Profile, Companies and Runs, plus a detail panel per job.
+- **Profile edits:** the Profile section edits your ready answers, written to `profile/master_profile.yaml` with comments kept and a `.bak`. Form questions your profile can't answer are listed there to answer once (D35).
+- **Status edits** are written to `status_history`.
+- **Files** are served by job id only, from inside `output/`.
 
 ```bash
 ./agent.sh dashboard
@@ -315,7 +320,7 @@ npm run lint && npm run typecheck && npm test
 
 ## 14. Real-World Troubleshooting & Solutions
 
-Every issue met while building this, with the exact error, is in [`docs/troubleshooting.md`](docs/troubleshooting.md) (#1–#28). A selection:
+Every issue met while building this, with the exact error, is in [`docs/troubleshooting.md`](docs/troubleshooting.md) (#1–#29). A selection:
 
 **WhatsApp hung after scanning the QR, and a second command was refused (#14).**
 

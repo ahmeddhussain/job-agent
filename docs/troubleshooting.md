@@ -624,3 +624,22 @@ below made the next run pass.
 
 **Fix.** The workflow sets `kernel.apparmor_restrict_unprivileged_userns=0` before the tests, as
 puppeteer documents for CI. It doesn't turn off Chrome's sandbox. Run for fa9acdd: success.
+
+---
+
+## 29. Scoring listed a degree and fluent English as "missing"
+
+**Symptom.** The job detail for Henkel's Platform Engineer (dashboard, 2026-11-23) listed under missing:
+
+```
+Fluent English is stated in the profile Languages section but has no citable id, so it is not counted
+Bachelor's degree is stated in the Education section but has no citable id, so it is not counted
+```
+
+**Diagnosis.** The scoring rule requires every matched requirement to cite a profile id. Education,
+certifications and languages were given to the model as plain text without ids, so requirements met
+by them could never count, and fit scores came out lower than they should.
+
+**Fix.** The profile shown to the scorer gives them ids (`scu_bsc: …`, the certification ids,
+`lang_english`), the evidence check accepts them, and the prompt names them. Scores from earlier runs
+are unchanged; new jobs are scored with the ids.

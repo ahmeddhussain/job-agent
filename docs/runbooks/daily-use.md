@@ -54,14 +54,22 @@ facts from your profile.
 
 ## 3. The dashboard
 
-`./agent.sh dashboard` (Ctrl-C stops it). Only reachable from this VM (127.0.0.1).
+`./agent.sh dashboard` (Ctrl-C stops it); `./agent.sh dashboard skipped` opens a section directly.
+Only reachable from this VM (127.0.0.1). Click any job for its detail panel.
 
-- **Apply yourself:** link, CV, letter, the filled-form screenshot, and why the agent stopped. **Mark applied** when done (or `./agent.sh apply` marks it for you).
-- **Email drafts waiting:** what `./agent.sh send` would send.
-- **Tiles:** matches in the last 24 h, ready, needs review, applied, interviews, response rate, last run health.
-- **Job table:** filter by status, source, priority; click a row for the fit summary, the "why this role" line for interviews, the cover letter, notes.
-- **Status changes** you make (Interview, Offer, Rejected) are saved with history. Replies to sent applications are detected by the next run (● reply).
-- **Company boards polled:** the companies found automatically from job links, and how each was found.
+| Section | What it's for |
+|---|---|
+| **Today** | What needs you, tiles, last-run health, the funnel from jobs seen to interviews, applications per day |
+| **Needs action** | In order: questions forms asked (answer once), email drafts to send, **Apply yourself** (link, CV, letter, the filled-form screenshot, why it stopped, Mark applied), needs review (Prepare anyway / Skip), queued |
+| **Applied** | A board: drag a card from Applied to Interview, Offer or Rejected. Replies to your emails are detected by each run (● reply) |
+| **Skipped** | Grouped by reason (too old, low fit, over 3 years, excluded title…). **Prepare anyway** queues one for the next run |
+| **All jobs** | Search (press `/`), filter, sort |
+| **Profile** | Your contact facts, **ready answers** (edit, add, remove), questions waiting for an answer, CV headlines |
+| **Companies / Runs** | Boards polled (and how each was found); every run with its numbers |
+
+The detail panel shows the fit breakdown, the matched and missing requirements, what the agent typed
+into the form, the "why this role" line for interviews, the cover letter (editable until you apply),
+notes, and the original post.
 
 ---
 
@@ -100,6 +108,8 @@ the next run prepares it.
 | Every 6 days (Gmail app in Testing mode) | `./agent.sh gmail-auth` | Google expires Testing tokens after 7 days. `./agent.sh run` warns a day before |
 | If WhatsApp shows "logged out" | `./agent.sh whatsapp-login` | Scan the QR again (WhatsApp → Linked devices) |
 | First `./agent.sh apply` | Sign in to LinkedIn in the window that opens | It remembers you in `data/browser-profile` |
+| A form question you just answered in the dashboard | `./agent.sh retry` | Submits the forms that waited only for it (the next run does it anyway) |
+| Jobs prepared before the age check existed | `./agent.sh recheck` | Reads their real posting dates; moves those older than 30 days to Skipped |
 | Before trying a config change | `./agent.sh dry-run` | A full run on a copy of the database; nothing is sent, drafted or submitted |
 | An old post or a forwarded email | `./agent.sh add post.txt --name "where it came from"` then `./agent.sh run` | Adds it to the queue |
 | A job's CV or letter needs redoing (after a profile edit) | `./agent.sh redo <id>` | Delete the old Gmail draft yourself first (the agent can't delete) |
@@ -114,7 +124,8 @@ the next run prepares it.
 | `agent run is already running (pid …)` | Another `run`, `apply` or `redo` is going | Wait, or stop that process |
 | WhatsApp stuck at start | Another WhatsApp command running | One at a time (troubleshooting #14, #16) |
 | `usage limit reached` | Your Claude usage limit | Nothing: the next run continues |
-| A form job always goes to Apply yourself with the same question | The question in the dashboard reason | Add the answer to `application_answers` in your profile |
+| A form asked something your profile doesn't hold | The run output, the digest, or the dashboard badge on Profile | Answer it once in **Needs action** or **Profile**; it's saved to your profile and used on every form after |
+| Old jobs in the list | Dashboard → job → "Posted" | They're skipped as `stale` once the real date is known (limit: `filters.max_job_age_days`) |
 | A good job was skipped | `./agent.sh skipped` | `./agent.sh redo <id>`; if it keeps happening, tell the scoring (config `scoring.thresholds`) |
 
 Every real problem and its fix: `docs/troubleshooting.md`.
