@@ -84,6 +84,7 @@ filters:
   countries: [Egypt]               # anywhere in these countries is fine (Ahmed, 2026-11-20)
   allow_remote: true
   max_years_required: 3            # more than this is skipped; no seniority-word rules (D21)
+  max_job_age_days: 30          # D34: alerts also recommend old jobs; skip those older than this
 
 scoring:
   weights:                         # final score = skills * w.skills + experience * w.experience (D21)

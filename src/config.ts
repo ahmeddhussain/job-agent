@@ -97,6 +97,8 @@ export const ConfigSchema = z.strictObject({
     countries: z.array(realString).min(1),
     allow_remote: z.boolean(),
     max_years_required: z.number().int().min(0),
+    /** Older jobs are skipped as stale when the posting date is known (D34). */
+    max_job_age_days: positiveInt,
   }),
   scoring: z.strictObject({
     weights: z

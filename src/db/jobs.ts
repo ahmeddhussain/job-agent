@@ -18,11 +18,11 @@ export function insertJob(
     db
       .prepare(
         `INSERT INTO jobs (raw_item_id, title, title_norm, company, company_norm, location, work_mode,
-           seniority, years_min, requirements, nice_to_have, apply_channel, apply_email, apply_url, apply_phone,
+           seniority, years_min, requirements, nice_to_have, apply_channel, apply_email, apply_url, apply_phone, job_posted_at,
            subject_hint, deadline, language, fingerprint, duplicate_of, priority, fit_score, fit_reasons,
            flags, status, skip_reason, created_at, updated_at)
          VALUES (@raw, @title, @title_norm, @company, @company_norm, @location, @work_mode, @seniority,
-           @years_min, @requirements, @nice, @channel, @email, @url, @phone, @subject, @deadline, @language,
+           @years_min, @requirements, @nice, @channel, @email, @url, @phone, @posted, @subject, @deadline, @language,
            @fingerprint, @dup, @priority, @fit, @reasons, @flags, @status, @skip, @at, @at)`,
       )
       .run({
@@ -41,6 +41,7 @@ export function insertJob(
         email: job.apply_email,
         url: job.apply_url,
         phone: job.apply_phone,
+        posted: job.job_posted_at ?? null,
         subject: job.subject_hint,
         deadline: job.deadline,
         language: job.language,

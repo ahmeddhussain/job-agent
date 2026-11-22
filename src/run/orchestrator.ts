@@ -7,7 +7,8 @@
 // the usage limit (R18) loses nothing: the next run continues where this one stopped.
 import { join } from 'node:path';
 import type { Logger } from 'pino';
-import { applyJob } from '../apply/apply.js';
+import { applyJob, retryAnsweredForms } from '../apply/apply.js';
+import { pendingQuestions } from '../apply/questions.js';
 import type { FormFiller } from '../apply/forms.js';
 import { prepareApplication } from '../apply/prepare.js';
 import type { Config } from '../config.js';
@@ -209,6 +210,26 @@ export async function runAgent(d: RunDeps): Promise<RunReport> {
 
     // 5. Tailor and apply, best matches first (PLAN 5.5 step 6).
     await tailorQueue(d, stats, stopOn);
+
+    // 6. Forms that waited only for answers Ahmed has since given (D35).
+    const retry = await retryAnsweredForms(
+      {
+        db,
+        cfg,
+        profile: d.profile,
+        gmail: d.gmailWrite,
+        dryRun: d.dryRun,
+        now: d.now,
+        forms: d.forms ?? null,
+        sourceOf: (j) => sourceLabel(db, j.raw_item_id),
+      },
+      d.out,
+    );
+    if (retry.tried)
+      d.out(
+        `retried ${String(retry.tried)} forms with your new answers: ${String(retry.submitted)} submitted`,
+      );
+    stats.applications.submitted += retry.submitted;
   } catch (err) {
     if (!(err instanceof Stop)) {
       error = err instanceof Error ? err.message : String(err);
@@ -272,13 +293,25 @@ export async function runAgent(d: RunDeps): Promise<RunReport> {
     runId,
   );
 
-  const digest = buildDigest(
-    db,
-    started.toISOString(),
-    started.toISOString().slice(0, 10),
-    error,
-    healthLines(stats, halt.reason),
-  );
+  // Questions forms asked that the profile can't answer: answer each once (D35).
+  const questions = pendingQuestions(db);
+  if (questions.length) {
+    d.out(
+      `\nFORMS ASKED ${String(questions.length)} QUESTIONS YOUR PROFILE DOESN'T ANSWER (answer once: dashboard → Profile):`,
+    );
+    for (const q of questions) d.out(`  - ${q.question}  (asked ${String(q.times)}×)`);
+  }
+  const questionLines = questions.length
+    ? [
+        `Questions to answer once (dashboard → Profile, or profile application_answers):`,
+        ...questions.map((q) => `- ${q.question} (asked ${String(q.times)}×)`),
+        '',
+      ]
+    : [];
+  const digest = buildDigest(db, started.toISOString(), started.toISOString().slice(0, 10), error, [
+    ...questionLines,
+    ...healthLines(stats, halt.reason),
+  ]);
   if (d.sendDigest && cfg.digest.enabled) {
     try {
       await d.sendDigest(digest);

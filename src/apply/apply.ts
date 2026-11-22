@@ -11,7 +11,8 @@ import { updateJobStatus, type JobRow } from '../db/jobs.js';
 import type { GmailWriter } from '../gmail/client.js';
 import type { Profile } from '../profile/load.js';
 import { draftApplication } from './email.js';
-import { formEligible, saveFormReport, type FormFiller } from './forms.js';
+import { formEligible, saveFormReport, type FormFiller, type FormReport } from './forms.js';
+import { allAnswered, recordQuestions } from './questions.js';
 import { applicationGuard } from './guard.js';
 import type { Prepared } from './prepare.js';
 
@@ -221,6 +222,7 @@ export async function applyJob(d: ApplyDeps, job: JobRow, p: Prepared): Promise<
         await r.page.close().catch(() => undefined);
         const report = { ...r, page: undefined };
         saveFormReport(p.dir, report);
+        if (r.unanswered.length) recordQuestions(d.db, r.unanswered, job.id, at());
         if (r.outcome === 'submitted') {
           insertApp({
             channel: 'form',
@@ -276,4 +278,73 @@ function waNumber(job: JobRow): string | null {
   const digits = (job.apply_phone ?? '').replace(/\D/g, '');
   if (/^01\d{9}$/.test(digits)) return `20${digits.slice(1)}`;
   return digits.length >= 10 ? digits : null;
+}
+
+/**
+ * Forms that stopped only on questions Ahmed has since answered (D35) are tried again,
+ * with the current profile. Returns how many were submitted.
+ */
+export async function retryAnsweredForms(
+  d: ApplyDeps,
+  out: (line: string) => void,
+): Promise<{ tried: number; submitted: number }> {
+  if (!d.forms) return { tried: 0, submitted: 0 };
+  const rows = d.db
+    .prepare(
+      `SELECT j.*, a.package_dir, a.cv_pdf, a.cover_text, a.why_this_role, a.form_report
+       FROM jobs j JOIN applications a ON a.job_id = j.id
+       WHERE j.status = 'ready' AND a.mode = 'manual' AND a.channel = 'form' AND a.form_report IS NOT NULL`,
+    )
+    .all() as (JobRow & {
+    package_dir: string | null;
+    cv_pdf: string | null;
+    cover_text: string | null;
+    why_this_role: string | null;
+    form_report: string;
+  })[];
+  let tried = 0;
+  let submitted = 0;
+  for (const j of rows) {
+    const prev = JSON.parse(j.form_report) as FormReport;
+    if (prev.unanswered.length === 0 || !allAnswered(d.db, prev.unanswered)) continue;
+    const url = j.apply_url_direct ?? j.apply_url;
+    if (!url || !j.package_dir || !j.cv_pdf || !formEligible(url, d.cfg)) continue;
+    tried++;
+    try {
+      const r = await d.forms.run(
+        { id: j.id, title: j.title, company: j.company, source: d.sourceOf?.(j) ?? 'job board' },
+        url,
+        {
+          dir: j.package_dir,
+          cvPath: j.cv_pdf,
+          coverText: j.cover_text ?? '',
+          whyThisRole: j.why_this_role ?? '',
+        },
+        { submit: !d.dryRun && d.cfg.forms.auto_submit },
+      );
+      await r.page.close().catch(() => undefined);
+      const report = { ...r, page: undefined };
+      saveFormReport(j.package_dir, report);
+      const at = d.now().toISOString();
+      if (r.outcome === 'submitted') {
+        d.db
+          .prepare(
+            `UPDATE applications SET mode = 'submitted', sent_at = ?, form_report = ?, manual_reason = NULL WHERE job_id = ?`,
+          )
+          .run(at, JSON.stringify(report), j.id);
+        updateJobStatus(d.db, j.id, 'applied', 'agent', at, null);
+        submitted++;
+        out(`  SUBMITTED (retry) ${j.title}${j.company ? ` · ${j.company}` : ''}`);
+      } else {
+        if (r.unanswered.length) recordQuestions(d.db, r.unanswered, j.id, at);
+        d.db
+          .prepare('UPDATE applications SET form_report = ?, manual_reason = ? WHERE job_id = ?')
+          .run(JSON.stringify(report), r.reason, j.id);
+        out(`  still apply yourself: ${j.title} (${r.reason ?? ''})`);
+      }
+    } catch (err) {
+      out(`  retry failed: ${j.title}: ${String(err).slice(0, 120)}`);
+    }
+  }
+  return { tried, submitted };
 }

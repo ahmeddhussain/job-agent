@@ -130,7 +130,7 @@ describe('migration 002', () => {
        VALUES (1, 't', 't', 'form', 'f', 'now', 'now')`,
     ).run();
     const res = migrate(db);
-    expect(res.applied).toEqual(['002_run.sql', '003_forms.sql']);
+    expect(res.applied).toEqual(['002_run.sql', '003_forms.sql', '004_dates_questions.sql']);
     expect(
       db.prepare('SELECT count(*) FROM raw_items WHERE processed_at IS NULL').pluck().get(),
     ).toBe(1);

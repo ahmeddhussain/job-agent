@@ -77,8 +77,30 @@ export function linkedinJobId(url: string): string | null {
   return /^https:\/\/(?:[a-z]{2,3}\.)?linkedin\.com\/jobs\/view\/(\d{6,})$/.exec(url)?.[1] ?? null;
 }
 
+/** "3 months ago" / "2 days ago" (LinkedIn) → an ISO date, counted back from `now`. */
+export function agoToIso(text: string | null, now: Date): string | null {
+  const m = /(\d+)\s*(minute|hour|day|week|month|year)s?\s+ago/i.exec(text ?? '');
+  if (!m) return null;
+  const n = Number(m[1]);
+  const unit = (m[2] ?? '').toLowerCase();
+  const day = 86_400_000;
+  const ms =
+    unit === 'minute'
+      ? n * 60_000
+      : unit === 'hour'
+        ? n * 3_600_000
+        : unit === 'day'
+          ? n * day
+          : unit === 'week'
+            ? n * 7 * day
+            : unit === 'month'
+              ? n * 30 * day
+              : n * 365 * day;
+  return new Date(now.getTime() - ms).toISOString();
+}
+
 /** LinkedIn's logged-out page (jobs-guest/jobs/api/jobPosting/<id>). Shapes seen 2026-11-22. */
-export function linkedinGuestJob(html: string): PageJob | null {
+export function linkedinGuestJob(html: string, now: Date = new Date()): PageJob | null {
   const pick = (re: RegExp) => {
     const m = re.exec(html)?.[1];
     return m ? decodeEntities(m) || null : null;
@@ -96,7 +118,7 @@ export function linkedinGuestJob(html: string): PageJob | null {
     company: pick(/topcard__org-name-link[^>]*>\s*([^<]+?)\s*</),
     location: pick(/topcard__flavor topcard__flavor--bullet"[^>]*>\s*([^<]+?)\s*</),
     text,
-    postedAt: null,
+    postedAt: agoToIso(pick(/posted-time-ago__text[^"]*"[^>]*>\s*([^<]+?)\s*</), now),
     validThrough: null,
     offsite: /apply-link-offsite/.test(html),
   };

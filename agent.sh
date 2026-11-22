@@ -81,7 +81,7 @@ case "$cmd" in
     echo "Next: ./agent.sh dashboard (review), ./agent.sh apply (finish the rest), ./agent.sh send (send drafts)"
     ;;
   dry-run) agent run --dry-run "$@" ;;
-  dashboard) dashboard "/" ;;
+  dashboard) dashboard "/#${1:-today}" ;;
   apply)
     use_desktop
     agent assist "$@"
@@ -91,8 +91,10 @@ case "$cmd" in
     days="${1:-7}"
     [[ "$days" =~ ^[0-9]+$ ]] || die "usage: ./agent.sh skipped [days]"
     agent skipped --days "$days"
-    echo "In the dashboard: ./agent.sh dashboard, then the Skipped filter."
+    echo "In the dashboard: ./agent.sh dashboard skipped"
     ;;
+  retry) agent retry-forms ;;
+  recheck) agent recheck-dates ;;
   redo)
     [[ "${1:-}" =~ ^[0-9]+$ ]] || die "usage: ./agent.sh redo <job id>"
     agent reprocess "$1" --from tailor
@@ -113,7 +115,7 @@ case "$cmd" in
 Daily
   ./agent.sh run              collect WhatsApp, alerts and company boards; score; prepare CVs;
                               draft emails; submit web forms (failures go to "Apply yourself")
-  ./agent.sh dashboard        tracker in the browser (http://127.0.0.1:8080)
+  ./agent.sh dashboard [tab]  tracker in the browser (tabs: today, action, applied, skipped, all, profile)
   ./agent.sh apply            open each "apply yourself" job pre-filled (incl. LinkedIn Easy Apply)
   ./agent.sh send             send all reviewed email drafts (asks once)
   ./agent.sh skipped [days]   skipped jobs with reasons and links (default 7 days)
@@ -121,6 +123,8 @@ Daily
 Sometimes
   ./agent.sh dry-run          a full run on a copy of the database: nothing is sent or submitted
   ./agent.sh redo <id>        prepare a job again (e.g. one you rescued from "skipped")
+  ./agent.sh retry            retry forms that waited for questions you've since answered
+  ./agent.sh recheck          read real posting dates of jobs not applied to; skip the stale ones
   ./agent.sh add <file>       add a post by hand (an old post, a forwarded email)
   ./agent.sh status           config, Gmail token age, polled companies
   ./agent.sh gmail-auth       re-authorize Gmail (weekly while the app is in Testing mode)

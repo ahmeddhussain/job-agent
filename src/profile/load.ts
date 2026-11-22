@@ -142,6 +142,10 @@ export function loadProfile(path: string): Profile {
   return parseProfile(parse(text), path);
 }
 
+/** The id a language is cited by: "English" → lang_english. */
+export const languageId = (name: string): string =>
+  `lang_${name.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`;
+
 /** Every fact the model may cite, keyed by id (bullets and stories). */
 export function factIndex(p: Profile): Map<string, string> {
   const m = new Map<string, string>();
@@ -157,11 +161,13 @@ export function factIndex(p: Profile): Map<string, string> {
 export function profileForPrompt(p: Profile): string {
   const lines: string[] = [];
   lines.push(`Location: ${p.candidate.location}. Max years of experience the candidate can match: ${p.max_years_required}.`);
-  lines.push(`Education: ${p.education.map((e) => `${e.degree}, ${e.school} (${e.dates})`).join('; ')}`);
-  lines.push(`Certifications held: ${p.certifications.map((c) => c.name).join('; ')}`);
+  // Education, certifications and languages carry ids so the scorer can cite them as
+  // evidence (live run 1: "degree … has no citable id", troubleshooting #29).
+  lines.push(`Education: ${p.education.map((e) => `${e.id}: ${e.degree}, ${e.school} (${e.dates})`).join('; ')}`);
+  lines.push(`Certifications held: ${p.certifications.map((c) => `${c.id}: ${c.name}`).join('; ')}`);
   lines.push(`Courses (not certifications): ${p.courses.map((c) => c.name).join('; ')}`);
   lines.push(`NOT held (never claim): ${p.not_held.join('; ')}`);
-  lines.push(`Languages: ${p.languages.map((l) => `${l.name} (${l.level})`).join(', ')}`);
+  lines.push(`Languages: ${p.languages.map((l) => `${languageId(l.name)}: ${l.name} (${l.level})`).join(', ')}`);
   lines.push(`Military status: ${p.application_answers['military_status'] ?? 'unknown'}`);
   lines.push(`Known gaps: ${p.known_gaps.join('; ')}`);
   lines.push('', 'SKILLS (id: name, level, evidence entries):');

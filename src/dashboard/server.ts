@@ -6,7 +6,7 @@
 //   (a cross-site form can't send JSON without a CORS preflight, which is never granted);
 // - files are looked up by job id and kind in the database, never from a path in the
 //   request, and must resolve inside apply.output_dir.
-import { readFileSync, realpathSync, existsSync } from 'node:fs';
+import { readFileSync, realpathSync, existsSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import Fastify, { type FastifyInstance } from 'fastify';
@@ -14,6 +14,9 @@ import { z } from 'zod';
 import type { Config } from '../config.js';
 import { migrate, openDb, type Db } from '../db/index.js';
 import { updateJobStatus } from '../db/jobs.js';
+import { pendingQuestions } from '../apply/questions.js';
+import { loadProfile } from '../profile/load.js';
+import { AnswerError, setAnswer } from '../profile/answers.js';
 import { draftUrl } from '../gmail/client.js';
 import type { Io } from '../cli/program.js';
 
@@ -38,8 +41,22 @@ const JobsQuery = z.object({
   include_duplicates: z.enum(['true', 'false']).optional(),
 });
 const Patch = z
-  .strictObject({ status: z.enum(STATUSES).optional(), notes: z.string().max(5000).optional() })
-  .refine((v) => v.status !== undefined || v.notes !== undefined, 'nothing to change');
+  .strictObject({
+    status: z.enum(STATUSES).optional(),
+    notes: z.string().max(5000).optional(),
+    /** Edits the cover letter of a prepared application (paste box / apply window). */
+    cover_text: z.string().min(50).max(6000).optional(),
+  })
+  .refine(
+    (v) => v.status !== undefined || v.notes !== undefined || v.cover_text !== undefined,
+    'nothing to change',
+  );
+const AnswerBody = z.strictObject({
+  key: z.string().max(50),
+  value: z.string().max(500),
+  /** The form question this answers (form_questions.id), if any. */
+  question_id: z.number().int().positive().optional(),
+});
 const FileParams = z.object({
   id: z.coerce.number().int().positive(),
   kind: z.enum(['cv', 'cover', 'cv_md', 'package', 'form']),
@@ -80,14 +97,35 @@ interface Row {
   company_board: string | null;
   app_mode: string | null;
   manual_reason: string | null;
+  job_posted_at: string | null;
+  post_text: string | null;
+  requirements: string | null;
+  apply_phone: string | null;
+  sent_at_app: string | null;
+  form_report: string | null;
 }
 
 function toJob(r: Row) {
   const reasons = (() => {
     try {
-      return JSON.parse(r.fit_reasons ?? '{}') as { summary?: string };
+      return JSON.parse(r.fit_reasons ?? '{}') as {
+        summary?: string;
+        matched?: { requirement: string }[];
+        missing?: string[];
+        scores?: { skills: number; experience: number; final: number };
+      };
     } catch {
       return {};
+    }
+  })();
+  const form = (() => {
+    try {
+      return JSON.parse(r.form_report ?? 'null') as {
+        filled?: { label: string; value: string }[];
+        unanswered?: string[];
+      } | null;
+    } catch {
+      return null;
     }
   })();
   const ats = (() => {
@@ -125,10 +163,28 @@ function toJob(r: Row) {
       ...(r.cover_text ? { cover: `/files/${String(r.id)}/cover` } : {}),
       ...(r.cv_md ? { cv_md: `/files/${String(r.id)}/cv_md` } : {}),
       ...(r.package_dir ? { package: `/files/${String(r.id)}/package` } : {}),
-      ...(r.package_dir && r.app_mode === 'manual' ? { form: `/files/${String(r.id)}/form` } : {}),
+      ...(r.package_dir && existsSync(join(r.package_dir, 'form-filled.png'))
+        ? { form: `/files/${String(r.id)}/form` }
+        : {}),
     },
     app_mode: r.app_mode,
     manual_reason: r.manual_reason,
+    job_posted_at: r.job_posted_at,
+    applied_at: r.sent_at_app,
+    post_text: r.post_text,
+    requirements: (() => {
+      try {
+        return JSON.parse(r.requirements ?? '[]') as string[];
+      } catch {
+        return [];
+      }
+    })(),
+    matched: (reasons.matched ?? []).map((m) => m.requirement),
+    missing: reasons.missing ?? [],
+    scores: reasons.scores ?? null,
+    apply_phone: r.apply_phone,
+    form_filled: form?.filled ?? [],
+    form_unanswered: form?.unanswered ?? [],
     fit_summary: reasons.summary ?? null,
     why_this_role: r.why_this_role,
     ats_keywords: ats?.keywordCoverage ?? null,
@@ -204,6 +260,7 @@ export function buildDashboard(cfg: Config, db: Db): FastifyInstance {
            1 + (SELECT count(*) FROM jobs d WHERE d.duplicate_of = j.id) AS seen,
            a.gmail_message_id, a.sent_at, a.cv_pdf, a.cv_md, a.cover_text, a.package_dir,
            a.why_this_role, a.ats_report, a.mode AS app_mode, a.manual_reason,
+           a.sent_at AS sent_at_app, a.form_report, substr(r.text, 1, 2500) AS post_text,
            CASE WHEN c.id IS NULL THEN NULL ELSE c.ats || '/' || COALESCE(c.board, c.url) END AS company_board
          FROM jobs j JOIN raw_items r ON r.id = j.raw_item_id
          LEFT JOIN applications a ON a.job_id = j.id
@@ -300,8 +357,88 @@ export function buildDashboard(cfg: Config, db: Db): FastifyInstance {
           id,
         );
     })();
+    if (body.data.cover_text !== undefined) {
+      const a = db
+        .prepare('SELECT package_dir, channel, sent_at FROM applications WHERE job_id = ?')
+        .get(id) as { package_dir: string | null; channel: string; sent_at: string | null } | undefined;
+      if (!a) return reply.code(404).send({ error: 'no prepared application for this job' });
+      if (a.sent_at) return reply.code(409).send({ error: 'already applied: the letter was sent' });
+      db.prepare('UPDATE applications SET cover_text = ? WHERE job_id = ?').run(
+        body.data.cover_text,
+        id,
+      );
+      // Keep the package's paste-box file in step (only inside the output directory).
+      if (a.package_dir && existsSync(a.package_dir)) {
+        const dir = realpathSync(a.package_dir);
+        if (dir.startsWith(outputRoot + sep))
+          writeFileSync(join(dir, 'cover_letter.txt'), `${body.data.cover_text.trim()}\n`);
+      }
+      return {
+        ok: true,
+        note:
+          a.channel === 'email'
+            ? 'Saved here. The Gmail draft keeps its own text: edit it in Gmail.'
+            : 'Saved: ./agent.sh apply uses this letter.',
+      };
+    }
     return { ok: true };
   });
+
+  // ------------------------------------------------------------------ profile (D35)
+  app.get('/api/profile', (_req, reply) => {
+    const p = loadProfile(cfg.paths.profile);
+    return reply.send({
+      candidate: {
+        full_name: p.candidate.full_name,
+        location: p.candidate.location,
+        email: p.candidate.email,
+        phone: p.candidate.phone,
+        links: p.candidate.links,
+      },
+      headlines: p.headlines,
+      summaries: p.summaries,
+      answers: p.application_answers,
+      questions: pendingQuestions(db),
+      counts: {
+        projects: p.projects.length,
+        experience: p.experience.length,
+        certifications: p.certifications.length,
+        skills: Object.values(p.skills).flat().length,
+        not_held: p.not_held.length,
+      },
+      certifications: p.certifications.map((c) => c.name),
+      projects: p.projects.map((e) => e.name ?? e.title ?? e.id),
+    });
+  });
+
+  app.put('/api/profile/answers', (req, reply) => {
+    const b = AnswerBody.safeParse(req.body);
+    if (!b.success) return reply.code(400).send({ error: z.prettifyError(b.error) });
+    try {
+      const answers = setAnswer(cfg.paths.profile, b.data.key, b.data.value);
+      if (b.data.question_id && b.data.value.trim())
+        db.prepare('UPDATE form_questions SET answer_key = ? WHERE id = ?').run(
+          b.data.key,
+          b.data.question_id,
+        );
+      return reply.send({ ok: true, answers, questions: pendingQuestions(db) });
+    } catch (err) {
+      if (err instanceof AnswerError) return reply.code(400).send({ error: err.message });
+      return reply.code(400).send({ error: `profile not saved: ${String(err).slice(0, 300)}` });
+    }
+  });
+
+  app.get('/api/runs', (_req, reply) =>
+    reply.send({
+      runs: (
+        db
+          .prepare(
+            `SELECT id, status, mode, started_at, finished_at, error, stats FROM runs ORDER BY id DESC LIMIT 20`,
+          )
+          .all() as { stats: string | null }[]
+      ).map((r) => ({ ...r, stats: r.stats ? (JSON.parse(r.stats) as unknown) : null })),
+    }),
+  );
 
   app.get('/files/:id/:kind', async (req, reply) => {
     const p = FileParams.safeParse(req.params);

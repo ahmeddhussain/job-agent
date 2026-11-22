@@ -3,7 +3,7 @@
 import type { Config } from '../config.js';
 import { FitResultSchema, type FitResult } from '../llm/schemas.js';
 import type { Llm } from '../llm/types.js';
-import { factIndex, profileForPrompt, type Profile } from '../profile/load.js';
+import { factIndex, languageId, profileForPrompt, type Profile } from '../profile/load.js';
 import type { CheckedJob } from './extract.js';
 import { loadPrompt, fence } from './extract.js';
 import type { Angle, TitleMatcher } from './titles.js';
@@ -74,6 +74,12 @@ export function hardFilter(
   }
   if (job.deadline !== null && job.deadline < ctx.runDate)
     return { reason: 'deadline_passed', ...base };
+  if (
+    job.job_posted_at &&
+    Date.parse(ctx.runDate) - Date.parse(job.job_posted_at) >
+      ctx.cfg.filters.max_job_age_days * 86_400_000
+  )
+    return { reason: 'stale', ...base };
   if (!locationOk(job, ctx.cfg)) return { reason: 'location', ...base };
   return { reason: null, ...base };
 }
@@ -100,6 +106,9 @@ function evidenceIds(p: Profile): Set<string> {
   return new Set([
     ...factIndex(p).keys(),
     ...[...p.experience, ...p.projects].map((e) => e.id),
+    ...p.education.map((e) => e.id),
+    ...p.certifications.map((c) => c.id),
+    ...p.languages.map((l) => languageId(l.name)),
     ...Object.values(p.skills)
       .flat()
       .map((s) => s.id),

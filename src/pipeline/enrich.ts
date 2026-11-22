@@ -143,7 +143,7 @@ export async function enrichJob(
             `https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/${liId}`,
             'text/html',
           );
-          page = linkedinGuestJob(html);
+          page = linkedinGuestJob(html, d.now);
           pageFrom = link;
           if (page?.offsite === true) note = 'linkedin_offsite';
           else if (page?.offsite === false) note = 'linkedin_easy_apply';
@@ -208,6 +208,10 @@ export async function enrichJob(
   } else if (!job.company && page?.company) {
     merged = { ...job, company: page.company };
   }
+  // When the job itself was posted: the feed or the page knows; the alert email doesn't.
+  const postedAt = posting?.postedAt ?? page?.postedAt ?? null;
+  if (postedAt && !Number.isNaN(Date.parse(postedAt)))
+    merged = { ...merged, job_posted_at: new Date(postedAt).toISOString() };
   // The page states where the job is even when the alert didn't ("PwC Brasil" in a
   // LinkedIn alert): the country filter needs it.
   if (!merged.country && page?.location) {

@@ -108,6 +108,22 @@ export function buildProgram(io: Io): Command {
     });
 
   program
+    .command('retry-forms')
+    .description('retry forms that waited only for questions you have since answered')
+    .action(async () => {
+      const { retryFormsCommand } = await import('./assist.js');
+      await retryFormsCommand(loadConfig(configPath()), io);
+    });
+
+  program
+    .command('recheck-dates')
+    .description('read the real posting date of jobs not yet applied to; skip the stale ones')
+    .action(async () => {
+      const { recheckDatesCommand } = await import('./assist.js');
+      await recheckDatesCommand(loadConfig(configPath()), io);
+    });
+
+  program
     .command('companies')
     .description('list the company boards polled: companies.yaml plus discovered ones')
     .action(async () => {

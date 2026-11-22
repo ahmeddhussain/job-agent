@@ -26,6 +26,8 @@ const EMAIL_RE = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
 
 export interface CheckedJob extends ExtractedJob {
   flags: string[];
+  /** When the job itself was posted, if a page or feed says (D34); alerts can be old. */
+  job_posted_at?: string | null;
 }
 
 /** Post-validation (PLAN 5.3): the model may only copy contact targets, never invent them. */

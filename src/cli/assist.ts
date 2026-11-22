@@ -8,7 +8,10 @@ import { spawnSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
 import type { Config } from '../config.js';
+import { retryAnsweredForms } from '../apply/apply.js';
 import { formEligible, FormFiller } from '../apply/forms.js';
+import { jsonLdJobPosting, linkedinGuestJob, linkedinJobId } from '../collect/pages/jobpage.js';
+import { PoliteHttp } from '../util/http.js';
 import { sendReviewedDrafts } from '../apply/send.js';
 import { migrate, openDb } from '../db/index.js';
 import { updateJobStatus } from '../db/jobs.js';
@@ -227,6 +230,103 @@ export function skippedCommand(
     );
     io.out(
       'Apply to one anyway: ./agent.sh redo <id>  (or set it to "New" in the dashboard; the next run prepares it)',
+    );
+  } finally {
+    db.close();
+  }
+}
+
+/** `agent retry-forms`: forms that waited only for answers you've now given (D35). */
+export async function retryFormsCommand(cfg: Config, io: Io): Promise<void> {
+  const release = acquireLock(cfg.run.lock_file, 'agent run');
+  const db = openDb(cfg.paths.db);
+  migrate(db);
+  const profile = loadProfile(cfg.paths.profile);
+  const forms = new FormFiller({ cfg, profile, llm: claude(cfg, []), log: logger });
+  try {
+    const r = await retryAnsweredForms(
+      {
+        db,
+        cfg,
+        profile,
+        gmail: null,
+        dryRun: false,
+        now: () => new Date(),
+        forms,
+        sourceOf: (j) => sourceLabel(db, j.raw_item_id),
+      },
+      io.out,
+    );
+    io.out(
+      r.tried
+        ? `retried ${String(r.tried)} forms: ${String(r.submitted)} submitted`
+        : 'no form is waiting only for answers you have given',
+    );
+  } finally {
+    await forms.close();
+    db.close();
+    release();
+  }
+}
+
+/**
+ * `agent recheck-dates`: reads the real posting date of jobs that are ready but not yet
+ * applied to (LinkedIn's "N days ago", schema.org datePosted) and moves jobs older than
+ * filters.max_job_age_days to skipped (stale). For jobs prepared before D34.
+ */
+export async function recheckDatesCommand(cfg: Config, io: Io): Promise<void> {
+  const db = openDb(cfg.paths.db);
+  migrate(db);
+  const linkedin = new PoliteHttp({
+    userAgent: cfg.ats.user_agent,
+    minIntervalMs: cfg.alerts.linkedin_min_interval_seconds * 1000,
+  });
+  const web = new PoliteHttp({
+    userAgent: cfg.ats.user_agent,
+    minIntervalMs: cfg.enrich.min_interval_seconds * 1000,
+  });
+  try {
+    const rows = db
+      .prepare(
+        `SELECT id, title, company, apply_url FROM jobs
+         WHERE status IN ('ready', 'needs_review', 'new') AND job_posted_at IS NULL AND apply_url IS NOT NULL`,
+      )
+      .all() as { id: number; title: string; company: string | null; apply_url: string }[];
+    let stale = 0;
+    for (const r of rows) {
+      const host = new URL(r.apply_url).hostname;
+      if (cfg.enrich.skip_hosts.some((h) => host === h || host.endsWith(`.${h}`))) continue;
+      let posted: string | null = null;
+      try {
+        const id = linkedinJobId(r.apply_url);
+        if (id) {
+          const html = await linkedin.get(
+            `https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/${id}`,
+            'text/html',
+          );
+          posted = linkedinGuestJob(html)?.postedAt ?? null;
+        } else if (formEligible(r.apply_url, cfg) || host.endsWith('wuzzuf.net')) {
+          posted = jsonLdJobPosting(await web.get(r.apply_url, 'text/html'))?.postedAt ?? null;
+        }
+      } catch (err) {
+        io.out(`  ${String(r.id)} ${r.title}: could not read (${String(err).slice(0, 80)})`);
+        continue;
+      }
+      if (!posted) continue;
+      const iso = new Date(posted).toISOString();
+      const days = Math.round((Date.now() - Date.parse(iso)) / 86_400_000);
+      db.prepare('UPDATE jobs SET job_posted_at = ? WHERE id = ?').run(iso, r.id);
+      const old = days > cfg.filters.max_job_age_days;
+      if (old) {
+        updateJobStatus(db, r.id, 'skipped', 'agent', new Date().toISOString(), 'stale');
+        stale++;
+      }
+      io.out(
+        `  ${String(r.id).padStart(5)} posted ${String(days)} days ago${old ? '  → skipped (stale)' : ''}  ${r.title}${r.company ? ` · ${r.company}` : ''}`,
+      );
+    }
+    io.out(
+      `checked ${String(rows.length)} jobs; ${String(stale)} older than ${String(cfg.filters.max_job_age_days)} days moved to skipped`,
     );
   } finally {
     db.close();
