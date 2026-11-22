@@ -132,7 +132,19 @@ export const ConfigSchema = z.strictObject({
     daily_send_cap: z.number().int().min(0),
     min_seconds_between_sends: z.number().int().min(60),
     output_dir: realString,
+    /** `agent send-drafts`: pause between sends of reviewed drafts. */
+    send_all_interval_seconds: z.number().int().min(5),
     cv_language: z.enum(['en', 'ar']),
+  }),
+  forms: z.strictObject({
+    /** Submit web forms when every required answer is known (D33); false = fill only. */
+    auto_submit: z.boolean(),
+    /** Never tried as forms: boards that need an account (LinkedIn, Wuzzuf, Indeed, Bayt). */
+    never_hosts: z.array(realString),
+    timeout_seconds: positiveInt,
+    max_pages: positiveInt,
+    /** Assisted mode's persistent browser profile (you sign in to LinkedIn there once). */
+    browser_profile: realString,
   }),
   cv: z.strictObject({
     max_pages: z.literal(1), // R14: an applied CV is exactly one page; not configurable upward

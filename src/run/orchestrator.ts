@@ -8,10 +8,11 @@
 import { join } from 'node:path';
 import type { Logger } from 'pino';
 import { applyJob } from '../apply/apply.js';
+import type { FormFiller } from '../apply/forms.js';
 import { prepareApplication } from '../apply/prepare.js';
 import type { Config } from '../config.js';
 import type { Db } from '../db/index.js';
-import { insertJob, updateJobStatus, type JobRow } from '../db/jobs.js';
+import { insertJob, rowToCheckedJob, updateJobStatus, type JobRow } from '../db/jobs.js';
 import type { GmailReader, GmailWriter } from '../gmail/client.js';
 import { syncGmail } from '../gmail/sync.js';
 import type { FitResult } from '../llm/schemas.js';
@@ -20,7 +21,8 @@ import { buildDigest, type Digest } from '../pipeline/digest.js';
 import { findJobDuplicate, findRawDuplicate } from '../pipeline/dedupe.js';
 import { enrichJob, type Enrichment } from '../pipeline/enrich.js';
 import { extractJobs, type CheckedJob } from '../pipeline/extract.js';
-import { hardFilter, scoreJob, type Decision } from '../pipeline/score.js';
+import { fitScore, hardFilter, scoreJob, type Decision } from '../pipeline/score.js';
+import { normalizeTitle } from '../util/text.js';
 import type { TitleMatcher } from '../pipeline/titles.js';
 import type { Profile } from '../profile/load.js';
 import type { Renderer } from '../render/renderer.js';
@@ -57,6 +59,8 @@ export interface RunDeps {
   /** Filled by the model client's onCall hook; persisted to llm_calls at the end. */
   calls: LlmCallRecord[];
   sendDigest: ((d: Digest) => Promise<void>) | null;
+  /** Web-form submitter (D33); null = form jobs become "apply yourself" packages. */
+  forms?: FormFiller | null;
 }
 
 export interface RunReport {
@@ -73,7 +77,7 @@ export function emptyStats(): RunStats {
     sources: [],
     items: { processed: 0, duplicates: 0, failed: 0, left: 0 },
     jobs: {},
-    applications: { drafts: 0, packages: 0, sent: 0, review: 0, left: 0 },
+    applications: { drafts: 0, packages: 0, submitted: 0, sent: 0, review: 0, left: 0 },
     companies_discovered: 0,
     llm: { calls: 0, failed: 0, output_tokens: 0 },
   };
@@ -83,7 +87,14 @@ export interface RunStats {
   sources: { name: string; ok: boolean; inserted: number; detail: string }[];
   items: { processed: number; duplicates: number; failed: number; left: number };
   jobs: Record<string, number>;
-  applications: { drafts: number; packages: number; sent: number; review: number; left: number };
+  applications: {
+    drafts: number;
+    packages: number;
+    submitted: number;
+    sent: number;
+    review: number;
+    left: number;
+  };
   companies_discovered: number;
   llm: { calls: number; failed: number; output_tokens: number };
 }
@@ -284,7 +295,7 @@ function healthLines(s: RunStats, stopReason: string | null): string[] {
     'Run health:',
     ...s.sources.map((x) => `- ${x.name}: ${x.ok ? 'ok' : 'FAILED'} · ${x.detail}`),
     `- items read: ${String(s.items.processed)} (${String(s.items.duplicates)} duplicates, ${String(s.items.failed)} failed, ${String(s.items.left)} left for the next run)`,
-    `- applications: ${String(s.applications.drafts)} drafts, ${String(s.applications.packages)} packages, ${String(s.applications.sent)} sent, ${String(s.applications.review)} to review, ${String(s.applications.left)} left`,
+    `- applications: ${String(s.applications.drafts)} drafts, ${String(s.applications.submitted)} forms submitted, ${String(s.applications.packages)} to apply yourself, ${String(s.applications.sent)} sent, ${String(s.applications.review)} to review, ${String(s.applications.left)} left`,
     `- companies discovered: ${String(s.companies_discovered)}`,
     `- model calls: ${String(s.llm.calls)} (${String(s.llm.failed)} failed), output tokens ${String(s.llm.output_tokens)}`,
     ...(stopReason ? [`- stopped early: ${stopReason}`] : []),
@@ -426,19 +437,38 @@ export async function tailorQueue(
         scores?: { skills: number };
       };
       const cls = d.matcher.classify(job.title);
-      const angle = cls.tier !== null ? cls.angle : null;
-      if (!angle || !reasons.matched) {
-        updateJobStatus(db, job.id, 'needs_review', 'agent', at(), 'no_fit_data');
-        stats.applications.review++;
-        continue;
+      // A job Ahmed moved back to "new" from skipped may be an excluded title or have no
+      // fit data yet: his choice wins; the angle comes from the title words.
+      const angle = cls.tier !== null ? cls.angle : d.matcher.angle(normalizeTitle(job.title));
+      let fit: FitResult;
+      if (reasons.matched) {
+        fit = {
+          fit_score: reasons.scores?.skills ?? job.fit_score ?? 0,
+          matched: reasons.matched,
+          missing: reasons.missing ?? [],
+          eligibility_issues: [],
+          summary: reasons.summary ?? '',
+        };
+      } else {
+        try {
+          fit = (
+            await fitScore(
+              {
+                cfg,
+                profile: d.profile,
+                matcher: d.matcher,
+                llm: d.llm,
+                runDate: at().slice(0, 10),
+              },
+              rowToCheckedJob(job),
+              `job${String(job.id)}.score`,
+            )
+          ).fit;
+        } catch (err) {
+          if (err instanceof UsageLimitError) stopOn(err);
+          throw err;
+        }
       }
-      const fit: FitResult = {
-        fit_score: reasons.scores?.skills ?? job.fit_score ?? 0,
-        matched: reasons.matched,
-        missing: reasons.missing ?? [],
-        eligibility_issues: [],
-        summary: reasons.summary ?? '',
-      };
       const dir = join(
         d.outputRoot,
         date,
@@ -481,12 +511,15 @@ export async function tailorQueue(
             gmail: d.gmailWrite,
             dryRun: d.dryRun,
             now: d.now,
+            forms: d.forms ?? null,
+            sourceOf: (j) => sourceLabel(db, j.raw_item_id),
           },
           db.prepare('SELECT * FROM jobs WHERE id = ?').get(job.id) as JobRow,
           prep,
         );
         if (res.mode === 'draft') stats.applications.drafts++;
-        else if (res.mode === 'package') stats.applications.packages++;
+        else if (res.mode === 'submitted') stats.applications.submitted++;
+        else if (res.mode === 'package' || res.mode === 'manual') stats.applications.packages++;
         else if (res.mode === 'send') stats.applications.sent++;
         else stats.applications.review++;
         d.out(
@@ -507,4 +540,22 @@ export async function tailorQueue(
   } finally {
     await renderer.close();
   }
+}
+
+/** Where a job was found, in the words an application form's "how did you hear" offers. */
+export function sourceLabel(db: Db, rawItemId: number): string {
+  const r = db.prepare('SELECT source, source_name FROM raw_items WHERE id = ?').get(rawItemId) as
+    { source: string; source_name: string | null } | undefined;
+  if (!r) return 'job board';
+  if (r.source === 'whatsapp' || r.source === 'whatsapp_export') return 'a WhatsApp jobs group';
+  if (r.source === 'ats' || r.source === 'html') return "the company's careers page";
+  const n = r.source_name ?? '';
+  for (const [re, label] of [
+    [/linkedin/i, 'LinkedIn'],
+    [/indeed/i, 'Indeed'],
+    [/wuzzuf/i, 'Wuzzuf'],
+    [/bayt/i, 'Bayt'],
+  ] as const)
+    if (re.test(n)) return label;
+  return 'a job board';
 }

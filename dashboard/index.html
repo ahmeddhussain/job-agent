@@ -113,6 +113,9 @@
   .detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px 24px; }
   .detail-grid .k { color: var(--text-secondary); font-size: 12px; }
   .detail textarea { width: 100%; min-height: 60px; margin-top: 4px; }
+  .manual-row { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .manual-row:last-child { border-bottom: 0; }
+  .manual-row .btn { padding: 3px 10px; font-size: 12px; }
   .empty { text-align: center; color: var(--text-secondary); padding: 32px; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
@@ -139,6 +142,18 @@
   <div class="banner" id="banner"></div>
 
   <section class="tiles" id="tiles" aria-label="Summary"></section>
+
+  <section class="panel" id="manual-panel">
+    <h2>Apply yourself <span class="muted" id="manual-count"></span></h2>
+    <div class="sub">The agent prepared these but could not submit them (captcha, sign-in, Easy Apply, a question your profile can't answer). Run <b>./agent.sh apply</b> to open each one pre-filled, or use the links.</div>
+    <div id="manual"></div>
+  </section>
+
+  <section class="panel" id="drafts-panel">
+    <h2>Email drafts waiting <span class="muted" id="drafts-count"></span></h2>
+    <div class="sub">Review them in Gmail Drafts, then send them all with <b>./agent.sh send</b>.</div>
+    <div id="drafts"></div>
+  </section>
 
   <section class="panel">
     <h2>Applications sent per day</h2>
@@ -201,7 +216,7 @@
   "use strict";
 
   const STATUSES = [
-    { key: "new",          label: "New",          color: "var(--text-muted)" },
+    { key: "new",          label: "New (prepare next run)", color: "var(--text-muted)" },
     { key: "needs_review", label: "Needs review", color: "var(--warning)" },
     { key: "ready",        label: "Ready",        color: "var(--series-1)" },
     { key: "applied",      label: "Applied",      color: "var(--text-secondary)" },
@@ -305,7 +320,20 @@
   }
 
   // ---------- render ----------
-  function render() { renderHeader(); renderTiles(); renderChips(); renderRows(); renderChart(); renderCompanies(); }
+  function render() { renderHeader(); renderTiles(); renderManual(); renderChips(); renderRows(); renderChart(); renderCompanies(); }
+
+  function renderManual() {
+    const ready = state.jobs.filter(j => j.status === "ready");
+    const manual = ready.filter(j => j.app_mode === "manual" || j.app_mode === "package");
+    const drafts = ready.filter(j => j.apply_channel === "email");
+    $("manual-count").textContent = manual.length ? `(${manual.length})` : "";
+    $("drafts-count").textContent = drafts.length ? `(${drafts.length})` : "";
+    const line = (j, extra) => `<div class="manual-row"><div><span class="role">${esc(j.title)}</span> <span class="muted">${esc(j.company || "")}${j.fit_score != null ? " · fit " + j.fit_score : ""}</span>
+        <div class="muted">${extra}</div></div>
+        <div class="actions">${j.apply_url_direct || j.apply_url ? `<a href="${esc(j.apply_url_direct || j.apply_url)}" target="_blank" rel="noopener noreferrer">Open</a>` : ""}${j.gmail_draft_url ? `<a href="${esc(j.gmail_draft_url)}" target="_blank" rel="noopener">Draft</a>` : ""}${j.files?.cv ? `<a href="${esc(j.files.cv)}" target="_blank">CV</a>` : ""}${j.files?.cover ? `<a href="${esc(j.files.cover)}" target="_blank">Letter</a>` : ""}${j.files?.form ? `<a href="${esc(j.files.form)}" target="_blank">Form screenshot</a>` : ""}<button class="btn" type="button" data-applied="${j.id}">Mark applied</button></div></div>`;
+    $("manual").innerHTML = manual.length ? manual.map(j => line(j, esc(j.manual_reason || NOTE_LABEL[j.apply_note] || "apply on the site"))).join("") : `<div class="muted">Nothing waiting.</div>`;
+    $("drafts").innerHTML = drafts.length ? drafts.map(j => line(j, "to " + esc(j.apply_email || ""))).join("") : `<div class="muted">Nothing waiting.</div>`;
+  }
 
   function renderCompanies() {
     const cs = state.stats?.companies || [];
@@ -511,6 +539,12 @@
     state.open = state.open === +tr.dataset.id ? null : +tr.dataset.id;
     renderRows();
   });
+  document.addEventListener("click", e => {
+    const b = e.target.closest("[data-applied]"); if (!b) return;
+    patchJob(+b.dataset.applied, { status: "applied" });
+  });
+  // ?status=skipped (./agent.sh skipped --open) preselects a filter.
+  try { const st = new URLSearchParams(location.search).get("status"); if (st) { state.status = st; if (st === "skipped") { state.showSkipped = true; $("show-skipped").checked = true; } } } catch (_) {}
   let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(renderChart, 120); });
 
   // ---------- sample data (used only when the API is unreachable) ----------

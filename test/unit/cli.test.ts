@@ -22,6 +22,9 @@ const COMMANDS = [
   'add',
   'companies',
   'dashboard',
+  'assist',
+  'send-drafts',
+  'skipped',
 ];
 
 function makeProgram() {
@@ -86,7 +89,7 @@ describe('cli', () => {
   it('db:migrate creates the database, and a rerun applies nothing', async () => {
     const first = makeProgram();
     await first.program.parseAsync(['node', 'agent', '-c', configPath, 'db:migrate']);
-    expect(first.lines).toContain('applied: 001_init.sql, 002_run.sql');
+    expect(first.lines).toContain('applied: 001_init.sql, 002_run.sql, 003_forms.sql');
 
     const second = makeProgram();
     await second.program.parseAsync(['node', 'agent', '-c', configPath, 'db:migrate']);

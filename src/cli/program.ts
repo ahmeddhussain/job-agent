@@ -79,6 +79,35 @@ export function buildProgram(io: Io): Command {
     });
 
   program
+    .command('assist')
+    .description('open each "apply yourself" job in a visible browser, pre-filled; you submit')
+    .option('--job <id>', 'only this job')
+    .action(async (opts: { job?: string }) => {
+      const { assistCommand } = await import('./assist.js');
+      await assistCommand(loadConfig(configPath()), opts.job ? { job: Number(opts.job) } : {}, io);
+    });
+
+  program
+    .command('send-drafts')
+    .description('send every reviewed application draft still in Gmail Drafts (asks once)')
+    .option('--yes', 'do not ask for confirmation')
+    .action(async (opts: { yes?: boolean }) => {
+      const { sendDraftsCommand } = await import('./assist.js');
+      await sendDraftsCommand(loadConfig(configPath()), opts, io);
+    });
+
+  program
+    .command('skipped')
+    .description('list skipped jobs with their reason and link, to catch what the agent missed')
+    .option('--days <n>', 'look back this many days', '7')
+    .option('--reason <r>', 'only this reason (low_fit, excluded_title, over_experience, ...)')
+    .option('--all', 'include duplicates')
+    .action(async (opts: { days?: string; reason?: string; all?: boolean }) => {
+      const { skippedCommand } = await import('./assist.js');
+      skippedCommand(loadConfig(configPath()), opts, io);
+    });
+
+  program
     .command('companies')
     .description('list the company boards polled: companies.yaml plus discovered ones')
     .action(async () => {

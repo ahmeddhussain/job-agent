@@ -14,7 +14,7 @@ describe('database', () => {
 
   it('creates every table from PLAN.md section 4', () => {
     const res = migrate(db);
-    expect(res.applied).toEqual(['001_init.sql', '002_run.sql']);
+    expect(res.applied).toEqual(['001_init.sql', '002_run.sql', '003_forms.sql']);
     expect(listTables(db)).toEqual([
       'applications',
       'companies',
@@ -33,7 +33,7 @@ describe('database', () => {
     migrate(db);
     const second = migrate(db);
     expect(second.applied).toEqual([]);
-    expect(second.alreadyApplied).toEqual(['001_init.sql', '002_run.sql']);
+    expect(second.alreadyApplied).toEqual(['001_init.sql', '002_run.sql', '003_forms.sql']);
   });
 
   it('has foreign keys enforced', () => {

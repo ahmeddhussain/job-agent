@@ -42,7 +42,7 @@ const Patch = z
   .refine((v) => v.status !== undefined || v.notes !== undefined, 'nothing to change');
 const FileParams = z.object({
   id: z.coerce.number().int().positive(),
-  kind: z.enum(['cv', 'cover', 'cv_md', 'package']),
+  kind: z.enum(['cv', 'cover', 'cv_md', 'package', 'form']),
 });
 
 interface Row {
@@ -78,6 +78,8 @@ interface Row {
   why_this_role: string | null;
   ats_report: string | null;
   company_board: string | null;
+  app_mode: string | null;
+  manual_reason: string | null;
 }
 
 function toJob(r: Row) {
@@ -123,7 +125,10 @@ function toJob(r: Row) {
       ...(r.cover_text ? { cover: `/files/${String(r.id)}/cover` } : {}),
       ...(r.cv_md ? { cv_md: `/files/${String(r.id)}/cv_md` } : {}),
       ...(r.package_dir ? { package: `/files/${String(r.id)}/package` } : {}),
+      ...(r.package_dir && r.app_mode === 'manual' ? { form: `/files/${String(r.id)}/form` } : {}),
     },
+    app_mode: r.app_mode,
+    manual_reason: r.manual_reason,
     fit_summary: reasons.summary ?? null,
     why_this_role: r.why_this_role,
     ats_keywords: ats?.keywordCoverage ?? null,
@@ -198,7 +203,7 @@ export function buildDashboard(cfg: Config, db: Db): FastifyInstance {
         `SELECT j.*, r.source, r.source_name, r.posted_at,
            1 + (SELECT count(*) FROM jobs d WHERE d.duplicate_of = j.id) AS seen,
            a.gmail_message_id, a.sent_at, a.cv_pdf, a.cv_md, a.cover_text, a.package_dir,
-           a.why_this_role, a.ats_report,
+           a.why_this_role, a.ats_report, a.mode AS app_mode, a.manual_reason,
            CASE WHEN c.id IS NULL THEN NULL ELSE c.ats || '/' || COALESCE(c.board, c.url) END AS company_board
          FROM jobs j JOIN raw_items r ON r.id = j.raw_item_id
          LEFT JOIN applications a ON a.job_id = j.id
@@ -302,7 +307,9 @@ export function buildDashboard(cfg: Config, db: Db): FastifyInstance {
     const p = FileParams.safeParse(req.params);
     if (!p.success) return reply.code(400).send({ error: 'bad file request' });
     const a = db
-      .prepare('SELECT cv_pdf, cv_md, cover_text, package_dir FROM applications WHERE job_id = ?')
+      .prepare(
+        'SELECT cv_pdf, cv_md, cover_text, package_dir FROM applications WHERE job_id = ?',
+      )
       .get(p.data.id) as
       | { cv_pdf: string | null; cv_md: string | null; cover_text: string | null; package_dir: string | null }
       | undefined;
@@ -317,14 +324,18 @@ export function buildDashboard(cfg: Config, db: Db): FastifyInstance {
         : p.data.kind === 'cv_md'
           ? a.cv_md
           : a.package_dir
-            ? join(a.package_dir, 'apply.md')
+            ? join(a.package_dir, p.data.kind === 'form' ? 'form-filled.png' : 'apply.md')
             : null;
     if (!file || !existsSync(file)) return reply.code(404).send({ error: 'file not found' });
     const real = realpathSync(file);
     if (!real.startsWith(outputRoot + sep)) {
       return reply.code(403).send({ error: 'file outside the output directory' });
     }
-    const type = real.endsWith('.pdf') ? 'application/pdf' : 'text/plain; charset=utf-8';
+    const type = real.endsWith('.pdf')
+      ? 'application/pdf'
+      : real.endsWith('.png')
+        ? 'image/png'
+        : 'text/plain; charset=utf-8';
     return reply
       .type(type)
       .header('Content-Disposition', `inline; filename="${basename(real).replace(/[^\w.-]/g, '_')}"`)

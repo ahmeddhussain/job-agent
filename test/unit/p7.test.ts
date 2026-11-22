@@ -130,7 +130,7 @@ describe('migration 002', () => {
        VALUES (1, 't', 't', 'form', 'f', 'now', 'now')`,
     ).run();
     const res = migrate(db);
-    expect(res.applied).toEqual(['002_run.sql']);
+    expect(res.applied).toEqual(['002_run.sql', '003_forms.sql']);
     expect(
       db.prepare('SELECT count(*) FROM raw_items WHERE processed_at IS NULL').pluck().get(),
     ).toBe(1);
@@ -523,7 +523,7 @@ describe('agent run end to end (fixtures, recorded model outputs, fake Gmail)', 
       package_dir: string;
       mode: string;
     };
-    expect(app.mode).toBe('package');
+    expect(app.mode).toBe('manual'); // no form filler in this test: apply yourself
     const pkg = readFileSync(join(app.package_dir, 'apply.md'), 'utf8');
     expect(pkg).toMatch(
       /Apply here:\*\* https:\/\/pyramidpay\.example\/careers\/app-support-engineer/,

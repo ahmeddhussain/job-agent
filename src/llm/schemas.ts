@@ -81,3 +81,17 @@ export const FitResultSchema = z.strictObject({
 export type FitResult = z.infer<typeof FitResultSchema>;
 
 export const PreflightSchema = z.strictObject({ ok: z.boolean() });
+
+export const FormAnswersSchema = z.strictObject({
+  answers: z
+    .array(
+      z.strictObject({
+        id: z.string().max(20),
+        value: z.string().max(3000).nullable(),
+        options: z.array(z.string().max(200)).max(30),
+        source: z.string().max(160),
+      }),
+    )
+    .max(80),
+});
+export type FormAnswers = z.infer<typeof FormAnswersSchema>;

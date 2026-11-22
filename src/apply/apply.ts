@@ -11,6 +11,7 @@ import { updateJobStatus, type JobRow } from '../db/jobs.js';
 import type { GmailWriter } from '../gmail/client.js';
 import type { Profile } from '../profile/load.js';
 import { draftApplication } from './email.js';
+import { formEligible, saveFormReport, type FormFiller } from './forms.js';
 import { applicationGuard } from './guard.js';
 import type { Prepared } from './prepare.js';
 
@@ -22,11 +23,15 @@ export interface ApplyDeps {
   gmail: GmailWriter | null;
   dryRun: boolean;
   now: () => Date;
+  /** Web-form submitter (D33); null = packages only. */
+  forms?: FormFiller | null;
+  /** Where the job was found, for "how did you hear about us". */
+  sourceOf?: (job: JobRow) => string;
 }
 
 export interface ApplyResult {
   status: 'ready' | 'applied' | 'needs_review' | 'skipped';
-  mode: 'draft' | 'send' | 'package' | null;
+  mode: 'draft' | 'send' | 'package' | 'submitted' | 'manual' | null;
   detail: string;
 }
 
@@ -99,7 +104,9 @@ export async function applyJob(d: ApplyDeps, job: JobRow, p: Prepared): Promise<
   const insertApp = (v: {
     channel: 'email' | 'form' | 'whatsapp_dm';
     to: string | null;
-    mode: 'draft' | 'send' | 'package';
+    mode: 'draft' | 'send' | 'package' | 'submitted' | 'manual';
+    formReport?: string | null;
+    manualReason?: string | null;
     draft?: { draftId: string; messageId: string; threadId: string } | null;
     sentAt?: string | null;
     packageDir?: string | null;
@@ -108,16 +115,17 @@ export async function applyJob(d: ApplyDeps, job: JobRow, p: Prepared): Promise<
       .prepare(
         `INSERT INTO applications (job_id, channel, to_email, subject, body, cv_pdf, cv_md, cover_text,
            ats_report, why_this_role, gmail_draft_id, gmail_thread_id, gmail_message_id, mode,
-           created_at, sent_at, package_dir, answers)
+           created_at, sent_at, package_dir, answers, form_report, manual_reason)
          VALUES (@job, @channel, @to, @subject, @body, @cv, @md, @cover, @ats, @why, @draft, @thread,
-           @msg, @mode, @at, @sent, @pkg, @answers)
+           @msg, @mode, @at, @sent, @pkg, @answers, @form, @manual)
          ON CONFLICT (job_id) DO UPDATE SET channel = excluded.channel, to_email = excluded.to_email,
            subject = excluded.subject, body = excluded.body, cv_pdf = excluded.cv_pdf,
            cv_md = excluded.cv_md, cover_text = excluded.cover_text, ats_report = excluded.ats_report,
            why_this_role = excluded.why_this_role, gmail_draft_id = excluded.gmail_draft_id,
            gmail_thread_id = excluded.gmail_thread_id, gmail_message_id = excluded.gmail_message_id,
            mode = excluded.mode, created_at = excluded.created_at, sent_at = excluded.sent_at,
-           package_dir = excluded.package_dir, answers = excluded.answers`,
+           package_dir = excluded.package_dir, answers = excluded.answers,
+           form_report = excluded.form_report, manual_reason = excluded.manual_reason`,
       )
       .run({
         job: job.id,
@@ -138,6 +146,8 @@ export async function applyJob(d: ApplyDeps, job: JobRow, p: Prepared): Promise<
         sent: v.sentAt ?? null,
         pkg: v.packageDir ?? null,
         answers: JSON.stringify(d.profile.application_answers),
+        form: v.formReport ?? null,
+        manual: v.manualReason ?? null,
       });
   };
 
@@ -189,17 +199,71 @@ export async function applyJob(d: ApplyDeps, job: JobRow, p: Prepared): Promise<
     const phone = job.apply_channel === 'whatsapp_dm' ? waNumber(job) : null;
     const waLink = phone ? `https://wa.me/${phone}` : null;
     writeFileSync(join(p.dir, 'apply.md'), packageText(d, job, p, waLink));
+    const formUrl = job.apply_url_direct ?? job.apply_url;
+    let manualReason =
+      job.apply_channel === 'whatsapp_dm'
+        ? 'apply on WhatsApp (the agent never sends WhatsApp messages)'
+        : (NOTES[job.apply_note ?? ''] ?? 'apply on the site');
+
+    if (job.apply_channel === 'form' && d.forms && formEligible(formUrl, d.cfg) && formUrl) {
+      try {
+        const r = await d.forms.run(
+          {
+            id: job.id,
+            title: job.title,
+            company: job.company,
+            source: d.sourceOf?.(job) ?? 'job board',
+          },
+          formUrl,
+          { dir: p.dir, cvPath: p.cvPath, coverText: p.coverText, whyThisRole: p.whyThisRole },
+          { submit: !d.dryRun && d.cfg.forms.auto_submit },
+        );
+        await r.page.close().catch(() => undefined);
+        const report = { ...r, page: undefined };
+        saveFormReport(p.dir, report);
+        if (r.outcome === 'submitted') {
+          insertApp({
+            channel: 'form',
+            to: null,
+            mode: 'submitted',
+            packageDir: p.dir,
+            sentAt: at(),
+            formReport: JSON.stringify(report),
+          });
+          updateJobStatus(d.db, job.id, 'applied', 'agent', at(), null);
+          return { status: 'applied', mode: 'submitted', detail: `form submitted: ${r.finalUrl}` };
+        }
+        manualReason = r.reason ?? manualReason;
+        insertApp({
+          channel: 'form',
+          to: null,
+          mode: 'manual',
+          packageDir: p.dir,
+          formReport: JSON.stringify(report),
+          manualReason,
+        });
+        updateJobStatus(d.db, job.id, 'ready', 'agent', at(), null);
+        return {
+          status: 'ready',
+          mode: 'manual',
+          detail: `apply yourself (${manualReason}): ${formUrl}`,
+        };
+      } catch (err) {
+        manualReason = `the form could not be opened or filled: ${String(err).slice(0, 160)}`;
+      }
+    }
     insertApp({
       channel: job.apply_channel,
       to: null,
-      mode: 'package',
+      mode: 'manual',
       packageDir: p.dir,
+      manualReason,
     });
     updateJobStatus(d.db, job.id, 'ready', 'agent', at(), null);
     return {
       status: 'ready',
-      mode: 'package',
-      detail: `package: ${job.apply_url_direct ?? waLink ?? job.apply_url ?? p.dir}`,
+      mode: 'manual',
+      detail: `apply yourself (${manualReason}): ${job.apply_url_direct ?? waLink ?? job.apply_url ?? p.dir}`,
     };
   }
 

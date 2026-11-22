@@ -117,7 +117,15 @@ apply:
   daily_send_cap: 15
   min_seconds_between_sends: 60
   output_dir: output
+  send_all_interval_seconds: 20  # agent.sh send: pause between reviewed drafts
   cv_language: en
+
+forms:                       # D33: web-form applications
+  auto_submit: true          # submit when every required answer is known; failures go to "Apply yourself"
+  never_hosts: [linkedin.com, wuzzuf.net, indeed.com, bayt.com, glassdoor.com, facebook.com, t.me, wa.me]
+  timeout_seconds: 45
+  max_pages: 6
+  browser_profile: data/browser-profile   # ./agent.sh apply: sign in to LinkedIn here once
 
 cv:
   max_pages: 1                     # R14: every applied CV is exactly one page

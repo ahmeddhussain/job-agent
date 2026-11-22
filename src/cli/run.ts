@@ -15,6 +15,7 @@ import type { LlmCallRecord } from '../llm/types.js';
 import { sendDigest } from '../pipeline/digest.js';
 import { insertRawItem, prepareRawItem } from '../pipeline/dedupe.js';
 import { scoreJob } from '../pipeline/score.js';
+import { FormFiller } from '../apply/forms.js';
 import { TitleMatcher } from '../pipeline/titles.js';
 import { loadProfile } from '../profile/load.js';
 import { Renderer } from '../render/renderer.js';
@@ -40,7 +41,7 @@ export interface RunFlags {
   collect?: boolean;
 }
 
-function claude(cfg: Config, calls: LlmCallRecord[]): ClaudeCli {
+export function claude(cfg: Config, calls: LlmCallRecord[]): ClaudeCli {
   const env = loadDotEnv(cfg.paths.env);
   for (const w of env.warnings) logger.warn(w);
   return new ClaudeCli({
@@ -91,7 +92,10 @@ function depsFor(
   cfg: Config,
   db: Db,
   io: Io,
-  extra: Pick<RunDeps, 'gmailRead' | 'gmailWrite' | 'sources' | 'dryRun' | 'sendDigest'> & {
+  extra: Pick<
+    RunDeps,
+    'gmailRead' | 'gmailWrite' | 'sources' | 'dryRun' | 'sendDigest' | 'forms'
+  > & {
     calls: LlmCallRecord[];
     llm: ClaudeCli;
     outputRoot: string;
@@ -132,6 +136,7 @@ function depsFor(
     outputRoot: extra.outputRoot,
     calls: extra.calls,
     sendDigest: extra.sendDigest,
+    forms: extra.forms ?? null,
   };
 }
 
@@ -203,6 +208,13 @@ export async function runCommand(cfg: Config, flags: RunFlags, io: Io): Promise<
     const calls: LlmCallRecord[] = [];
     const llm = claude(cfg, calls);
     const g = gm.g;
+    // A fresh headless profile per run: no saved sign-ins are ever exposed to form pages.
+    const forms = new FormFiller({
+      cfg,
+      profile: loadProfile(cfg.paths.profile),
+      llm,
+      log: logger,
+    });
     const report = await runAgent(
       depsFor(cfg, db, io, {
         llm,
@@ -213,8 +225,9 @@ export async function runCommand(cfg: Config, flags: RunFlags, io: Io): Promise<
         dryRun,
         outputRoot: dryRun ? join(cfg.apply.output_dir, 'dry-run') : cfg.apply.output_dir,
         sendDigest: !dryRun && g ? (dg) => sendDigest(g, cfg, dg) : null,
+        forms,
       }),
-    );
+    ).finally(() => forms.close());
     if (dryRun || !g)
       io.out(`\n--- digest ---\nSubject: ${report.digest.subject}\n\n${report.digest.text}`);
     io.out(
@@ -299,6 +312,7 @@ export async function reprocessCommand(
       dryRun: false,
       outputRoot: cfg.apply.output_dir,
       sendDigest: null,
+      forms: new FormFiller({ cfg, profile: loadProfile(cfg.paths.profile), llm, log: logger }),
     });
     io.out(`preflight: ${await (d.preflight as () => Promise<string>)()}`);
     const now = new Date().toISOString();
@@ -339,14 +353,18 @@ export async function reprocessCommand(
       updateJobStatus(db, jobId, 'new', 'ahmed', now, null);
     }
     const stats = emptyStats();
-    await tailorQueue(
-      d,
-      stats,
-      (err) => {
-        throw err;
-      },
-      jobId,
-    );
+    try {
+      await tailorQueue(
+        d,
+        stats,
+        (err) => {
+          throw err;
+        },
+        jobId,
+      );
+    } finally {
+      await d.forms?.close();
+    }
     return 0;
   } finally {
     db.close();
