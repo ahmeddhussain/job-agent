@@ -71,7 +71,8 @@ employer messages and application updates you must see.
 
 Why it is shaped this way:
 - **LinkedIn by exact address.** linkedin.com also sends messages and notifications that are not jobs.
-  `jobalerts-noreply@` is the job-alert sender; the other two send job recommendations.
+  `jobalerts-noreply@` is the documented job-alert sender; `jobs-noreply@` and `jobs-listings@` are
+  other LinkedIn job senders whose exact use isn't documented, included so job emails aren't missed.
 - **Wuzzuf, Bayt, Glassdoor by domain.** They publish no alert sender address, so the whole domain is
   matched (a domain also matches its subdomains, e.g. `mail.wuzzuf.net`). Their newsletters get the
   label too; extraction marks them "not a job post", which costs a few tokens and nothing else.
