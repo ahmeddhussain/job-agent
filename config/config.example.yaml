@@ -27,6 +27,11 @@ whatsapp:
   min_text_chars: 40               # shorter messages need an email or link to be kept
   export_date_order: dmy           # exported chats from an Egyptian phone: day/month/year
 
+gmail:
+  client_file: secrets/gmail_client.json   # Desktop OAuth client (docs/gmail-setup.md)
+  token_file: secrets/gmail_token.json     # written by `agent gmail:auth`, owner-only
+  max_alert_chars: 20000           # cap on one alert email's text sent to extraction
+
 alerts:
   gmail_label: job-alerts          # Gmail filter puts LinkedIn/Wuzzuf/Bayt/Indeed alerts here
   fetch_linkedin_public_page: true # logged-out, no cookies, ≤ 1 req / 5 s

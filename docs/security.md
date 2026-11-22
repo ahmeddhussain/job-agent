@@ -40,7 +40,7 @@ Threat model and controls for `job-agent` (requirement R19). Status values:
 | A7 | **Text posts only**: no media is downloaded | Malicious image/PDF parsers; storing third-party files | done (P4): captions read, nothing downloaded |
 | A8 | URL fetching guard: https only, DNS resolved and private/link-local/metadata ranges refused, no cookies, timeouts, size cap, redirects re-checked | SSRF | planned (P2 shorteners, P6 ATS) |
 | A9 | PDF rendering with **JavaScript disabled and all network requests blocked** in Puppeteer; templates escape every value | Script execution or data exfiltration through the CV template | done (P3), tested: a script in the page does not run |
-| A10 | Gmail scopes `gmail.readonly` + `gmail.compose` only; `draft` mode by default | A bug or injection sending mail | planned (P5) |
+| A10 | Gmail scopes `gmail.readonly` + `gmail.compose` only; `draft` mode by default | A bug or injection sending mail | done (P5): two scopes checked at auth; facade + tests; digest self-only; draft refuses a different account |
 | A11 | Dashboard on 127.0.0.1 only, `Host` header allowlist, `Origin` check on writes, files served by DB id only | CSRF, DNS rebinding, path traversal | planned (P8) |
 | A12 | Container: non-root, read-only root filesystem, `cap_drop: [ALL]`, `no-new-privileges`, secrets mounted read-only, **never the Docker socket** | Escape from the container to the host | planned (P9) |
 | A13 | Exact dependency versions, lockfile, `npm ci`; `npm audit` and Trivy in CI; Dependabot | Supply-chain drift | partly done (pins); CI planned (P10) |

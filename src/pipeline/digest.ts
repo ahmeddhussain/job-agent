@@ -1,0 +1,73 @@
+// Digest email (PLAN 5.8): one summary to Ahmed after every run, failures included.
+// It can only ever go to Ahmed's own address (checked against the Gmail account).
+import type { Config } from '../config.js';
+import type { Db } from '../db/index.js';
+import { draftUrl, type GmailWriter } from '../gmail/client.js';
+import { buildMime } from '../gmail/mime.js';
+
+export interface Digest {
+  subject: string;
+  text: string;
+}
+
+interface JobRow {
+  title: string;
+  company: string | null;
+  fit_score: number | null;
+  status: string;
+  skip_reason: string | null;
+  apply_url: string | null;
+  draft: string | null;
+}
+
+export function buildDigest(
+  db: Db,
+  since: string,
+  date: string,
+  runError: string | null = null,
+): Digest {
+  const jobs = db
+    .prepare(
+      `SELECT j.title, j.company, j.fit_score, j.status, j.skip_reason, j.apply_url,
+              a.gmail_message_id AS draft
+       FROM jobs j LEFT JOIN applications a ON a.job_id = j.id
+       WHERE j.created_at >= ? OR j.updated_at >= ? ORDER BY j.priority, j.fit_score DESC`,
+    )
+    .all(since, since) as JobRow[];
+  const ready = jobs.filter((j) => j.status === 'ready');
+  const review = jobs.filter((j) => j.status === 'needs_review');
+  const skipped = jobs.filter((j) => j.status === 'skipped');
+  const by = new Map<string, number>();
+  for (const j of skipped)
+    by.set(j.skip_reason ?? 'other', (by.get(j.skip_reason ?? 'other') ?? 0) + 1);
+
+  const line = (j: JobRow) =>
+    `- ${j.title}${j.company ? ` · ${j.company}` : ''}${j.fit_score !== null ? ` · ${String(j.fit_score)}` : ''}`;
+  const parts: string[] = [];
+  if (runError) parts.push(`RUN FAILED: ${runError}`, '');
+  parts.push(`Ready to send (${String(ready.length)}):`);
+  for (const j of ready)
+    parts.push(
+      `${line(j)}${j.draft ? `  ${draftUrl(j.draft)}` : j.apply_url ? `  apply: ${j.apply_url}` : ''}`,
+    );
+  parts.push('', `Needs review (${String(review.length)}):`);
+  for (const j of review) parts.push(`${line(j)}  (${j.skip_reason ?? 'check'})`);
+  parts.push(
+    '',
+    `Skipped (${String(skipped.length)}): ${[...by].map(([r, n]) => `${r} ${String(n)}`).join(', ') || 'none'}`,
+  );
+  const subject = runError
+    ? `Job agent — run failed (${date})`
+    : `Job agent — ${String(ready.length)} ready, ${String(review.length)} need review (${date})`;
+  return { subject, text: `${parts.join('\n')}\n` };
+}
+
+export async function sendDigest(gmail: GmailWriter, cfg: Config, d: Digest): Promise<void> {
+  const me = await gmail.myAddress();
+  if (cfg.digest.to.toLowerCase() !== me) {
+    throw new Error(`digest.to (${cfg.digest.to}) must be your own Gmail address (${me})`);
+  }
+  await gmail.sendRaw(
+    buildMime({ fromName: 'Job agent', fromEmail: me, to: me, subject: d.subject, text: d.text }),
+  );
+}

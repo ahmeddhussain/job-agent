@@ -41,6 +41,11 @@ export const ConfigSchema = z.strictObject({
     min_text_chars: positiveInt,
     export_date_order: z.enum(['dmy', 'mdy']),
   }),
+  gmail: z.strictObject({
+    client_file: realString,
+    token_file: realString,
+    max_alert_chars: positiveInt,
+  }),
   alerts: z.strictObject({
     gmail_label: realString,
     fetch_linkedin_public_page: z.boolean(),

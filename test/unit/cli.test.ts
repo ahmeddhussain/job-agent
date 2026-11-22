@@ -14,6 +14,9 @@ const COMMANDS = [
   'ats:detect',
   'tailor:fixtures',
   'collect',
+  'gmail:check',
+  'gmail:test-draft',
+  'sync',
   'config:check',
   'db:migrate',
 ];
@@ -47,7 +50,7 @@ describe('cli', () => {
 
   it('commands from later phases fail loudly instead of pretending to work', async () => {
     const { program } = makeProgram();
-    await expect(program.parseAsync(['node', 'agent', 'gmail:auth'])).rejects.toBeInstanceOf(
+    await expect(program.parseAsync(['node', 'agent', 'reprocess', '1'])).rejects.toBeInstanceOf(
       NotImplementedError,
     );
   });

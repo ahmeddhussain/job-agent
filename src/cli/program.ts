@@ -99,17 +99,31 @@ export function buildProgram(io: Io): Command {
   program
     .command('collect')
     .description('collect new posts from one source into the database (no model calls)')
-    .addArgument(new Argument('<source>', 'source').choices(['whatsapp', 'whatsapp-export']))
+    .addArgument(
+      new Argument('<source>', 'source').choices(['whatsapp', 'whatsapp-export', 'alerts']),
+    )
     .option('--since <iso>', 'override the watermark (ISO-8601)')
     .option('--dry-run', 'count only; write nothing')
     .option('--file <path>', 'whatsapp-export: the exported chat .txt')
     .option('--group <name>', 'whatsapp-export: the group the export came from')
+    .option('--extract', 'alerts: also show the jobs extracted from each alert (no storage)')
     .action(
       async (
         source: string,
-        opts: { since?: string; dryRun?: boolean; file?: string; group?: string },
+        opts: {
+          since?: string;
+          dryRun?: boolean;
+          file?: string;
+          group?: string;
+          extract?: boolean;
+        },
       ) => {
         const cfg = loadConfig(configPath());
+        if (source === 'alerts') {
+          const g = await import('./gmail.js');
+          await g.collectAlertsCommand(cfg, opts, io);
+          return;
+        }
         const wa = await import('./whatsapp.js');
         if (source === 'whatsapp') {
           await wa.collectWhatsAppCommand(cfg, opts, io);
@@ -126,8 +140,36 @@ export function buildProgram(io: Io): Command {
 
   program
     .command('gmail:auth')
-    .description('authorize Gmail (desktop OAuth, loopback)')
-    .action(notYet('gmail:auth', 'P5'));
+    .description('authorize Gmail (desktop OAuth, loopback; see docs/gmail-setup.md)')
+    .action(async () => {
+      const g = await import('./gmail.js');
+      await g.gmailAuthCommand(loadConfig(configPath()), io);
+    });
+
+  program
+    .command('gmail:check')
+    .description('show the authorized account, scopes and job-alert label count')
+    .action(async () => {
+      const g = await import('./gmail.js');
+      await g.gmailCheckCommand(loadConfig(configPath()), io);
+    });
+
+  program
+    .command('gmail:test-draft')
+    .description('P5 gate: draft a fixture application to yourself with both PDFs')
+    .argument('[fixture]', 'fixture id', '01-devops-email-en')
+    .action(async (fixture: string) => {
+      const g = await import('./gmail.js');
+      await g.testDraftCommand(loadConfig(configPath()), fixture, io);
+    });
+
+  program
+    .command('sync')
+    .description('mark sent drafts as applied and flag replies (Gmail)')
+    .action(async () => {
+      const g = await import('./gmail.js');
+      await g.syncCommand(loadConfig(configPath()), io);
+    });
 
   program
     .command('reprocess')
@@ -142,8 +184,13 @@ export function buildProgram(io: Io): Command {
 
   program
     .command('digest')
-    .description('build and send the digest email for the last run')
-    .action(notYet('digest', 'P5'));
+    .description('print the digest of the last 24 h (--send emails it to yourself)')
+    .option('--send', 'send it to digest.to (must be your own address)')
+    .option('--hours <n>', 'period to summarize', '24')
+    .action(async (opts: { send?: boolean; hours?: string }) => {
+      const g = await import('./gmail.js');
+      await g.digestCommand(loadConfig(configPath()), opts, io);
+    });
 
   program
     .command('ats:detect')

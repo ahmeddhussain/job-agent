@@ -188,3 +188,14 @@ allowlisted by id. The dry run counted 13 posts in the last 24 h (11 kept after 
 pre-filter). The real run stored 11 raw items with hashed authors and set the watermark.
 An immediate second run stored 0 new posts. Fixes found on the way: lock and clean exits
 (#14), refusal on clock skew (#15), auto "Use here" on WhatsApp's conflict screen (#16).
+
+## D27: Gmail integration (P5)
+
+- **Libraries:** `@googleapis/gmail` 22.1.0 (only the Gmail API, not the 190-API `googleapis` bundle), `google-auth-library` 11.3.4 (the same version it depends on, so the types match), `html-to-text` 10.0.1 for alert emails. No new audit findings.
+- **Auth:** desktop OAuth client with a loopback redirect on `127.0.0.1:<random port>`, PKCE (S256) and a random `state` that must match. `prompt=consent` + `access_type=offline` so Google always returns a refresh token. The token is written owner-only to `secrets/gmail_token.json` and rewritten when Google rotates it. The consent screen must be **In production** (Testing tokens expire in 7 days).
+- **Scopes:** `gmail.readonly` + `gmail.compose` only, checked after the exchange; a missing one fails the authorization.
+- **Facade:** `src/gmail/client.ts` is the only importer of `@googleapis/gmail`. It reads, creates drafts and inspects drafts and threads. A test forbids delete, trash, modify, insert/import and any labels, settings or filters call. Sending exists for two callers, enforced by a test: the digest and the apply stage (send mode only).
+- **Recipients:** the draft refuses to be created if Gmail is authorized as a different account than the profile's email. The digest can only go to the authorized account itself.
+- **Alerts:** one raw item per alert email; HTML becomes text with link targets kept as `text (url)`, images dropped, capped at `gmail.max_alert_chars`. Extraction splits it into jobs; LinkedIn `/comm/jobs/view/<id>` links canonicalize as before. Watermark `alerts` advances with the commit (as in D26).
+- **L4 guard:** the same role to the same address within 60 days → skipped. A different role to an address that got an application in the last 14 days → review (one combined email may be better). An address Ahmed emailed by hand (`in:sent to:<addr> newer_than:60d`) → review, not skip, because that email may have been about something else.
+- **Alternatives:** IMAP with an app password (wider access than two scopes, and app passwords need 2-step verification changes); the full `googleapis` package (much larger); sending immediately (D8 keeps drafts first).
