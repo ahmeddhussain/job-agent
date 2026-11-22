@@ -15,7 +15,13 @@ if one differs, look for the closest match.
 
 ## 2. OAuth consent ("Google Auth Platform")
 
-1. **Google Auth Platform → Branding** (or "OAuth consent screen"): app name `job-agent`, your email as support and developer contact. Save.
+1. **Google Auth Platform → Branding** (or "OAuth consent screen"). Google requires all of these before it lets you publish:
+   - App name: `job-agent`
+   - User support email and developer contact: your Gmail
+   - App home page: `https://ahmeddhussain.github.io`
+   - Privacy policy: `https://ahmeddhussain.github.io/privacy.html` (the page is `docs/consent/privacy.html`; publish it on the portfolio site first)
+   - Authorized domains: `ahmeddhussain.github.io`
+   - Save.
 2. **Audience**: user type **External**. Click **Publish app** so the status is **In production**.
    - Why: apps left in "Testing" get refresh tokens that **expire after 7 days**, which would silently break the daily run.
    - "In production" without Google's verification is fine for your own account. You'll see a "Google hasn't verified this app" warning when you authorize; that's expected.
@@ -46,6 +52,12 @@ mv ~/Downloads/client_secret_*.json ~/job-agent/secrets/gmail_client.json && chm
    `jobalerts-noreply@linkedin.com OR jobs-noreply@linkedin.com`
 4. **Create filter** → tick **Apply the label** → **New label** `job-alerts` → tick **Also apply filter to matching conversations** → Create. ("Skip the Inbox" is optional.)
 5. On LinkedIn: search for a role (for example "DevOps Engineer", location Egypt), then **Set alert → Daily**. Repeat for "Cloud Engineer", "Technical Support", "Linux Administrator".
+
+### If Google won't publish the app
+
+Fallback: leave it in **Testing** and add your own Gmail under **Audience → Test users**. Everything
+works the same, but Google expires the refresh token after **7 days**, so `gmail:auth` must be run
+again weekly. When it expires, `gmail:check` and every Gmail step fail with `invalid_grant` and say so.
 
 ## 5. Authorize the agent
 
