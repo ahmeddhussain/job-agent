@@ -351,7 +351,12 @@ async function processItem(
     dup: number | null;
     enr: Enrichment | null;
   }[] = [];
+  const seenHere = new Set<string>();
   for (const [i, job] of jobs.entries()) {
+    // The same job listed twice in one post or alert: keep the first.
+    const here = `${normalizeTitle(job.title)}|${(job.company ?? '').toLowerCase()}`;
+    if (seenHere.has(here)) continue;
+    seenHere.add(here);
     const dup = findJobDuplicate(db, { ...job, created_at: item.posted_at }, cfg.dedupe);
     if (dup) {
       pending.push({
@@ -390,6 +395,17 @@ async function processItem(
   }
   db.transaction(() => {
     for (const p of pending) {
+      // A duplicate from a company feed (or traced to the company's form) gives the
+      // original its direct link, so the original can be applied to on the company site.
+      const direct =
+        p.enr?.directUrl ??
+        (item.source === 'ats' || item.source === 'html' ? p.job.apply_url : null);
+      if (p.dup !== null && direct) {
+        db.prepare(
+          `UPDATE jobs SET apply_url_direct = ? WHERE id = ? AND apply_url_direct IS NULL
+             AND status NOT IN ('applied', 'interview', 'offer', 'rejected')`,
+        ).run(direct, p.dup);
+      }
       const id = insertJob(db, item.id, p.job, p.decision, p.dup, now());
       if (p.enr) {
         db.prepare(

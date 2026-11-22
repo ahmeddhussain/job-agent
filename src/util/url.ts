@@ -83,6 +83,13 @@ export function canonicalizeUrl(raw: string): string | null {
     return `https://${url.hostname}/viewjob?jk=${jk.toLowerCase()}`;
   }
 
+  // Job pages on these boards are identified by the path alone; every parameter is tracking.
+  if (
+    /(^|\.)(wuzzuf\.net|bayt\.com)$/.test(url.hostname) &&
+    /^\/(jobs|en\/[a-z-]+\/jobs)\//.test(url.pathname)
+  ) {
+    url.search = '';
+  }
   for (const key of [...url.searchParams.keys()]) {
     const k = key.toLowerCase();
     if (k.startsWith('utm_') || TRACKING_PARAMS.has(k)) url.searchParams.delete(key);

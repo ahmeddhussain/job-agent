@@ -19,7 +19,7 @@ const defaultConfigPath = (): string => process.env['CONFIG_PATH'] ?? 'config/co
 export function buildProgram(io: Io): Command {
   const program = new Command()
     .name('agent')
-    .description('Daily read-only job-hunting agent (PLAN.md)')
+    .description('Daily job-application agent (README.md, PLAN.md)')
     .option('-c, --config <path>', 'config file', defaultConfigPath())
     .showHelpAfterError();
 

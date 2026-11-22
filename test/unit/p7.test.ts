@@ -174,6 +174,13 @@ describe('tracking links (troubleshooting #20)', () => {
       ),
     ).not.toContain('secret');
   });
+  it('keeps only the path of Wuzzuf and Bayt job pages (all parameters are tracking)', () => {
+    expect(
+      canonicalizeUrl(
+        'https://wuzzuf.net/jobs/p/vt9q66w4fv2b-medior-devops?a=Nancy+Weekly&l=rje&o=1',
+      ),
+    ).toBe('https://wuzzuf.net/jobs/p/vt9q66w4fv2b-medior-devops');
+  });
   it('leaves ordinary links alone', () => {
     expect(unwrapTracking('https://jobs.lever.co/acme/123')).toBe('https://jobs.lever.co/acme/123');
   });
@@ -321,6 +328,48 @@ describe('enrichment (D30)', () => {
     expect(e.job.years_min).toBe(4);
     expect(e.job.apply_url).toBe('https://linkedin.com/jobs/view/4492953317'); // unchanged
     expect(e.companyId).not.toBeNull();
+  });
+
+  it('takes the country from the job page when the alert did not state it', async () => {
+    const e = await enrichJob(
+      {
+        http: fakeHttp({}),
+        linkedinHttp: fakeHttp({
+          'https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/4492953317': page(
+            'linkedin-guest-thndr.html',
+          ),
+        }),
+        db: freshDb(),
+        cfg: { ...cfg, enrich: { ...cfg.enrich, probe_ats_by_name: false } },
+        llm,
+        now: NOW,
+        log,
+      },
+      thinJob({ country: null, requirements: ['a', 'b', 'c'] }),
+      { rawSource: 'alert_email' },
+    );
+    expect(e.job.country).toBe('Egypt');
+  });
+
+  it('still looks for the company form when LinkedIn says Easy Apply', async () => {
+    const easy = page('linkedin-guest-thndr.html').replaceAll('apply-link-offsite', 'apply-link-x');
+    const e = await enrichJob(
+      {
+        http: fakeHttp({ 'https://api.ashbyhq.com/posting-api/job-board/thndr': ASHBY_THNDR }),
+        linkedinHttp: fakeHttp({
+          'https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/4492953317': easy,
+        }),
+        db: freshDb(),
+        cfg,
+        llm,
+        now: NOW,
+        log,
+      },
+      thinJob(),
+      { rawSource: 'alert_email' },
+    );
+    expect(e.note).toBe('linkedin_easy_apply');
+    expect(e.directUrl).toMatch(/jobs\.ashbyhq\.com\/thndr\/.*\/application$/);
   });
 
   it('never fetches application forms or hosts that refuse bots', async () => {

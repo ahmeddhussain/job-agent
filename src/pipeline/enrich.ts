@@ -173,7 +173,9 @@ export async function enrichJob(
     }
     const company = job.company ?? page?.company ?? null;
     // No company link yet: guess the board from the name (accepted only on a title match).
-    if (!hit && company && e.probe_ats_by_name && note !== 'linkedin_easy_apply') {
+    // Also for Easy Apply jobs: the company's own form can be submitted by the agent, Easy
+    // Apply can't (Thndr, live run 2026-11-22).
+    if (!hit && company && e.probe_ats_by_name) {
       hit = await boardFromName(d, { title: job.title, company }, o.jobId ?? null);
     }
   } catch (err) {
@@ -205,6 +207,13 @@ export async function enrichJob(
     merged = await mergeFull(d, job, full, o.key);
   } else if (!job.company && page?.company) {
     merged = { ...job, company: page.company };
+  }
+  // The page states where the job is even when the alert didn't ("PwC Brasil" in a
+  // LinkedIn alert): the country filter needs it.
+  if (!merged.country && page?.location) {
+    const country = page.location.split(',').at(-1)?.trim();
+    if (country && country.length > 1)
+      merged = { ...merged, country: country === 'EG' ? 'Egypt' : country };
   }
   return {
     job: merged,
