@@ -609,3 +609,18 @@ enriched "Staff Software Engineer" · OVERJET: company site …   (twice)
 - Easy Apply jobs are searched for a company board too.
 - Repeated jobs within one item are dropped before enrichment.
 - Each change has a test.
+
+---
+
+## 28. CI: tests failed on GitHub but passed on a clean clone
+
+**Symptom.** The first CI run (commit 90a02d5) failed at `npm test`; lint and typecheck passed. A
+fresh `git clone` + `npm ci` + `vitest run` on the VM passed (254 passed, 1 skipped).
+
+**Diagnosis.** The run logs need a signed-in GitHub client, so they weren't read. The difference
+had to be the runner: `ubuntu-24.04` restricts unprivileged user namespaces through AppArmor, and
+Chrome's sandbox (used by the PDF and form tests) needs them. This was a hypothesis until the fix
+below made the next run pass.
+
+**Fix.** The workflow sets `kernel.apparmor_restrict_unprivileged_userns=0` before the tests, as
+puppeteer documents for CI. It doesn't turn off Chrome's sandbox. Run for fa9acdd: success.

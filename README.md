@@ -315,7 +315,7 @@ npm run lint && npm run typecheck && npm test
 
 ## 14. Real-World Troubleshooting & Solutions
 
-Every issue met while building this, with the exact error, is in [`docs/troubleshooting.md`](docs/troubleshooting.md) (#1–#27). A selection:
+Every issue met while building this, with the exact error, is in [`docs/troubleshooting.md`](docs/troubleshooting.md) (#1–#28). A selection:
 
 **WhatsApp hung after scanning the QR, and a second command was refused (#14).**
 
