@@ -333,9 +333,49 @@ steps the clock during the first three updates; after that it slews, which can't
 18-hour gap (typical after a VM suspend/resume). The same skew broke AWS signatures in the
 lab before (story_ntp).
 
-**Hypothesis, not yet proven:** the intermittent `Waiting failed` socket timeouts from
-WhatsApp Web (#14) may come from the same skew. To be re-tested after the clock is fixed.
+**Hypothesis disproved:** after the clock was fixed (`chronyc tracking`: Leap status
+Normal, offset 0), the `Waiting failed` socket timeouts from WhatsApp Web continued. Their
+real cause is #16.
+
+After Ahmed's fix, `timedatectl` still said `synchronized: no` for a few seconds: a
+"Forward time jump detected!" made chrony distrust its sources (`^?`) until fresh samples
+arrived. It reported `Leap status: Normal` 14 seconds later.
 
 **Fix.**
 - **Host (Ahmed, root):** `sudo chronyc makestep` once. To make it permanent on a VM that suspends, set `makestep 1.0 -1` in `/etc/chrony.conf` (step whenever the offset exceeds 1 s) and `sudo systemctl restart chronyd`.
 - **Code:** the collector now fetches first and refuses to write anything if the newest message is more than 10 minutes in the future. It reports the measured offset and the fix, so a wrong clock can never again silently produce "0 new posts" (test added).
+
+---
+
+## 16. WhatsApp Web stuck: "open in another window"
+
+**Symptom.** Intermittent, even with a correct clock and a valid linked session: runs that
+worked a minute earlier failed with
+
+```
+command failed Waiting failed: 60000ms exceeded
+```
+
+and took about 2 minutes to exit.
+
+**Diagnosis.** A probe on the real session printed the page state every 10 s:
+
+```
+10s PAGE {"socket":"UNLAUNCHED","text":"WhatsApp End-to-end encrypted Don't close this window. Your messages are downloading."}
+20s PAGE {"socket":"UNLAUNCHED","text":"WhatsApp is open in another window. Click \"Use here\" to use WhatsApp in this window. Close"}
+...
+90s PAGE {"socket":"UNLAUNCHED", ...same...}
+98s initialize failed TimeoutError: Waiting failed: 90000ms exceeded
+```
+
+WhatsApp still considered an earlier window of the same linked device active (closing the
+headless browser isn't seen as a clean disconnect). On the conflict screen the socket never
+leaves `UNLAUNCHED`, so whatsapp-web.js waits until its timeout. Its `takeoverOnConflict`
+option only reacts after the socket starts, which never happens here. This also explains
+Ahmed's first hang: a second command was started while the login was still syncing. The
+earlier "broken session" in #14 was most likely this conflict too.
+
+**Fix.** While starting, the facade checks the page every 3 s. On the conflict screen it
+clicks "Use here", which only makes this window the active one for the same linked device:
+it sends nothing and changes no chat. Verified live on three consecutive runs: each one
+logged `whatsapp conflict screen: clicked "Use here"` and completed.

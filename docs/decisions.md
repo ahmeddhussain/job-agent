@@ -180,3 +180,11 @@ D1 to D10 come from `PLAN.md` section 3 (full reasoning there); new decisions ar
 - **Commands:** `agent wa:login` (QR in the terminal, one time), `agent wa:groups` (prints names and ids for the allowlist), `agent collect whatsapp [--dry-run] [--since ISO]`, and the fallback `agent collect whatsapp-export --file chat.txt --group "Name"`, which parses Android and iOS exports in Cairo time (DST-aware).
 - **Alternatives:** Baileys (lighter, but reimplements the protocol); official Cloud API (can't read groups you only joined); manual exports only (safe but not automatic). Kept as decided in D3.
 - **Audit additions (accepted):** `archiver`/`zip-stream`/`archiver-utils`/`glob`/`minimatch` (moderate) arrive with `whatsapp-web.js`, which uses them only for `RemoteAuth` (zipping a session to remote storage). We use `LocalAuth`, so that code never runs. The high findings remain the two install-time ones from D22.
+
+### D26 addendum: P4 gate result (2026-11-22)
+
+`wa:login` linked the number; `wa:groups` listed 7 groups; group `✧Career✧Chance✧` is
+allowlisted by id. The dry run counted 13 posts in the last 24 h (11 kept after the
+pre-filter). The real run stored 11 raw items with hashed authors and set the watermark.
+An immediate second run stored 0 new posts. Fixes found on the way: lock and clean exits
+(#14), refusal on clock skew (#15), auto "Use here" on WhatsApp's conflict screen (#16).

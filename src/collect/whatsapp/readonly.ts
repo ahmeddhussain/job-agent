@@ -49,6 +49,20 @@ export interface WhatsAppReader {
   destroy(): Promise<void>;
 }
 
+/**
+ * Runs in the WhatsApp Web page: if the conflict screen is shown, click its "Use here"
+ * button. A string, so it runs as-is in the browser (no DOM types needed here).
+ */
+const USE_HERE_SCRIPT = `(() => {
+  const text = document.body ? document.body.innerText : '';
+  if (!/open in another window/i.test(text)) return false;
+  const btn = Array.from(document.querySelectorAll('button, div[role="button"]'))
+    .find((e) => /^\\s*use here\\s*$/i.test(e.textContent || ''));
+  if (!btn) return false;
+  btn.click();
+  return true;
+})()`;
+
 export class ReadOnlyWhatsApp implements WhatsAppReader {
   private constructor(private readonly client: InstanceType<typeof Client>) {}
 
@@ -102,13 +116,33 @@ export class ReadOnlyWhatsApp implements WhatsAppReader {
       o.log.warn({ reason }, 'whatsapp disconnected');
     });
     const wa = new ReadOnlyWhatsApp(client);
+    // "WhatsApp is open in another window. Click 'Use here'": shown when an earlier run
+    // didn't disconnect cleanly. The page then never opens its socket and the library
+    // waits forever (troubleshooting #16). "Use here" only makes this window the active
+    // one for the same linked device: it sends nothing and changes no chat.
+    const takeover = setInterval(() => {
+      void (async () => {
+        const page = client.pupPage;
+        if (!page) return;
+        const clicked = await page
+          .evaluate(USE_HERE_SCRIPT)
+          .then((r) => r === true)
+          .catch(() => false);
+        if (clicked) {
+          o.onProgress?.('session was open in a stale window; switched it here ("Use here")');
+          o.log.warn('whatsapp conflict screen: clicked "Use here"');
+        }
+      })();
+    }, 3000);
     try {
       await Promise.race([client.initialize().then(() => ready), ready]);
+      clearInterval(takeover);
       o.onProgress?.('ready');
       // Let history sync finish before reading (PLAN 5.1 step 1).
       await new Promise((r) => setTimeout(r, o.settleSeconds * 1000));
       return wa;
     } catch (err) {
+      clearInterval(takeover);
       await wa.destroy();
       throw err;
     }
