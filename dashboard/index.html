@@ -148,6 +148,12 @@
   </section>
 
   <section class="panel">
+    <h2>Company boards polled</h2>
+    <div class="sub">From config/companies.yaml and discovered automatically from job links</div>
+    <div id="companies" class="muted">—</div>
+  </section>
+
+  <section class="panel">
     <div class="filters" id="status-chips" role="group" aria-label="Filter by status"></div>
     <div class="filters">
       <input type="search" id="q" placeholder="Search role, company, email…" aria-label="Search">
@@ -156,6 +162,7 @@
         <option value="whatsapp">WhatsApp</option>
         <option value="alert_email">Alerts (LinkedIn / boards)</option>
         <option value="ats">Company sites</option>
+        <option value="manual">Added by hand</option>
       </select>
       <select id="priority" aria-label="Priority">
         <option value="">All priorities</option>
@@ -204,7 +211,8 @@
     { key: "skipped",      label: "Skipped",      color: "var(--border)" },
   ];
   const STATUS_BY_KEY = Object.fromEntries(STATUSES.map(s => [s.key, s]));
-  const SOURCE_LABEL = { whatsapp: "WhatsApp", alert_email: "Alert", ats: "Company site", html: "Company site", whatsapp_export: "WhatsApp" };
+  const SOURCE_LABEL = { whatsapp: "WhatsApp", alert_email: "Alert", ats: "Company site", html: "Company site", whatsapp_export: "WhatsApp", manual: "Added by hand" };
+  const NOTE_LABEL = { linkedin_offsite: "LinkedIn: apply on company website", linkedin_easy_apply: "LinkedIn Easy Apply", form: "Application form", blocked_host: "Apply on the job board" };
   const CHANNEL_LABEL = { email: "Email", form: "Web form", whatsapp_dm: "WhatsApp DM", unknown: "Unknown" };
 
   const state = {
@@ -239,7 +247,7 @@
     } catch (_) {
       const sample = sampleData();
       state.jobs = sample.jobs; state.stats = sample.stats; state.live = false;
-      $("banner").textContent = "Showing sample data — the agent's API isn't reachable. Run the dashboard service (docker compose up -d dashboard) and open http://127.0.0.1:8080. Status changes here won't be saved.";
+      $("banner").textContent = "Showing sample data — the agent's API isn't reachable. Start it with: npm run agent -- dashboard, then open http://127.0.0.1:8080. Status changes here won't be saved.";
       $("banner").classList.add("show");
     }
     render();
@@ -297,7 +305,14 @@
   }
 
   // ---------- render ----------
-  function render() { renderHeader(); renderTiles(); renderChips(); renderRows(); renderChart(); }
+  function render() { renderHeader(); renderTiles(); renderChips(); renderRows(); renderChart(); renderCompanies(); }
+
+  function renderCompanies() {
+    const cs = state.stats?.companies || [];
+    $("companies").innerHTML = cs.length ? cs.map(c =>
+      `<span class="flag" title="${esc(c.evidence || "")}">${esc(c.name)} · ${esc(c.ats)}${c.source === "discovered" ? " · discovered" : ""}${c.active ? "" : " · off"}</span>`
+    ).join("") : "None discovered yet: they appear when a job link leads to a company's applicant tracking system.";
+  }
 
   function renderHeader() {
     const r = state.stats?.last_run;
@@ -330,7 +345,7 @@
       `<div class="tile"><div class="label">${esc(t.label)}</div><div class="value">${esc(t.value)}</div><div class="hint">${esc(t.hint)}</div></div>`
     ).join("") + `<div class="tile run"><div class="label">Last run</div>
       <div class="value"><span class="dot" style="background:${runColor}"></span>${esc(runText)}</div>
-      <div class="hint">${r ? esc(relTime(r.finished_at || r.started_at)) + (r.error ? " · " + esc(r.error) : "") : "—"}</div></div>`;
+      <div class="hint">${r ? esc(relTime(r.finished_at || r.started_at)) + (r.error ? " · " + esc(r.error) : "") : "—"}${state.stats?.unread_items ? ` · ${state.stats.unread_items} items left` : ""}</div></div>`;
   }
 
   function renderChips() {
@@ -363,9 +378,11 @@
       const flags = (j.flags || []).map(f => `<span class="flag ${["suspicious","email_unverified","same_recruiter"].includes(f) ? "warn" : ""}">${esc(f.replace(/_/g, " "))}</span>`).join("");
       const files = [
         j.gmail_draft_url ? `<a href="${esc(j.gmail_draft_url)}" target="_blank" rel="noopener">Draft</a>` : "",
-        j.apply_url ? `<a href="${esc(j.apply_url)}" target="_blank" rel="noopener">Apply</a>` : "",
+        j.apply_url_direct ? `<a href="${esc(j.apply_url_direct)}" target="_blank" rel="noopener noreferrer">Company site</a>` : "",
+        j.apply_url ? `<a href="${esc(j.apply_url)}" target="_blank" rel="noopener noreferrer">${j.apply_url_direct ? "Listing" : "Apply"}</a>` : "",
         j.files?.cv ? `<a href="${esc(j.files.cv)}" target="_blank" rel="noopener">CV</a>` : "",
-        j.files?.cover ? `<a href="${esc(j.files.cover)}" target="_blank" rel="noopener">Cover</a>` : "",
+        j.files?.cover ? `<a href="${esc(j.files.cover)}" target="_blank" rel="noopener">Letter</a>` : "",
+        j.files?.package ? `<a href="${esc(j.files.package)}" target="_blank" rel="noopener">Package</a>` : "",
       ].join("") || `<span class="muted">—</span>`;
       const fit = j.fit_score == null ? `<span class="muted">—</span>` :
         `<span class="fit"><span class="fitbar" aria-hidden="true"><i style="width:${j.fit_score}%"></i></span><span class="num">${j.fit_score}</span></span>`;
@@ -385,10 +402,15 @@
       if (state.open !== j.id) return main;
       return main + `<tr class="detail"><td colspan="8"><div class="detail-grid">
           <div><div class="k">Fit summary</div>${esc(j.fit_summary || "—")}</div>
-          <div><div class="k">Apply to</div>${esc(j.apply_email || j.apply_url || "—")}</div>
-          <div><div class="k">Skip reason</div>${esc(j.skip_reason || "—")}</div>
+          <div><div class="k">Apply to</div>${esc(j.apply_email || j.apply_url_direct || j.apply_url || "—")}${j.apply_note ? `<div class="muted">${esc(NOTE_LABEL[j.apply_note] || j.apply_note)}</div>` : ""}</div>
+          <div><div class="k">Skip / review reason</div>${esc(j.skip_reason || "—")}</div>
           <div><div class="k">Posted</div>${esc(new Date(j.posted_at).toLocaleString())}</div>
+          <div><div class="k">Why this role (interview line)</div>${esc(j.why_this_role || "—")}</div>
+          <div><div class="k">Company board</div>${esc(j.company_board || "—")}${j.ats_keywords != null ? `<div class="muted">CV keyword coverage ${Math.round(j.ats_keywords * 100)}%</div>` : ""}</div>
         </div>
+        ${j.cover_text ? `<div style="margin-top:10px"><label class="k" for="cover-${j.id}">Cover letter (paste box / email body)</label>
+          <textarea id="cover-${j.id}" readonly style="min-height:140px">${esc(j.cover_text)}</textarea>
+          <button class="btn" type="button" data-copy="${j.id}" style="margin-top:6px">Copy letter</button></div>` : ""}
         <div style="margin-top:10px"><label class="k" for="notes-${j.id}">Notes</label>
           <textarea id="notes-${j.id}" data-notes="${j.id}" placeholder="Interview date, contact name, follow-up…">${esc(j.notes || "")}</textarea>
           <button class="btn" type="button" data-save="${j.id}" style="margin-top:6px">Save notes</button></div>
@@ -472,6 +494,12 @@
   });
   $("rows").addEventListener("click", e => {
     if (e.target.closest("select, a, textarea")) return;
+    const copy = e.target.closest("[data-copy]");
+    if (copy) {
+      const t = document.getElementById(`cover-${copy.dataset.copy}`);
+      navigator.clipboard?.writeText(t.value).then(() => { copy.textContent = "Copied"; }, () => { t.select(); });
+      return;
+    }
     const save = e.target.closest("[data-save]");
     if (save) {
       const id = +save.dataset.save;
