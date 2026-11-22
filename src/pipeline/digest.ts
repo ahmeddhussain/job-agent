@@ -17,7 +17,10 @@ interface JobRow {
   status: string;
   skip_reason: string | null;
   apply_url: string | null;
+  apply_url_direct: string | null;
+  apply_channel: string;
   draft: string | null;
+  package_dir: string | null;
 }
 
 export function buildDigest(
@@ -25,11 +28,12 @@ export function buildDigest(
   since: string,
   date: string,
   runError: string | null = null,
+  health: string[] = [],
 ): Digest {
   const jobs = db
     .prepare(
       `SELECT j.title, j.company, j.fit_score, j.status, j.skip_reason, j.apply_url,
-              a.gmail_message_id AS draft
+              j.apply_url_direct, j.apply_channel, a.gmail_message_id AS draft, a.package_dir
        FROM jobs j LEFT JOIN applications a ON a.job_id = j.id
        WHERE j.created_at >= ? OR j.updated_at >= ? ORDER BY j.priority, j.fit_score DESC`,
     )
@@ -45,17 +49,23 @@ export function buildDigest(
     `- ${j.title}${j.company ? ` · ${j.company}` : ''}${j.fit_score !== null ? ` · ${String(j.fit_score)}` : ''}`;
   const parts: string[] = [];
   if (runError) parts.push(`RUN FAILED: ${runError}`, '');
-  parts.push(`Ready to send (${String(ready.length)}):`);
-  for (const j of ready)
-    parts.push(
-      `${line(j)}${j.draft ? `  ${draftUrl(j.draft)}` : j.apply_url ? `  apply: ${j.apply_url}` : ''}`,
-    );
+  const drafts = ready.filter((j) => j.apply_channel === 'email');
+  const packages = ready.filter((j) => j.apply_channel !== 'email');
+  parts.push(`Email drafts ready to send (${String(drafts.length)}):`);
+  for (const j of drafts) parts.push(`${line(j)}${j.draft ? `  ${draftUrl(j.draft)}` : ''}`);
+  parts.push('', `Apply on the site (${String(packages.length)}), files in each package folder:`);
+  for (const j of packages) {
+    const link = j.apply_url_direct ?? j.apply_url;
+    parts.push(`${line(j)}${link ? `  ${link}` : ''}`);
+    if (j.package_dir) parts.push(`    ${j.package_dir}`);
+  }
   parts.push('', `Needs review (${String(review.length)}):`);
   for (const j of review) parts.push(`${line(j)}  (${j.skip_reason ?? 'check'})`);
   parts.push(
     '',
     `Skipped (${String(skipped.length)}): ${[...by].map(([r, n]) => `${r} ${String(n)}`).join(', ') || 'none'}`,
   );
+  if (health.length) parts.push('', ...health);
   const subject = runError
     ? `Job agent — run failed (${date})`
     : `Job agent — ${String(ready.length)} ready, ${String(review.length)} need review (${date})`;

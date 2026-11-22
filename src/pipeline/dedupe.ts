@@ -29,7 +29,7 @@ const daysBefore = (iso: string, days: number): string =>
 
 // ---------------------------------------------------------------- raw items (L0–L2)
 
-export type RawSource = 'whatsapp' | 'alert_email' | 'ats' | 'html' | 'whatsapp_export';
+export type RawSource = 'whatsapp' | 'alert_email' | 'ats' | 'html' | 'whatsapp_export' | 'manual';
 
 export interface RawItemInput {
   source: RawSource;

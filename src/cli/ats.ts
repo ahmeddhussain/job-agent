@@ -2,14 +2,16 @@
 import type { Config } from '../config.js';
 import { ADAPTERS } from '../collect/ats/adapters.js';
 import { collectAts, loadCompanies } from '../collect/ats/collect.js';
+import { companiesToPoll } from '../collect/ats/discover.js';
 import { detectAts, detectIn } from '../collect/ats/detect.js';
 import { migrate, openDb } from '../db/index.js';
+import { existsSync } from 'node:fs';
 import { TitleMatcher } from '../pipeline/titles.js';
 import { PoliteHttp } from '../util/http.js';
 import { logger } from '../util/logger.js';
 import type { Io } from './program.js';
 
-const httpFor = (cfg: Config) =>
+export const httpFor = (cfg: Config) =>
   new PoliteHttp({
     userAgent: cfg.ats.user_agent,
     minIntervalMs: cfg.ats.min_interval_seconds * 1000,
@@ -27,7 +29,7 @@ export async function collectAtsCommand(
       http: httpFor(cfg),
       db,
       cfg,
-      companies: loadCompanies(cfg.ats.companies_file),
+      companies: companiesToPoll(db, loadCompanies(cfg.ats.companies_file)),
       matcher: TitleMatcher.fromFile(cfg.paths.titles),
       now: new Date(),
       log: logger,
@@ -70,4 +72,39 @@ export async function atsDetectCommand(cfg: Config, url: string, io: Io): Promis
     `${d.ats} board "${d.board}" works: ${String(jobs.length)} open postings. Add to config/companies.yaml:`,
   );
   io.out(`  - { name: ${name}, ats: ${d.ats}, board: ${d.board} }`);
+}
+
+/** `agent companies`: what collect:ats polls, and how each discovered board was found. */
+export function companiesCommand(cfg: Config, io: Io): void {
+  const fromConfig = existsSync(cfg.ats.companies_file)
+    ? loadCompanies(cfg.ats.companies_file)
+    : [];
+  for (const c of fromConfig)
+    io.out(`config      ${c.name} [${c.ats}] ${c.ats === 'html' ? c.url : c.board}`);
+  const db = openDb(cfg.paths.db);
+  migrate(db);
+  try {
+    const rows = db
+      .prepare(
+        `SELECT name, ats, board, url, active, fail_count, evidence, added_at FROM companies
+         WHERE source = 'discovered' ORDER BY added_at`,
+      )
+      .all() as {
+      name: string;
+      ats: string;
+      board: string | null;
+      url: string | null;
+      active: number;
+      fail_count: number;
+      evidence: string | null;
+      added_at: string;
+    }[];
+    for (const r of rows)
+      io.out(
+        `discovered  ${r.name} [${r.ats}] ${r.board ?? r.url ?? ''}${r.active ? '' : ' (OFF: failing)'} · ${r.added_at.slice(0, 10)} · ${r.evidence ?? ''}`,
+      );
+    io.out(`${String(fromConfig.length)} from config, ${String(rows.length)} discovered`);
+  } finally {
+    db.close();
+  }
 }

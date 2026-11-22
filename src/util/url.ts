@@ -18,12 +18,44 @@ const TRACKING_PARAMS = new Set([
   'originalsubdomain',
   'lever-source', // Lever boards
   'gh_src', // Greenhouse boards
+  // Personal tokens in alert links (Bayt puts a per-user token in every link): never stored.
+  'usertoken',
+  'email_name',
 ]);
+
+/**
+ * Email click-trackers wrap the real link; the target is inside the wrapper, so it can be
+ * read without a request (troubleshooting #20):
+ * - Amazon SES (Wuzzuf): https://x.r.eu-west-1.awstrack.me/L0/<encoded target>/1/...
+ * - Bayt: https://bayt.com/barrier/tracklink.adp?...&target_link=<encoded target>
+ * - Google / Facebook redirectors: ?q= / ?u=
+ */
+export function unwrapTracking(raw: string): string {
+  let url: URL;
+  try {
+    url = new URL(raw.trim());
+  } catch {
+    return raw;
+  }
+  const host = url.hostname.toLowerCase();
+  let inner: string | null = null;
+  if (host.endsWith('.awstrack.me')) {
+    const seg = url.pathname.split('/')[2];
+    if (url.pathname.startsWith('/L0/') && seg) inner = decodeURIComponent(seg);
+  } else if (/(^|\.)bayt\.com$/.test(host) && url.pathname.includes('tracklink')) {
+    inner = url.searchParams.get('target_link');
+  } else if (/(^|\.)google\.[a-z.]+$/.test(host) && url.pathname === '/url') {
+    inner = url.searchParams.get('q') ?? url.searchParams.get('url');
+  } else if (/^l\.(facebook|instagram)\.com$/.test(host)) {
+    inner = url.searchParams.get('u');
+  }
+  return inner && /^https?:\/\//i.test(inner) ? unwrapTracking(inner) : raw;
+}
 
 export function canonicalizeUrl(raw: string): string | null {
   let url: URL;
   try {
-    url = new URL(raw.trim());
+    url = new URL(unwrapTracking(raw.trim()));
   } catch {
     return null;
   }

@@ -460,3 +460,80 @@ failed run, or silently fewer jobs, at random.
 **Fix.** `PoliteHttp.json()` retries network errors and bodies that aren't complete JSON (3 tries,
 growing delay). Refusals by the SSRF guard and HTTP 4xx answers are final and not retried. A test
 feeds a truncated body first and checks the retry succeeds.
+
+---
+
+## 20. Job-alert links: personal tokens and click-trackers
+
+**Symptom.** Reading the real alert emails for company discovery (2026-11-22):
+
+```
+bayt.com/en/egypt/jobs/devops-monitoring-engineer-75445933/?utm_source=…&email_name=j_job_alerts_channels&userToken=v2%3A9240…
+jbyxlvy7.r.eu-west-1.awstrack.me/L0/https:%2F%2Fwuzzuf.net%2Fjobs%2Fp%2Fqenpbmle0qpo-junior-system-administrator-…/1/0102…
+```
+
+**Diagnosis.** Every Bayt link carries a per-user `userToken`, which the canonicalizer kept, so it
+would have been stored in `raw_items`, `jobs.apply_url`, the digest and the tracker. Wuzzuf wraps
+every link in an Amazon SES click-tracker (`awstrack.me`), so the job URL was the tracker's, not
+Wuzzuf's, and L3 dedupe could not match the same job from two sources.
+
+**Fix.** `canonicalizeUrl` decodes known wrappers offline (`awstrack.me` path, Bayt `target_link`,
+Google `/url?q=`, Facebook `l.php?u=`), without a request to the tracker, and strips `userToken` and
+`email_name`. Tests use the real link shapes with the token replaced.
+
+---
+
+## 21. LinkedIn's logged-out page no longer shows the company's apply link
+
+**Symptom.** The plan was to read "Apply on company website" links from LinkedIn's public job
+page (`<code id="applyUrl">`, as older scrapers do). On four real jobs (2026-11-22):
+
+```
+jobs-guest/jobs/api/jobPosting/<id>  http=200  applyUrl: not present   apply-link-offsite: present
+jobs/view/<id>                       http=200  applyUrl: not present   apply-link-offsite: present
+```
+
+**Diagnosis.** The hypothesis was wrong: LinkedIn now shows the external link only after sign-in.
+The logged-out page still has the full description, the company and whether the job is offsite.
+Indeed (`401`) and Bayt (`403`) refuse automated requests outright.
+
+**Fix.** The company's own posting is found another way (D30): from the company name, the agent
+tries the ATS boards for it and accepts one only if it lists the same title. The description comes
+from the LinkedIn page. Indeed and Bayt are never fetched (`enrich.skip_hosts`). Whether a job
+without `apply-link-offsite` is always Easy Apply is assumed, not yet seen on a real page.
+
+---
+
+## 22. Stale-lock check took a live process for a dead one
+
+**Symptom.** New test: a lock file holding pid 1 (always alive) was replaced instead of refused.
+
+**Diagnosis.** `process.kill(pid, 0)` throws `EPERM` for a live process owned by another user;
+the WhatsApp lock (troubleshooting #14) and the new run lock treated every error as "not running".
+For the same user it worked, which is why it never showed up.
+
+**Fix.** `EPERM` counts as alive (`src/util/lock.ts`, shared by both locks). Only `ESRCH` (no such
+process) frees the lock.
+
+---
+
+## 23. Guessing a company's board took a minute per company
+
+**Symptom.** Live discovery check on three real alert jobs: the Wuzzuf job (company "RayC
+Technologies", no ATS board) took 59 s. Timing each probe:
+
+```
+404 0.53s   boards-api.greenhouse.io/v1/boards/rayctechnologies/jobs
+404 24.08s  api.lever.co/v0/postings/rayctechnologies?mode=json
+404 0.53s   api.ashbyhq.com/posting-api/job-board/rayctechnologies
+404 0.61s   apply.workable.com/api/v1/widget/accounts/rayctechnologies
+200 0.47s   api.smartrecruiters.com/v1/companies/rayctechnologies/postings   {"totalFound":0}
+```
+
+**Diagnosis.** Lever answers an unknown board's 404 only after about 24 s, and the probe asked the
+ATSs one after another for up to three name variants.
+
+**Fix.** Probes use their own client: an 8 s timeout and one attempt (a timeout counts as "no board").
+The five ATS hosts are asked in parallel for each name variant, each host still paced. Same results
+on the same three jobs; slowest job 59 s → 8 s. Real boards are still listed through the normal
+client with retries (#19).

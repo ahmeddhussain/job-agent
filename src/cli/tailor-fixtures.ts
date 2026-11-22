@@ -1,7 +1,6 @@
 // `agent tailor:fixtures [ids...] [--record | --replay]` (P3 gate): scored fixture jobs
 // (replayed from P2 recordings) → Sonnet tailoring → validator → one-page PDF → ATS
 // check → cover letter. Files go to output/fixtures/<fixture>/ (gitignored).
-import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Config } from '../config.js';
 import { loadFixtures } from '../dev/fixtures.js';
@@ -11,19 +10,9 @@ import type { Llm, LlmCallRecord } from '../llm/types.js';
 import { runFixtures } from '../pipeline/dry-run.js';
 import { TitleMatcher } from '../pipeline/titles.js';
 import { loadProfile } from '../profile/load.js';
-import { atsCheck, type AtsReport } from '../render/ats.js';
-import {
-  cvMarkdown,
-  buildCvModel,
-  ensureDir,
-  fileName,
-  renderContextFor,
-  renderOnePageCv,
-} from '../render/cv.js';
+import { prepareApplication } from '../apply/prepare.js';
 import { Renderer } from '../render/renderer.js';
-import { tailorJob, type TailorJob } from '../tailor/tailor.js';
 import { vocabularyFor } from '../tailor/vocab.js';
-import { coverLetterText, emailBody, emailSubject } from '../apply/email.js';
 import { loadDotEnv } from '../util/env.js';
 import { logger } from '../util/logger.js';
 import type { Io } from './program.js';
@@ -101,50 +90,22 @@ export async function tailorFixturesCommand(
       const fit = decision.fit;
       const angle = decision.angle;
       if (!fit || !angle) continue;
-      const tj: TailorJob = {
-        title: job.title,
-        company: job.company,
-        location: job.location,
-        requirements: job.requirements,
-        nice_to_have: job.nice_to_have,
-        subject_hint: job.subject_hint,
-        matched: fit.matched.map((m) => m.requirement),
-        missing: fit.missing,
-      };
-      const dir = ensureDir(join(outRoot, id));
       const started = Date.now();
-      const t = await tailorJob(llm, cfg, profile, vocab, angle, tj, `${id}.tailor`);
-
-      const cvPath = join(dir, fileName(profile, 'CV', job.company, job.title));
-      const ctx = renderContextFor(
-        cfg,
+      const prep = await prepareApplication(
+        { llm, cfg, profile, vocab, renderer },
+        job,
+        fit,
         angle,
-        [job.title, ...job.requirements, ...job.nice_to_have].join('\n'),
-        (text) => vocab.find(text),
-        new Set(fit.matched.flatMap((m) => m.evidence)),
+        join(outRoot, id),
+        `${id}.tailor`,
       );
-      const fitRep = await renderOnePageCv(renderer, profile, t.output, cfg, cvPath, ctx);
-      const ats: AtsReport = await atsCheck(cvPath, cfg, profile, vocab, tj.matched);
-
-      // D28: no cover-letter PDF. The letter is the email body; forms get it as plain text.
-      writeFileSync(
-        join(dir, 'cover_letter.txt'),
-        coverLetterText(profile, fitRep.output.cover_letter),
-      );
-      writeFileSync(
-        join(dir, 'cv.md'),
-        cvMarkdown(buildCvModel(profile, fitRep.output, fitRep.layout, ctx)),
-      );
-      writeFileSync(
-        join(dir, 'email.txt'),
-        `Subject: ${emailSubject(profile, job.title, job.subject_hint)}\n\n${emailBody(profile, fitRep.output.cover_letter)}`,
-      );
-      writeFileSync(
-        join(dir, 'report.json'),
-        `${JSON.stringify({ angle, attempts: t.attempts, fallbacks: t.fallbacks, needsReview: t.needsReview, fit: fitRep, ats, why_this_role: t.output.why_this_role }, null, 2)}\n`,
-      );
-
-      const ok = ats.pass && fitRep.pages === 1 && t.needsReview.length === 0;
+      const { ats, fit: fitRep, cvPath } = prep;
+      const t = {
+        attempts: prep.attempts,
+        fallbacks: prep.fallbacks,
+        needsReview: prep.needsReview,
+      };
+      const ok = prep.ok;
       if (!ok) failed++;
       io.out(
         `${ok ? 'PASS' : 'FAIL'} ${id} [${angle}] pages=${String(fitRep.pages)} fill=${(fitRep.fill * 100).toFixed(0)}% ` +

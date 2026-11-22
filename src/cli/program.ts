@@ -16,12 +16,6 @@ export interface Io {
 
 const defaultConfigPath = (): string => process.env['CONFIG_PATH'] ?? 'config/config.yaml';
 
-function notYet(command: string, phase: string): () => never {
-  return () => {
-    throw new NotImplementedError(command, phase);
-  };
-}
-
 export function buildProgram(io: Io): Command {
   const program = new Command()
     .name('agent')
@@ -33,13 +27,18 @@ export function buildProgram(io: Io): Command {
 
   program
     .command('run')
-    .description('collect, dedupe, score, tailor and prepare applications')
-    .option('--dry-run', 'no Gmail writes; print the digest to stdout')
-    .option('--fixtures', 'use test/fixtures instead of live sources')
+    .description('collect, dedupe, score, tailor and prepare applications (end to end)')
+    .option('--dry-run', 'on a copy of the database; no Gmail writes; digest printed')
+    .option('--fixtures', 'with --dry-run: the P2 fixture gate instead of live sources')
     .addOption(
-      new Option('--source <name>', 'run one source only').choices(['whatsapp', 'alerts', 'ats']),
+      new Option('--source <name>', 'collect one source only').choices([
+        'whatsapp',
+        'alerts',
+        'ats',
+      ]),
     )
     .option('--since <iso>', 'override the per-source watermark (ISO-8601)')
+    .option('--no-collect', 'read only items already stored (e.g. added with `agent add`)')
     .option('--record', 'with --fixtures: save model outputs to test/fixtures/llm')
     .option('--replay', 'with --fixtures: use saved model outputs, no Claude calls')
     .option('--profile <path>', 'with --fixtures: profile file (default: paths.profile)')
@@ -47,18 +46,53 @@ export function buildProgram(io: Io): Command {
       async (opts: {
         dryRun?: boolean;
         fixtures?: boolean;
+        source?: string;
+        since?: string;
+        collect?: boolean;
         record?: boolean;
         replay?: boolean;
         profile?: string;
       }) => {
-        if (!(opts.dryRun && opts.fixtures))
-          throw new NotImplementedError('run (live sources)', 'P7');
-        if (opts.record && opts.replay) throw new Error('--record and --replay are exclusive');
-        const { runFixturesCommand } = await import('./run-fixtures.js');
-        const code = await runFixturesCommand(loadConfig(configPath()), opts, io);
+        if (opts.fixtures) {
+          if (!opts.dryRun) throw new Error('--fixtures needs --dry-run');
+          if (opts.record && opts.replay) throw new Error('--record and --replay are exclusive');
+          const { runFixturesCommand } = await import('./run-fixtures.js');
+          const code = await runFixturesCommand(loadConfig(configPath()), opts, io);
+          if (code !== 0) process.exitCode = code;
+          return;
+        }
+        const { runCommand } = await import('./run.js');
+        const code = await runCommand(loadConfig(configPath()), opts, io);
         if (code !== 0) process.exitCode = code;
       },
     );
+
+  program
+    .command('add')
+    .description('store a job post by hand (file, or stdin) for the next run')
+    .argument('[file]', 'text file with the post (default: stdin)')
+    .option('--name <label>', 'where it came from (shown in the tracker)')
+    .option('--posted <iso>', 'when it was posted (default: now)')
+    .action(async (file: string | undefined, opts: { name?: string; posted?: string }) => {
+      const { addCommand } = await import('./run.js');
+      addCommand(loadConfig(configPath()), file, opts, io);
+    });
+
+  program
+    .command('companies')
+    .description('list the company boards polled: companies.yaml plus discovered ones')
+    .action(async () => {
+      const { companiesCommand } = await import('./ats.js');
+      companiesCommand(loadConfig(configPath()), io);
+    });
+
+  program
+    .command('dashboard')
+    .description('serve the tracker on 127.0.0.1 (dashboard.host:port)')
+    .action(async () => {
+      const { serveDashboard } = await import('../dashboard/server.js');
+      await serveDashboard(loadConfig(configPath()), io);
+    });
 
   program
     .command('tailor:fixtures')
@@ -178,14 +212,20 @@ export function buildProgram(io: Io): Command {
 
   program
     .command('reprocess')
-    .description('rerun pipeline stages for one job')
-    .argument('<jobId>', 'job id')
+    .description('redo one job: rescore it, or re-tailor its CV and letter')
+    .argument('<jobId>', 'job id (dashboard, or the run output)')
     .addOption(
       new Option('--from <stage>', 'first stage to rerun')
-        .choices(['extract', 'dedupe', 'score', 'tailor', 'apply'])
+        .choices(['score', 'tailor'])
         .default('tailor'),
     )
-    .action(notYet('reprocess', 'P7'));
+    .action(async (jobId: string, opts: { from: 'score' | 'tailor' }) => {
+      const id = Number(jobId);
+      if (!Number.isInteger(id) || id <= 0) throw new Error(`not a job id: ${jobId}`);
+      const { reprocessCommand } = await import('./run.js');
+      const code = await reprocessCommand(loadConfig(configPath()), id, opts.from, io);
+      if (code !== 0) process.exitCode = code;
+    });
 
   program
     .command('digest')

@@ -53,6 +53,17 @@ ats:
   posting_max_chars: 20000         # one posting's text sent to extraction
   html_max_chars: 30000            # a careers page without an ATS feed
 
+enrich:                      # D30: follow job links to the full description and the company's board
+  enabled: true
+  min_interval_seconds: 2
+  skip_hosts: [indeed.com, bayt.com, glassdoor.com]        # refuse automated access (401/403)
+  form_hosts: [docs.google.com, forms.gle, forms.office.com, typeform.com, jotform.com, tally.so, airtable.com]
+  board_hosts: [wuzzuf.net, forasna.com, tanqeeb.com, naukrigulf.com, drjobpro.com, jooble.org, akhtaboot.com]
+  probe_ats_by_name: true    # guess the company's ATS board; kept only if it lists the same title
+  probe_cache_days: 14
+  min_title_similarity: 0.8
+  thin_requirements: 3
+
 llm:
   provider: claude_cli             # headless Claude Code on the Pro subscription (D17)
   cli:

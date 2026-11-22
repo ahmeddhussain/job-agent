@@ -49,6 +49,8 @@ export interface HttpOptions {
   fetchImpl?: typeof fetch;
   /** Base delay between retries (tests set it low). */
   retryDelayMs?: number;
+  /** Attempts for json() (default 3); board probes use 1. */
+  attempts?: number;
 }
 
 export class PoliteHttp {
@@ -110,10 +112,35 @@ export class PoliteHttp {
   }
 
   /**
+   * Follows redirects (each hop guarded) and returns the final URL without reading the
+   * body: for link shorteners (bit.ly, lnkd.in) in job posts.
+   */
+  async finalUrl(raw: string): Promise<string> {
+    let url = new URL(raw);
+    for (let hop = 0; hop < 8; hop++) {
+      await this.assertPublic(url);
+      await this.pace(url.hostname);
+      const res = await (this.o.fetchImpl ?? fetch)(url, {
+        redirect: 'manual',
+        headers: { 'User-Agent': this.o.userAgent, Accept: 'text/html' },
+        signal: AbortSignal.timeout(this.o.timeoutMs ?? 30_000),
+      });
+      await res.body?.cancel();
+      const loc = res.headers.get('location');
+      if (res.status >= 300 && res.status < 400 && loc) {
+        url = new URL(loc, url);
+        continue;
+      }
+      return url.href;
+    }
+    throw new HttpError(`too many redirects from ${raw}`, null);
+  }
+
+  /**
    * JSON with retries: this network drops and truncates responses (troubleshooting #19),
    * so a network error or a body that isn't complete JSON is retried before failing.
    */
-  async json(url: string, attempts = 3): Promise<unknown> {
+  async json(url: string, attempts = this.o.attempts ?? 3): Promise<unknown> {
     let last: unknown;
     for (let i = 0; i < attempts; i++) {
       try {

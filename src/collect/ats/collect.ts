@@ -76,6 +76,22 @@ export interface CompanyResult {
   error?: string;
 }
 
+/** Discovered boards that fail 5 runs in a row are switched off (a renamed or closed board). */
+function trackHealth(db: Db, c: CompanyEntry, failed: boolean, now: Date): void {
+  db.prepare(
+    `UPDATE companies SET last_checked_at = @now,
+       fail_count = CASE WHEN @failed THEN fail_count + 1 ELSE 0 END,
+       active = CASE WHEN @failed AND fail_count + 1 >= 5 THEN 0 ELSE active END
+     WHERE (ats = @ats AND board = @board) OR (ats = 'html' AND url = @url)`,
+  ).run({
+    now: now.toISOString(),
+    failed: failed ? 1 : 0,
+    ats: c.ats,
+    board: c.ats === 'html' ? null : c.board,
+    url: c.ats === 'html' ? c.url : null,
+  });
+}
+
 export async function collectAts(o: {
   http: PoliteHttp;
   db: Db;
@@ -182,6 +198,7 @@ export async function collectAts(o: {
       r.error = err instanceof Error ? err.message : String(err);
       o.log.warn({ company: c.name, err: r.error }, 'ats collection failed');
     }
+    if (!o.dryRun) trackHealth(db, c, r.error !== undefined, o.now);
   }
   return results;
 }

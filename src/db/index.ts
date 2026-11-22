@@ -49,10 +49,24 @@ export function migrate(db: Db, dir: string = MIGRATIONS_DIR): MigrationResult {
       continue;
     }
     const sql = readFileSync(join(dir, file), 'utf8');
-    db.transaction(() => {
-      db.exec(sql);
-      record.run(file, new Date().toISOString());
-    })();
+    // A migration that rebuilds a table (SQLite can't alter a CHECK constraint) says so on
+    // its first line. SQLite's documented procedure: foreign keys off outside the
+    // transaction, rebuild, foreign_key_check inside it, foreign keys back on.
+    const rebuild = sql.startsWith('-- rebuild');
+    if (rebuild) db.pragma('foreign_keys = OFF');
+    try {
+      db.transaction(() => {
+        db.exec(sql);
+        if (rebuild) {
+          const bad = db.pragma('foreign_key_check') as unknown[];
+          if (bad.length > 0)
+            throw new Error(`${file}: ${String(bad.length)} foreign key violations after rebuild`);
+        }
+        record.run(file, new Date().toISOString());
+      })();
+    } finally {
+      if (rebuild) db.pragma('foreign_keys = ON');
+    }
     result.applied.push(file);
   }
   return result;

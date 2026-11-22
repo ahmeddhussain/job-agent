@@ -11,8 +11,9 @@ import {
 } from '../collect/whatsapp/collect.js';
 import { exportRef, parseWhatsAppExport } from '../collect/whatsapp/export.js';
 import { ReadOnlyWhatsApp } from '../collect/whatsapp/readonly.js';
-import { migrate, openDb } from '../db/index.js';
+import { migrate, openDb, type Db } from '../db/index.js';
 import { insertRawItem, prepareRawItem } from '../pipeline/dedupe.js';
+import { alive } from '../util/lock.js';
 import { logger } from '../util/logger.js';
 import type { Io } from './program.js';
 
@@ -34,16 +35,7 @@ export async function withWhatsAppLock<T>(
     take();
   } catch {
     const pid = Number(readFileSync(lockPath, 'utf8').trim());
-    const alive = (() => {
-      if (!Number.isInteger(pid) || pid <= 0) return false;
-      try {
-        process.kill(pid, 0); // signal 0: existence check only
-        return true;
-      } catch {
-        return false;
-      }
-    })();
-    if (alive)
+    if (alive(pid))
       throw new Error(
         `another WhatsApp command is running (pid ${String(pid)}); wait for it or stop it first`,
       );
@@ -213,4 +205,40 @@ export function collectExportCommand(
   io.out(
     `parsed ${String(msgs.length)} messages, stored ${String(inserted)} new from "${opts.group}"`,
   );
+}
+
+/** `agent run`'s WhatsApp source: same collector, inside the run's database and record. */
+export async function collectWhatsAppForRun(
+  cfg: Config,
+  db: Db,
+  runId: number,
+  since?: Date,
+): Promise<{ inserted: number; detail: string }> {
+  return withWhatsAppLock(cfg, async (onExit) => {
+    const wa = await ReadOnlyWhatsApp.start(startOptions(cfg, cfg.whatsapp.ready_timeout_seconds));
+    onExit(async () => {
+      await wa.destroy();
+    });
+    try {
+      const res = await collectWhatsApp({
+        wa,
+        db,
+        cfg,
+        now: new Date(),
+        salt: loadOrCreateSalt(cfg.whatsapp.author_salt_file),
+        log: logger,
+        runId,
+        ...(since ? { since } : {}),
+      });
+      const groups = res.groups
+        .map((g) => `${g.name} ${String(g.inserted)} new${g.limitHit ? ' (LIMIT HIT)' : ''}`)
+        .join(', ');
+      return {
+        inserted: res.inserted,
+        detail: `${String(res.inserted)} new posts (${groups || 'no groups'})${res.warnings.length ? `; ${res.warnings.join('; ')}` : ''}`,
+      };
+    } finally {
+      await wa.destroy();
+    }
+  });
 }

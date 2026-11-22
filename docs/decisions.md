@@ -247,3 +247,45 @@ repo, commit 1769845).
   - **Retries** on network errors and truncated JSON (#19).
 - **Gate (live):** Thndr (Ashby, 19 open) and Careem (Greenhouse, 11 open). The pre-filter kept 1 (Thndr, Senior DevOps/Infrastructure Engineer, Cairo); the second run stored 0 new.
 - **Alternatives:** scraping careers HTML for every company (brittle, slower, closer to the line on terms); a paid jobs API (weak Egypt coverage).
+
+## D30: Companies are discovered from job links (Ahmed, 2026-11-22)
+
+- **Ahmed's requirement:** when an alert (or a group post) says "apply on the company website", the agent finds the company itself, without anyone adding it to `companies.yaml`.
+- **Choice: an enrichment stage before scoring** (`src/pipeline/enrich.ts`). It runs for form, WhatsApp and unknown-channel jobs from alerts, groups and hand-added posts whose title isn't excluded:
+  1. **Tracking links** are decoded offline: Wuzzuf `awstrack.me`, Bayt `tracklink`, and the Google and Facebook redirectors. Shorteners (bit.ly, lnkd.in, …) are followed through the guard.
+  2. **ATS links:** a link to an ATS board (jobs.lever.co/acme/…, jobs.ashbyhq.com/…) gives the board and this posting directly.
+  3. **LinkedIn links:** the logged-out page (`jobs-guest`, no cookies, ≤ 1 request / 5 s) gives the full description, the company, and offsite vs Easy Apply. It no longer contains the external link (troubleshooting #21).
+  4. **Company pages:** any other page is fetched once. Its schema.org `JobPosting` (Wuzzuf and most careers sites publish one for search engines) or an embedded ATS board gives the details, or else the page text is the description.
+  5. **Name probe:** with no board yet, the company name gives up to 3 board tokens (`DXC Technology` → `dxctechnology`, `dxc-technology`, `dxc`), tried on Greenhouse, Lever, Ashby, Workable and SmartRecruiters. **A guessed board is kept only if it lists the same title** (Dice ≥ 0.8). The result, found or not, is cached per company for 14 days.
+- **Re-extraction:** when the post listed fewer than 3 requirements, the full description is extracted again (Haiku) and merged. The post's own apply target stays, the description adds requirements, years, work mode and the deadline (`validThrough`). The direct link is stored as `jobs.apply_url_direct`, and the form package leads with it.
+- **Dynamic companies:** every board found goes into the `companies` table (`source = discovered`, with its evidence) and is polled by `collect:ats` on every later run, next to `companies.yaml`. A board failing 5 runs in a row is switched off. `agent companies` lists them.
+- **Never fetched:** application forms (Google/Microsoft Forms, Typeform…: the form is the application) and hosts that refuse bots (Indeed 401, Bayt 403). The agent **never submits** a form: it prepares the package (PLAN 1, out of scope on purpose: captchas, accounts, terms).
+- **Alternatives:** asking Ahmed for every company (what he wanted to avoid); logging into LinkedIn to read the external link (account risk, against its terms); a search engine API to find careers pages (paid, noisy).
+- **What production would add:** Workday and SuccessFactors adapters (large employers such as Henkel and DXC use them; not public JSON feeds); a per-company override list.
+
+## D31: The run orchestrator (P7)
+
+- **Collection and processing are decoupled.** Collectors store raw items and advance their watermarks in the same transaction (D26). Processing then reads **every raw item with `processed_at IS NULL`**, oldest first. So the usage limit (R18), a crash or a failed source loses nothing: the next run continues with what is left.
+- **Order:**
+  1. **Start:** preflight (subscription only), then Gmail sync.
+  2. **Collect:** WhatsApp, alerts, ATS, each isolated. A failing source makes the run `partial` and the others continue.
+  3. **Per item:** dedupe L1/L2, extract, then for each job L3, enrich (D30) and score. All of an item's jobs are stored in one transaction, so an item stopped half-way leaves nothing half-stored.
+  4. **Tailor queue:** priority, then fit, best first. Tailor, one-page CV, ATS check, then apply: an email draft (L4 guard first) or a package folder (`apply.md` with the direct link, the cover letter for paste boxes, screening answers, the CV). Anything that fails a check goes to `needs_review` with the reason.
+  5. **End:** the digest, with run health.
+- **Errors:**
+  - A usage limit stops model calls, and the run ends `partial`.
+  - A retryable model error (timeout) leaves the item for the next run.
+  - Any other error marks that one item or job and the run goes on.
+- **Dry run** (`agent run --dry-run`) works on a copy of the database (`data/dry-run.db`, rebuilt each time) and writes to `output/dry-run/`. Gmail is only read, the digest is printed, and the real database is untouched. Live runs take the pid lock `data/run.lock`.
+- **Testing aids:**
+  - `agent add [file]` stores a post by hand (an old post, a forwarded email) as source `manual`.
+  - `agent run --no-collect` reads only what is stored.
+  - `agent reprocess <job> --from score|tailor` redoes one job. An old Gmail draft stays in Drafts, because the agent has no delete permission.
+- **Schema (migration 002):** `raw_items` is rebuilt (SQLite's documented procedure: foreign keys off around the transaction, `foreign_key_check` before commit) to add the `manual` source and `processed_at`/`process_error`. It adds `companies`, `company_probes`, the `jobs.apply_phone`/`apply_url_direct`/`apply_note`/`enriched_from`/`company_id` columns and `applications.package_dir`/`answers`.
+- **Alternatives:** a job queue (BullMQ, needs Redis: too much for one daily run); watermark-only processing (loses items when the model stops mid-run).
+
+## D32: Tracker dashboard (P8)
+
+- **Choice:** Fastify 5.12.8 serving `dashboard/index.html` and the API of PLAN 10 on `127.0.0.1:8080` (`agent dashboard`). The page shows real jobs, status edits (written to `status_history` as `ahmed`), notes, and links to the CV, the cover letter (plain text), the package and the company site. It also lists the polled boards (config and discovered) and applications per day (from status changes to `applied`).
+- **Security:** see `docs/security.md` A11. Loopback only, Host allowlist against DNS rebinding, JSON-only writes with an Origin check against CSRF, a strict CSP, and files by job id and kind only, inside `output/` with symlinks resolved.
+- **Alternatives:** Node's `http` module (fewer dependencies but hand-written validation and routing; Fastify's `inject` also makes the API testable without a port); a React app (a build step for a one-person tracker).

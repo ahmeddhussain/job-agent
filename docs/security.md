@@ -41,10 +41,14 @@ Threat model and controls for `job-agent` (requirement R19). Status values:
 | A8 | URL fetching guard: https only, DNS resolved and private/link-local/metadata ranges refused, no cookies, timeouts, size cap, redirects re-checked | SSRF | done (P6): PoliteHttp, tested (private ranges, redirects, http, credentials) |
 | A9 | PDF rendering with **JavaScript disabled and all network requests blocked** in Puppeteer; templates escape every value | Script execution or data exfiltration through the CV template | done (P3), tested: a script in the page does not run |
 | A10 | Gmail scopes `gmail.readonly` + `gmail.compose` only; `draft` mode by default | A bug or injection sending mail | done (P5): two scopes checked at auth; facade + tests; digest self-only; draft refuses a different account |
-| A11 | Dashboard on 127.0.0.1 only, `Host` header allowlist, `Origin` check on writes, files served by DB id only | CSRF, DNS rebinding, path traversal | planned (P8) |
+| A11 | Dashboard on 127.0.0.1 only (refuses another host), `Host` header allowlist, writes need `Content-Type: application/json` and a same-origin `Origin`, strict CSP, files served by job id and kind from the DB and only inside `apply.output_dir` (symlinks resolved) | CSRF, DNS rebinding, path traversal | done (P8), tested with `inject`: foreign Host 403, form post 415, cross-origin 403, traversal 400/404, symlink out of `output/` 403 |
 | A12 | Container: non-root, read-only root filesystem, `cap_drop: [ALL]`, `no-new-privileges`, secrets mounted read-only, **never the Docker socket** | Escape from the container to the host | planned (P9) |
 | A13 | Exact dependency versions, lockfile, `npm ci`; `npm audit` and Trivy in CI; Dependabot | Supply-chain drift | partly done (pins); CI planned (P10) |
 | A14 | WhatsApp `ReadOnlyWhatsApp` facade + a grep test for write calls | The agent ever sending or reacting on WhatsApp | done (P4): facade + tests over all of `src/` |
+| A15 | Enrichment (D30) fetches only through PoliteHttp (A8); never fetches application forms (`enrich.form_hosts`) or hosts that refuse automated access (`enrich.skip_hosts`); LinkedIn only logged-out, no cookies, ≤ 1 request / 5 s; fetched page text is untrusted and goes to the model inside `<job_post>` fences like a post | SSRF; terms-of-service and account risk; prompt injection from web pages | done (P7), tested (form/blocked hosts make no request) |
+| A16 | Personal tokens in alert links (Bayt `userToken`, `email_name`) are stripped before anything is stored; click-tracker wrappers are decoded offline (no request to the tracker) | A login-capable token stored in the DB, the digest or the tracker | done (P7), tested |
+| A17 | A board guessed from a company name is added only when it lists the same job title; discovered boards that fail 5 runs are switched off | Polling (and applying through) an unrelated company with the same name | done (P7), tested |
+| A18 | `agent run` takes an exclusive pid lock; a lock held by a live process of another user counts as held (EPERM) | Two runs drafting the same applications twice | done (P7), tested |
 
 ## 4. Controls in Git
 

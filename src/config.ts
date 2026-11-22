@@ -61,6 +61,21 @@ export const ConfigSchema = z.strictObject({
     posting_max_chars: positiveInt,
     html_max_chars: positiveInt,
   }),
+  enrich: z.strictObject({
+    enabled: z.boolean(),
+    min_interval_seconds: z.number().min(1),
+    /** Never fetched: they refuse automated access (Indeed 401, Bayt 403). */
+    skip_hosts: z.array(realString),
+    /** The form is the application: never fetched, just linked. */
+    form_hosts: z.array(realString),
+    /** Job boards: their page text is not the company's own description. */
+    board_hosts: z.array(realString),
+    probe_ats_by_name: z.boolean(),
+    probe_cache_days: positiveInt,
+    min_title_similarity: ratio,
+    /** Re-extract from the full description when the post listed fewer requirements. */
+    thin_requirements: z.number().int().min(0),
+  }),
   llm: z.strictObject({
     provider: z.literal('claude_cli'), // D17: headless Claude Code on the subscription
     cli: z.strictObject({

@@ -136,6 +136,7 @@ From Ahmed's brief (explicit + implied). Re-check every item before calling the 
   - **Verify each endpoint's current shape at implementation time.**
 - Careers pages without an ATS feed use type `html`: fetch the page, hash the main content, and run `extract` only when the hash changes.
 - Add an `ats:detect <careers-url>` helper that recognises the ATS from the URL/HTML and prints the `companies.yaml` entry.
+- **Dynamic companies (D30, Ahmed 2026-11-22):** boards are also discovered automatically from job links in alerts and posts (ATS links, careers pages, or the company name when the board lists the same title) and polled on later runs; `companies.yaml` is optional.
 
 ### D6 — Headless Claude Code (`claude -p`) on Ahmed's subscription, two model tiers
 *Revised 2026-11-20 (decision D17 in `docs/decisions.md`): Ahmed is on the Pro plan with no API credits.*
@@ -450,8 +451,8 @@ The result (score, missing keywords, failures) is stored in `applications.ats_re
 
 | Channel | What the agent does | Status after |
 |---|---|---|
-| `email` | Builds a MIME multipart message (text body + CV PDF + cover-letter PDF), then `users.drafts.create` (mode `draft`) or `users.messages.send` (mode `send`, only when `fit ≥ auto_send_min_score`, priority ≤ `auto_send_max_priority`, no flags, and under `daily_send_cap`) | `ready` (draft) / `applied` (sent) |
-| `form` | Builds a package: PDFs, the apply URL, the cover letter as plain text (for paste boxes), draft answers to the common screening questions (years with X, notice period, expected salary, work authorization), filled from `profile.application_answers` | `ready` |
+| `email` | Builds a MIME multipart message (the cover letter as the text body + the CV PDF, D28), then `users.drafts.create` (mode `draft`) or `users.messages.send` (mode `send`, only when `fit ≥ auto_send_min_score`, priority ≤ `auto_send_max_priority`, no flags, and under `daily_send_cap`) | `ready` (draft) / `applied` (sent) |
+| `form` | Builds a package (`apply.md`): the CV, the apply URL (the company's own ATS posting when found, D30), the cover letter as plain text (for paste boxes), draft answers to the common screening questions (years with X, notice period, expected salary, work authorization), filled from `profile.application_answers` | `ready` |
 | `whatsapp_dm` | Package only (the agent never sends WhatsApp messages); the dashboard shows the number/link to contact | `ready` |
 | `unknown` | — | `needs_review` |
 

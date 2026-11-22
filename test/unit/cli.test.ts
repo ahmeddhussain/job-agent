@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { buildProgram, NotImplementedError } from '../../src/cli/program.js';
+import { buildProgram } from '../../src/cli/program.js';
 
 const COMMANDS = [
   'run',
@@ -19,6 +19,9 @@ const COMMANDS = [
   'sync',
   'config:check',
   'db:migrate',
+  'add',
+  'companies',
+  'dashboard',
 ];
 
 function makeProgram() {
@@ -36,23 +39,41 @@ describe('cli', () => {
     configPath = join(dir, 'config.yaml');
     const example = readFileSync('config/config.example.yaml', 'utf8')
       .replace('to: TODO@gmail.com', 'to: someone@example.com')
-      .replace('db: data/agent.db', `db: ${join(dir, 'agent.db')}`);
+      .replace('db: data/agent.db', `db: ${join(dir, 'agent.db')}`)
+      .replace('lock_file: data/run.lock', `lock_file: ${join(dir, 'run.lock')}`);
     writeFileSync(configPath, example);
   });
   afterEach(() => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it('registers every command from PLAN.md P0', () => {
+  it('registers every command (PLAN.md P0 plus P7/P8 additions)', () => {
     const { program } = makeProgram();
     expect(program.commands.map((c) => c.name()).sort()).toEqual([...COMMANDS].sort());
   });
 
-  it('commands from later phases fail loudly instead of pretending to work', async () => {
+  it('reprocess refuses an unknown job before touching anything', async () => {
     const { program } = makeProgram();
-    await expect(program.parseAsync(['node', 'agent', 'reprocess', '1'])).rejects.toBeInstanceOf(
-      NotImplementedError,
+    await expect(
+      program.parseAsync(['node', 'agent', '-c', configPath, 'reprocess', '1']),
+    ).rejects.toThrow(/job 1 not found/);
+    await expect(
+      program.parseAsync(['node', 'agent', '-c', configPath, 'reprocess', 'x']),
+    ).rejects.toThrow(/not a job id/);
+  });
+
+  it('add stores a pasted post once', async () => {
+    const post = join(dir, 'post.txt');
+    writeFileSync(
+      post,
+      'DevOps Engineer at Acme, Cairo. Linux, Docker, AWS. Send CV to jobs@acme.example',
     );
+    const a = makeProgram();
+    await a.program.parseAsync(['node', 'agent', '-c', configPath, 'add', post, '--name', 'test']);
+    expect(a.lines[0]).toMatch(/^stored as item 1/);
+    const b = makeProgram();
+    await b.program.parseAsync(['node', 'agent', '-c', configPath, 'add', post]);
+    expect(b.lines[0]).toMatch(/already stored/);
   });
 
   it('config:check validates and summarizes the config', async () => {
@@ -65,7 +86,7 @@ describe('cli', () => {
   it('db:migrate creates the database, and a rerun applies nothing', async () => {
     const first = makeProgram();
     await first.program.parseAsync(['node', 'agent', '-c', configPath, 'db:migrate']);
-    expect(first.lines).toContain('applied: 001_init.sql');
+    expect(first.lines).toContain('applied: 001_init.sql, 002_run.sql');
 
     const second = makeProgram();
     await second.program.parseAsync(['node', 'agent', '-c', configPath, 'db:migrate']);
