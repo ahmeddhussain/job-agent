@@ -162,9 +162,20 @@ export function explainGmailError(err: unknown): never {
   const e = err as {
     message?: string;
     code?: number | string;
-    response?: { data?: { error?: string } };
+    response?: { data?: { error?: unknown } };
   };
-  const text = `${e.message ?? ''} ${e.response?.data?.error ?? ''}`;
+  const text = `${e.message ?? ''} ${JSON.stringify(e.response?.data?.error ?? '')}`;
+  // 403 SERVICE_DISABLED: the Gmail API isn't enabled in the OAuth client's project.
+  if (/SERVICE_DISABLED|accessNotConfigured|has not been used in project/i.test(text)) {
+    const url =
+      /https:\/\/console\.developers\.google\.com\/apis\/api\/gmail\.googleapis\.com\/overview\?project=\d+/.exec(
+        text,
+      )?.[0];
+    throw new GmailAuthError(
+      `The Gmail API is not enabled in the Google Cloud project of your OAuth client. Enable it here, wait a minute, then retry:\n  ${url ?? 'https://console.cloud.google.com/apis/library/gmail.googleapis.com'}`,
+      { cause: err },
+    );
+  }
   if (/invalid_grant|invalid_token|unauthorized_client/i.test(text) || e.code === 401) {
     throw new GmailAuthError(REAUTH, { cause: err });
   }

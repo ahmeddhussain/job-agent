@@ -364,6 +364,30 @@ describe('expired or revoked Gmail authorization', () => {
     );
   });
 
+  it('explains a disabled Gmail API with the link to enable it', () => {
+    const url =
+      'https://console.developers.google.com/apis/api/gmail.googleapis.com/overview?project=640217805034';
+    const err = Object.assign(
+      new Error(
+        `Gmail API has not been used in project 640217805034 before or it is disabled. Enable it by visiting ${url} then retry.`,
+      ),
+      {
+        code: 403,
+        response: {
+          data: {
+            error: {
+              code: 403,
+              status: 'PERMISSION_DENIED',
+              details: [{ reason: 'SERVICE_DISABLED' }],
+            },
+          },
+        },
+      },
+    );
+    expect(() => explainGmailError(err)).toThrow(GmailAuthError);
+    expect(() => explainGmailError(err)).toThrow(url);
+  });
+
   it('passes other errors through unchanged (e.g. a 404 for a sent draft)', () => {
     const notFound = Object.assign(new Error('Not Found'), { code: 404 });
     expect(() => explainGmailError(notFound)).toThrow(notFound);

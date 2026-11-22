@@ -379,3 +379,37 @@ earlier "broken session" in #14 was most likely this conflict too.
 clicks "Use here", which only makes this window the active one for the same linked device:
 it sends nothing and changes no chat. Verified live on three consecutive runs: each one
 logged `whatsapp conflict screen: clicked "Use here"` and completed.
+
+---
+
+## 17. gmail:check: "Gmail API has not been used in project … or it is disabled"
+
+**Symptom.** After `gmail:auth` printed `Authorized`, `gmail:check` failed with a 403 and printed
+a huge JSON error object (request config, retry settings, response details) to the terminal:
+
+```
+"code":403 ... "reason":"SERVICE_DISABLED" ... "Gmail API has not been used in project 640217805034 before or it is disabled."
+```
+
+It still failed 45 minutes later, so it was not the "wait a few minutes" propagation delay.
+
+**Diagnosis.** The OAuth client works (authorization succeeded, token holds both scopes), but the
+Gmail API itself was never enabled in the project that owns that client (setup step 1.3, or it was
+enabled in a different project). Separately, the CLI logged whole error objects at fatal level:
+unreadable, and a risk, since API errors can carry request configuration.
+
+**Fix.**
+- Ahmed enables the Gmail API at the activation link for project 640217805034.
+- Code: `explainGmailError` maps `SERVICE_DISABLED`/`accessNotConfigured` to one instruction with the link.
+- The CLI prints Gmail setup errors as plain messages (exit 77), and any other error as a single `error: <message>` line. Full objects go to the log only at `LOG_LEVEL=debug`.
+
+Verified:
+
+```
+The Gmail API is not enabled in the Google Cloud project of your OAuth client. Enable it here, wait a minute, then retry:
+  https://console.developers.google.com/apis/api/gmail.googleapis.com/overview?project=640217805034
+exit=77
+```
+
+Note: the token showed `refresh_token_expires_in: 604799` (7 days), so the app is in Testing mode and
+`gmail:auth` must be re-run weekly (D27 addendum).
