@@ -232,3 +232,18 @@ repo, commit 1769845).
 - **Alternatives:** a short body plus a cover-letter PDF (the original plan; recruiters often don't open a second attachment); both (duplicated text).
 - **Why:** the recruiter reads the letter without opening anything, it's one fewer file for an ATS to parse, and the email stays tailored to the job. The truth validator's cover-letter rules (180–250 words, no clichés, facts only) now protect the email body directly.
 - **Verified live:** 3 re-tailored fixtures pass (198–220 words); the test draft to Ahmed has the letter as its body and one attachment, the CV, byte-identical (77,484 bytes).
+
+## D29: Company job feeds (P6)
+
+- **Choice:**
+  - **Adapters** for Greenhouse, Lever, Ashby, SmartRecruiters (list plus a per-posting details call) and Workable, plus an `html` type for careers pages without an ATS.
+  - **Formats verified live** on 2026-11-22: Greenhouse (careem), Lever (palantir), Ashby (thndr), SmartRecruiters (smartrecruiters). Trimmed real responses are kept as test fixtures. Workable's job fields could not be verified (the boards probed had no openings), so every field is optional.
+  - **Companies** are listed in `config/companies.yaml` (gitignored; example committed). `ats:detect <url>` recognises the ATS from the URL or the page HTML and proves the feed works before suggesting the entry.
+- **What is collected:** every currently open posting whose title is P1/P2, whose location is in `ats.keep_locations` (or that is remote), and that is not older than `ats.max_age_days` (45). There is no 24-hour window for feeds: an opening posted ten days ago is still applicable today. A posting is stored once (L0 on `ats:<board>:<id>`), and details are fetched only for unseen postings. P3 titles are never taken from feeds: big boards would flood the model.
+- **html pages:** the page text is one raw item keyed by its content hash, so a new item appears only when the page changes, and extraction then finds the roles.
+- **HTTP:**
+  - **Guarded fetches** through `PoliteHttp`: https only; DNS-resolved addresses must be public (loopback, RFC 1918, link-local/metadata, CGNAT, multicast and IPv6 private ranges refused), and so must every redirect target; no cookies.
+  - **Politeness and limits:** one request per host per `ats.min_interval_seconds`; `Retry-After` honoured once; a 30 s timeout and a 10 MB cap.
+  - **Retries** on network errors and truncated JSON (#19).
+- **Gate (live):** Thndr (Ashby, 19 open) and Careem (Greenhouse, 11 open). The pre-filter kept 1 (Thndr, Senior DevOps/Infrastructure Engineer, Cairo); the second run stored 0 new.
+- **Alternatives:** scraping careers HTML for every company (brittle, slower, closer to the line on terms); a paid jobs API (weak Egypt coverage).

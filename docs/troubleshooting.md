@@ -438,3 +438,25 @@ Three emails were exactly 20,012 characters, i.e. cut at the 20,000 cap.
 - Result: LinkedIn alert 20,012 → 10,444 characters, Indeed alert 12,177 → 5,705.
 - Still open: opaque `engage.indeed.com` trackers carry no job key. Resolving them needs an HTTP
   request to Indeed (with the SSRF guard, A8), so it is planned for P7.
+
+---
+
+## 19. Job-feed responses empty or cut off mid-JSON
+
+**Symptom.** While recording ATS fixtures, the same Lever URL returned in turn:
+
+```
+http=000 size=0
+http=200 size=17528   -> json.decoder.JSONDecodeError: Unterminated string starting at: line 1 column 17084
+http=200 size=40283   -> valid json
+```
+
+The same instability showed earlier as a GitHub push timeout and an empty first download.
+
+**Diagnosis.** The VM's connection intermittently drops or truncates responses; the server is
+fine (the third try was complete). A collector that trusts the first response would record a
+failed run, or silently fewer jobs, at random.
+
+**Fix.** `PoliteHttp.json()` retries network errors and bodies that aren't complete JSON (3 tries,
+growing delay). Refusals by the SSRF guard and HTTP 4xx answers are final and not retried. A test
+feeds a truncated body first and checks the retry succeeds.

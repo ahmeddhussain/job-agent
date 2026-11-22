@@ -56,6 +56,10 @@ export const ConfigSchema = z.strictObject({
     companies_file: realString,
     min_interval_seconds: z.number().min(1),
     user_agent: realString,
+    keep_locations: z.array(realString).min(1),
+    max_age_days: positiveInt,
+    posting_max_chars: positiveInt,
+    html_max_chars: positiveInt,
   }),
   llm: z.strictObject({
     provider: z.literal('claude_cli'), // D17: headless Claude Code on the subscription

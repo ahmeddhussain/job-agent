@@ -100,7 +100,7 @@ export function buildProgram(io: Io): Command {
     .command('collect')
     .description('collect new posts from one source into the database (no model calls)')
     .addArgument(
-      new Argument('<source>', 'source').choices(['whatsapp', 'whatsapp-export', 'alerts']),
+      new Argument('<source>', 'source').choices(['whatsapp', 'whatsapp-export', 'alerts', 'ats']),
     )
     .option('--since <iso>', 'override the watermark (ISO-8601)')
     .option('--dry-run', 'count only; write nothing')
@@ -119,6 +119,11 @@ export function buildProgram(io: Io): Command {
         },
       ) => {
         const cfg = loadConfig(configPath());
+        if (source === 'ats') {
+          const a = await import('./ats.js');
+          await a.collectAtsCommand(cfg, opts, io);
+          return;
+        }
         if (source === 'alerts') {
           const g = await import('./gmail.js');
           await g.collectAlertsCommand(cfg, opts, io);
@@ -194,9 +199,14 @@ export function buildProgram(io: Io): Command {
 
   program
     .command('ats:detect')
-    .description('detect the ATS behind a careers URL and print its companies.yaml entry')
+    .description(
+      'detect the ATS behind a careers URL, verify its feed, print the companies.yaml entry',
+    )
     .argument('<url>', 'careers page URL')
-    .action(notYet('ats:detect', 'P6'));
+    .action(async (url: string) => {
+      const a = await import('./ats.js');
+      await a.atsDetectCommand(loadConfig(configPath()), url, io);
+    });
 
   program
     .command('config:check')

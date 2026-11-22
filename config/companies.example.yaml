@@ -1,0 +1,10 @@
+# companies.example.yaml: copy to config/companies.yaml (gitignored) and edit.
+# Add a company from its careers page with:  npm run agent -- ats:detect <careers-url>
+companies:
+  - { name: Thndr, ats: ashby, board: thndr }
+  - { name: Careem, ats: greenhouse, board: careem }
+  # Other kinds:
+  # - { name: Example, ats: lever, board: example }
+  # - { name: Example, ats: smartrecruiters, board: Example }
+  # - { name: Example, ats: workable, board: example }
+  # - { name: Example, ats: html, url: https://example.com/careers }   # no ATS feed: page change detection

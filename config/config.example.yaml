@@ -48,6 +48,10 @@ ats:
   companies_file: config/companies.yaml
   min_interval_seconds: 1
   user_agent: "job-agent/1.0 (personal job search)"
+  keep_locations: [Egypt, Cairo, Giza, Alexandria, "6th of October", "New Cairo", Remote, EMEA, MENA, "Middle East"]
+  max_age_days: 45                 # skip postings older than this (when the feed dates them)
+  posting_max_chars: 20000         # one posting's text sent to extraction
+  html_max_chars: 30000            # a careers page without an ATS feed
 
 llm:
   provider: claude_cli             # headless Claude Code on the Pro subscription (D17)
