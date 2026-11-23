@@ -1,4 +1,4 @@
-// Security behaviour of the claude -p wrapper (docs/security.md A1-A5), against a fake CLI.
+// Security behaviour of the claude -p wrapper (docs/dev/security.md A1-A5), against a fake CLI.
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';

@@ -24,7 +24,7 @@ import { TitleMatcher } from '../../src/pipeline/titles.js';
 import { AnswerError, setAnswer } from '../../src/profile/answers.js';
 import { loadProfile } from '../../src/profile/load.js';
 
-const raw = parse(readFileSync('config/config.example.yaml', 'utf8')) as Record<
+const raw = parse(readFileSync('config/defaults.yaml', 'utf8')) as Record<
   string,
   Record<string, unknown>
 >;
@@ -36,7 +36,7 @@ let cfg: Config;
 beforeAll(() => {
   dir = mkdtempSync(join(tmpdir(), 'q-'));
   profilePath = join(dir, 'profile.yaml');
-  copyFileSync('profile/master_profile.example.yaml', profilePath);
+  copyFileSync('test/fixtures/profile.yaml', profilePath);
   raw['paths'] = { ...raw['paths'], profile: profilePath };
   raw['apply'] = { ...raw['apply'], output_dir: join(dir, 'output') };
   cfg = parseConfig(raw);
@@ -76,7 +76,7 @@ describe('posting dates (D34)', () => {
     } as CheckedJob;
     const ctx = {
       cfg,
-      matcher: TitleMatcher.fromFile('config/titles.yaml'),
+      matcher: TitleMatcher.fromFile('test/fixtures/titles.yaml'),
       runDate: '2026-11-23',
     };
     expect(hardFilter({ ...job, job_posted_at: '2026-08-25T00:00:00Z' }, ctx).reason).toBe('stale');

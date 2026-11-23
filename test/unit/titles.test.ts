@@ -4,9 +4,9 @@ import { loadProfile } from '../../src/profile/load.js';
 import { specialismFor } from '../../src/profile/specialisms.js';
 import { loadFixtures } from '../helpers/fixtures.js';
 
-const matcher = TitleMatcher.fromFile('config/titles.yaml');
+const matcher = TitleMatcher.fromFile('test/fixtures/titles.yaml');
 // Specialisms come from the profile (D44); the example profile defines the five used here.
-const profile = loadProfile('profile/master_profile.example.yaml');
+const profile = loadProfile('test/fixtures/profile.yaml');
 
 const cases = loadFixtures().flatMap((f) => f.expected.jobs.map((j) => ({ fixture: f.id, ...j })));
 

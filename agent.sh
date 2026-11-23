@@ -1,22 +1,33 @@
 #!/usr/bin/env bash
-# agent.sh: the daily commands for the job agent (docs/runbooks/daily-use.md).
-#   ./agent.sh run            collect, score, prepare, draft emails, submit forms
-#   ./agent.sh dashboard      open the tracker in the browser (Ctrl-C stops it)
-#   ./agent.sh apply          finish the "apply yourself" jobs in a pre-filled window
-#   ./agent.sh send           send every reviewed email draft (asks once)
-#   ./agent.sh skipped [days] list what was skipped, with reasons and links
-#   ./agent.sh help           everything else
+# agent.sh: the everyday commands for the job agent (docs/daily-use.md).
+#   ./agent.sh init            create your profile (from your CV, with Claude)
+#   ./agent.sh run             collect, score, prepare CVs and letters, apply
+#   ./agent.sh dashboard       open the tracker in the browser (Ctrl-C stops it)
+#   ./agent.sh apply           finish the "apply yourself" jobs in a pre-filled window
+#   ./agent.sh send            send every reviewed email draft (asks once)
+#   ./agent.sh help            everything else
+# Any command can take a profile first: ./agent.sh --profile <name> run
 set -euo pipefail
 
+# Paths the user types (./agent.sh add post.txt) are relative to where they typed them.
+export JOB_AGENT_CALLER_CWD="$PWD"
 cd "$(dirname "$(readlink -f "$0")")"
 PORT="${DASHBOARD_PORT:-8080}"
-
-agent() { npm run -s agent -- "$@"; }
 
 die() {
   echo "agent.sh: $*" >&2
   exit 1
 }
+
+if [[ "${1:-}" == "--profile" || "${1:-}" == "-p" ]]; then
+  [[ -n "${2:-}" ]] || die "--profile needs a name"
+  export JOB_AGENT_PROFILE="$2"
+  shift 2
+fi
+
+[[ -d node_modules ]] || die "not installed yet: run ./install.sh"
+
+agent() { npm run -s agent -- "$@"; }
 
 # A visible browser (apply, dashboard) needs the desktop session. From a terminal on the
 # desktop these are set already; from SSH or an IDE terminal they may be missing.
@@ -29,12 +40,12 @@ use_desktop() {
       auth="$(find "/run/user/$(id -u)" -maxdepth 1 -name '.mutter-Xwaylandauth.*' 2>/dev/null | head -n 1)"
       if [[ -n "$auth" ]]; then export XAUTHORITY="$auth"; fi
     elif [[ "${1:-}" != soft ]]; then
-      die "no desktop session found: run this from a terminal on the VM's desktop"
+      die "no desktop session found: run this from a terminal on your desktop"
     fi
   fi
 }
 
-# Warn before a run if Gmail will refuse (Testing mode tokens expire after 7 days).
+# Warn before a run if Gmail is on but will refuse (Testing-mode tokens expire after 7 days).
 gmail_hint() {
   local out
   if ! out="$(agent gmail:check 2>&1)"; then
@@ -46,9 +57,11 @@ gmail_hint() {
 }
 
 open_url() {
-  use_desktop
-  if command -v xdg-open >/dev/null; then
+  use_desktop soft
+  if command -v xdg-open >/dev/null && [[ -n "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]]; then
     xdg-open "$1" >/dev/null 2>&1 &
+  elif command -v open >/dev/null; then
+    open "$1"
   else
     echo "open $1 in your browser"
   fi
@@ -77,6 +90,14 @@ dashboard() {
 cmd="${1:-help}"
 shift || true
 case "$cmd" in
+  init) agent init "$@" ;;
+  use)
+    [[ -n "${1:-}" ]] || die "usage: ./agent.sh use <profile>"
+    agent profile:use "$1"
+    ;;
+  profiles) agent profile:list ;;
+  reviewed) agent profile:reviewed ;;
+  demo) JOB_AGENT_PROFILE=example agent demo:seed ;;
   run)
     gmail_hint
     status=0
@@ -119,14 +140,23 @@ case "$cmd" in
     ;;
   gmail-auth) agent gmail:auth ;;
   whatsapp-login) agent wa:login ;;
+  whatsapp-groups) agent wa:groups ;;
   help | -h | --help)
     cat <<'HELP'
+Setup
+  ./agent.sh init             create your profile: from your CV (via Claude), or the example
+  ./agent.sh reviewed         after checking profile.yaml and titles.yaml: allow runs
+  ./agent.sh profiles         list profiles (* = active);  ./agent.sh use <name> switches
+  ./agent.sh demo             fictional jobs in the example profile, to try the dashboard:
+                              then ./agent.sh --profile example dashboard
+
 Daily
-  ./agent.sh run              collect WhatsApp, alerts and company boards; score; prepare CVs;
-                              draft emails; submit web forms (failures go to "Apply yourself")
-  ./agent.sh dashboard [tab]  tracker in the browser (tabs: today, action, applied, skipped, all, profile)
+  ./agent.sh run              collect jobs from your sources; score; prepare a CV and cover
+                              letter for each fit; draft emails; submit web forms
+  ./agent.sh dashboard [tab]  tracker in the browser (tabs: today, action, applied, skipped,
+                              all, sources, profile, settings)
   ./agent.sh apply            open each "apply yourself" job pre-filled (incl. LinkedIn Easy Apply)
-  ./agent.sh send             send all reviewed email drafts (asks once)
+  ./agent.sh send             send all reviewed email drafts (asks once; needs Gmail)
   ./agent.sh skipped [days]   skipped jobs with reasons and links (default 7 days)
 
 Sometimes
@@ -135,10 +165,14 @@ Sometimes
   ./agent.sh retry            retry forms that waited for questions you've since answered
   ./agent.sh recheck          read real posting dates of jobs not applied to; skip the stale ones
   ./agent.sh add <file>       add a post by hand (an old post, a forwarded email)
-  ./agent.sh status           config, Gmail token age, polled companies
-  ./agent.sh gmail-auth       re-authorize Gmail (weekly while the app is in Testing mode)
-  ./agent.sh whatsapp-login   link WhatsApp again (QR code)
+  ./agent.sh status           config, sources, Gmail token age, polled companies
 
+Optional sources (docs/sources.md)
+  ./agent.sh gmail-auth       connect Gmail: email drafts, job-alert emails, digest
+  ./agent.sh whatsapp-login   link WhatsApp (QR code), read-only
+  ./agent.sh whatsapp-groups  list your groups, to choose which ones to read
+
+Any command takes a profile first: ./agent.sh --profile <name> <command>
 Everything else: npm run agent -- --help
 HELP
     ;;

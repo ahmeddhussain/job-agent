@@ -1,0 +1,204 @@
+# profile.yaml: the ONLY source of facts for every CV and cover letter this profile sends.
+# This one is FICTIONAL (Mona Adel does not exist): it shows the format, and lets you try
+# the agent with `./agent.sh --profile example dry-run`. Create your own from your CV with
+# ./agent.sh init, then review every line. Reference: docs/profiles.md.
+#
+# Rules (enforced in code):
+#   - The model may only select and rephrase what is here. It cannot add facts.
+#   - Bullets with status: in_progress can only be described as in progress.
+#   - Nothing in `not_held` may appear in any CV or cover letter.
+#   - Any list item with `confirmed: false` is left out until you set it to true.
+
+candidate:
+  first_name: Mona
+  last_name: Adel
+  full_name: Mona Adel Farouk
+  location: Alexandria, Egypt
+  email: mona.adel@example.com
+  phone: '01000000000'
+  links:
+    github: https://github.com/example
+    linkedin: https://linkedin.com/in/example
+
+max_years_required: 2 # jobs asking for more years than this are skipped
+
+# How you present yourself, by the kind of job. A job title is matched against each
+# specialism's `match` patterns in this order; the first match wins, else the default.
+specialisms:
+  support:
+    match: ['support', 'help[\s-]?desk', 'service[\s-]?desk', '\bit\s+specialist']
+    headline: IT Support Engineer
+    summary: >-
+      IT support engineer with a year of hands-on help-desk work for a 120-person office:
+      Windows and Linux troubleshooting, Microsoft 365 administration and ticket handling,
+      backed by a cloud and Linux training track.
+    pitch: I solve users' problems quickly and write down the fix so it stays solved.
+    evidence: [helpdesk_tickets, helpdesk_m365, helpdesk_runbooks]
+    motivation: I enjoy being the person who gets a team working again.
+    detailed_projects: [home_lab]
+  cloud:
+    match: ['cloud', 'dev\s?ops', 'platform', 'infra(structure)?']
+    headline: Junior Cloud Engineer
+    summary: >-
+      Junior cloud engineer who builds and automates small AWS environments with Terraform,
+      Docker and GitHub Actions, with a year of production IT support behind her.
+    pitch: I automate what I set up, so it can be rebuilt from code.
+    evidence: [webapp_terraform, webapp_pipeline, monitoring_stack]
+    motivation: I want to grow into infrastructure work on a team that runs real workloads.
+default_specialism: cloud
+
+featured_projects: [aws_webapp, monitoring] # always get bullets on the CV
+
+cover_letter:
+  style:
+    - Short and direct, 150-220 words, no clichés.
+    - One concrete example from the evidence, with its result.
+
+education:
+  - id: bsc_cs
+    degree: B.Sc. Computer Science
+    school: Alexandria University
+    dates: 2019 - 2023
+    gpa: Very Good
+
+certifications:
+  - { id: aws_ccp, name: AWS Certified Cloud Practitioner, issuer: Amazon Web Services }
+
+badges: []
+
+courses:
+  - { id: cloud_track, name: Cloud and DevOps track (9 months), dates: 2023 - 2024 }
+
+not_held:
+  - AWS Solutions Architect
+  - CCNA
+  - Kubernetes administration in production
+
+experience:
+  - id: helpdesk
+    title: IT Support Specialist
+    company: Delta Logistics (fictional)
+    dates: Jan 2024 - Present
+    status: done
+    bullets:
+      - id: helpdesk_tickets
+        label: Support
+        text: Resolve about 25 tickets a week for 120 users across Windows 11 laptops, printers and the office network.
+        tags: [support, windows, networking]
+      - id: helpdesk_m365
+        label: Microsoft 365
+        text: Administer Microsoft 365 accounts, licences and shared mailboxes, including onboarding and offboarding.
+        tags: [m365, identity]
+      - id: helpdesk_runbooks
+        label: Documentation
+        text: Wrote 15 runbooks for recurring issues, which new staff now use before opening a ticket.
+        tags: [documentation]
+
+projects:
+  - id: aws_webapp
+    name: Three-tier web app on AWS
+    dates: '2024'
+    link: https://github.com/example/aws-webapp
+    stack: AWS (VPC, EC2, RDS, ALB), Terraform, Docker, GitHub Actions
+    status: done
+    bullets:
+      - id: webapp_terraform
+        label: Infrastructure as code
+        text: Built a VPC with public and private subnets, an ALB and an RDS database entirely in Terraform modules.
+        tags: [aws, terraform]
+      - id: webapp_pipeline
+        label: CI/CD
+        text: Added a GitHub Actions pipeline that tests, builds the Docker image and deploys it on every merge.
+        tags: [cicd, docker]
+  - id: monitoring
+    name: Monitoring stack
+    dates: '2024'
+    stack: Prometheus, Grafana, Alertmanager, Docker Compose
+    status: done
+    bullets:
+      - id: monitoring_stack
+        label: Observability
+        text: Set up Prometheus and Grafana for five Linux servers with alerts on disk, memory and service health.
+        tags: [monitoring, linux]
+  - id: home_lab
+    name: Home lab
+    dates: 2023 - Present
+    stack: Proxmox, Ubuntu Server, pfSense, Active Directory
+    status: in_progress
+    bullets:
+      - id: lab_ad
+        label: Identity
+        text: Running an Active Directory domain with group policies and a pfSense firewall in Proxmox.
+        tags: [windows, networking, identity]
+  - id: backup_script
+    name: Backup automation
+    dates: '2024'
+    stack: Bash, cron, rsync
+    status: done
+    bullets:
+      - id: backup_rsync
+        text: Wrote a Bash script that backs up shared folders nightly with rsync and emails a summary.
+        tags: [linux, automation]
+  - id: ansible_setup
+    name: Workstation setup with Ansible
+    dates: '2024'
+    stack: Ansible, Ubuntu
+    status: done
+    bullets:
+      - id: ansible_play
+        text: Automated the setup of new Ubuntu workstations with an Ansible playbook, from about two hours to fifteen minutes.
+        tags: [automation, linux]
+
+stories:
+  - id: story_outage
+    text: When the office internet failed on a payroll day, she found a misconfigured DHCP lease range and restored access within an hour.
+
+skills:
+  Cloud:
+    - {
+        id: aws,
+        core: true,
+        name: 'AWS (EC2, VPC, RDS, IAM)',
+        level: working,
+        evidence: [aws_webapp],
+      }
+    - { id: terraform, core: true, name: Terraform, level: working, evidence: [aws_webapp] }
+  Containers & CI/CD:
+    - { id: docker, core: true, name: Docker, level: working, evidence: [aws_webapp, monitoring] }
+    - { id: github_actions, name: GitHub Actions, level: working, evidence: [aws_webapp] }
+  Systems:
+    - {
+        id: linux,
+        core: true,
+        name: Linux (Ubuntu),
+        level: working,
+        evidence: [monitoring, backup_script],
+      }
+    - { id: windows, core: true, name: Windows 11 support, level: strong, evidence: [helpdesk] }
+    - { id: m365, name: Microsoft 365 administration, level: working, evidence: [helpdesk] }
+    - { id: active_directory, name: Active Directory, level: familiar, evidence: [home_lab] }
+  Automation & Monitoring:
+    - { id: bash, name: Bash, level: working, evidence: [backup_script] }
+    - { id: ansible, name: Ansible, level: familiar, evidence: [ansible_setup] }
+    - {
+        id: prometheus,
+        core: true,
+        name: Prometheus and Grafana,
+        level: working,
+        evidence: [monitoring],
+      }
+
+soft_skills: [Clear writing, Patience with users, Calm under pressure]
+known_gaps: [No production Kubernetes experience]
+
+languages:
+  - { name: Arabic, level: Native }
+  - { name: English, level: Very good }
+
+# Ready answers for application forms. Questions a form asks that are not here show up
+# in the dashboard (Needs action) so you answer each one once.
+application_answers:
+  Notice period: Two weeks
+  Expected salary (EGP per month): '15000'
+  Willing to relocate: 'No'
+  Work authorization in Egypt: 'Yes, Egyptian citizen'

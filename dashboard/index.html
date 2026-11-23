@@ -298,6 +298,7 @@
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   // Job posts are untrusted: only http(s) links are ever rendered as links.
   const safeUrl = (u) => { if (!u) return null; try { const x = new URL(u, location.href); return /^https?:$/.test(x.protocol) ? x.href : null; } catch { return null; } };
+  const mailLink = (u, label, cls = "btn small") => (typeof u === "string" && u.startsWith("mailto:") ? `<a class="${cls}" href="${esc(u)}">${esc(label)}</a>` : "");
   const link = (u, label, cls = "btn small") => { const s = safeUrl(u); return s ? `<a class="${cls}" href="${esc(s)}" target="_blank" rel="noopener noreferrer">${esc(label)}</a>` : ""; };
 
   const STATUS = {
@@ -330,7 +331,7 @@
   const CHANNEL = { email: "Email", form: "Web form", whatsapp_dm: "WhatsApp", unknown: "Unknown" };
   const RUNS = { run: "Run", queue: "Process the queue", dry_run: "Dry run", send: "Send reviewed drafts", retry: "Retry waiting forms", recheck: "Recheck posting dates" };
 
-  const state = { jobs: [], dup: [], stats: null, profile: null, runs: [], settings: null, editable: false, sugg: [], sources: [], follow: [], run: null,
+  const state = { pfiles: null, pfilesLoading: false, pfile: "profile", pdraft: {}, pfileErr: "", jobs: [], dup: [], stats: null, profile: null, runs: [], settings: null, editable: false, sugg: [], sources: [], follow: [], run: null,
     tab: "today", q: "", status: "", source: "", mode: "", channel: "", within: "", minfit: 0, sort: { k: "posted", d: -1 }, showDup: false, open: null, dtab: "overview", sel: new Set(), cv: false, kf: -1, applyQueue: false, assistOpen: null };
 
   // ---------------------------------------------------------------- helpers
@@ -593,7 +594,7 @@
     return `<div class="page-h"><h2>Needs action</h2><div class="hint">Everything that waits for you, in the order to do it.</div></div>
       ${qs.length ? `<div class="panel"><h3>Questions forms asked that your profile doesn't answer</h3><div class="sub">Answer once: saved to your profile, and the waiting forms are retried on the next run.</div>${questionRows(qs)}</div>` : ""}
       ${sec("Email drafts to send", "Read them in Gmail Drafts; edit or delete any; then send all at once.", drafts, (j) => jobCard(j, `<div class="reason">To ${esc(j.apply_email)}</div>`, `${link(j.gmail_draft_url, "Open draft", "btn small primary")}${docs(j)}<button class="btn small good" data-status="${j.id}:applied">Mark sent</button>${notFit(j.id)}`), drafts.length ? `<button class="btn small primary" data-act="sendall">Send all ${drafts.length}</button>` : "")}
-      ${sec("Apply yourself", "Prepared but not submitted: a captcha, a sign-in, Easy Apply or an open question. “Open pre-filled” puts it on your desktop, ready to submit.", manual, (j) => jobCard(j, `<div class="reason">${esc(j.manual_reason || "apply on the site")}</div>`, `<button class="btn small primary" data-assist="${j.id}">${state.assistOpen === j.id ? "Reopen" : "Open pre-filled"}</button>${docs(j)}<button class="btn small good" data-status="${j.id}:applied">Mark applied</button>${notFit(j.id)}`), manual.length ? `<button class="btn small primary" data-act="applyall">Apply all, one by one</button>` : "")}
+      ${sec("Apply yourself", "Prepared but not submitted: a captcha, a sign-in, Easy Apply or an open question. “Open pre-filled” puts it on your desktop, ready to submit.", manual, (j) => jobCard(j, `<div class="reason">${esc(j.manual_reason || "apply on the site")}</div>`, `${j.mailto ? mailLink(j.mailto, "Write the email", "btn small primary") : `<button class="btn small primary" data-assist="${j.id}">${state.assistOpen === j.id ? "Reopen" : "Open pre-filled"}</button>`}${docs(j)}<button class="btn small good" data-status="${j.id}:applied">Mark applied</button>${notFit(j.id)}`), manual.length ? `<button class="btn small primary" data-act="applyall">Apply all, one by one</button>` : "")}
       ${fol.length ? `<div class="section-title"><h3>Follow-ups due</h3><span class="count">${fol.length}</span></div><div class="section-hint">Email applications with no reply after a week. One click drafts a short follow-up in the same Gmail thread; you send it.</div>
         <div class="cards">${fol.map((f) => `<div class="card"><div class="top"><div><div class="title" data-open="${f.job_id}">${esc(f.title)}</div><div class="muted">${esc(f.company || "")} · sent ${f.days} days ago to ${esc(f.to)}</div></div></div><div class="row-actions"><button class="btn small primary" data-follow="${f.job_id}">Draft follow-up</button><button class="btn small" data-status="${f.job_id}:rejected">They rejected me</button></div></div>`).join("")}</div>` : ""}
       ${sec("Needs review", "The agent stopped before preparing these: an eligibility condition, signs of a scam, or no way to apply.", review, (j) => jobCard(j, `<div class="reason">${esc(j.skip_reason || "check")}${(j.flags || []).length ? " · " + j.flags.map(esc).join(", ") : ""}</div>`, `<button class="btn small primary" data-status="${j.id}:new">Prepare anyway</button>${link(j.apply_url, "Listing")}${notFit(j.id)}`))}
@@ -682,7 +683,7 @@
           <div class="kv" style="grid-template-columns:90px 1fr"><span class="k">Email</span><span>${esc(p.candidate.email)}</span><span class="k">Phone</span><span>${esc(p.candidate.phone)}</span>
             ${Object.entries(p.candidate.links || {}).map(([k, u]) => `<span class="k">${esc(k)}</span><span>${link(u, u, "")}</span>`).join("")}</div>
           <div>${["projects", "experience", "certifications", "skills", "not_held"].map((k) => `<span class="chip">${esc(p.counts[k])} ${esc(k.replace("_", " "))}</span>`).join("")}</div>
-          <div class="faint" style="margin-top:8px">Facts, projects and skills live in <span class="mono">profile/master_profile.yaml</span>; every CV is checked against it.</div></div>
+          <div class="faint" style="margin-top:8px">Facts, projects and skills live in <span class="mono">profile.yaml</span>${state.pfiles?.profile_name ? ` (profile <b>${esc(state.pfiles.profile_name)}</b>)` : ""}; every CV is checked against it. Edit it below.</div></div>
         <div class="panel"><h3>Questions waiting <span class="count ${qs.length ? "hot" : ""}">${qs.length || ""}</span></h3><div class="sub">Asked by application forms; answered once, used on every form after.</div>${qs.length ? questionRows(qs) : `<div class="empty">None. Every question so far had an answer.</div>`}</div>
       </div>
       <div class="panel answers"><h3>Ready answers</h3><div class="sub">Used to fill application forms. Saved straight into your profile file (the previous version is kept as .bak).</div>
@@ -690,7 +691,37 @@
         <div class="a"><input type="text" id="newkey" placeholder="new_key, e.g. graduation_year"><input type="text" id="newval" placeholder="answer"><button class="btn small" id="addanswer">Add</button></div></div>
       <div class="panel"><h3>Specialisms</h3><div class="sub">How you present yourself for different kinds of jobs. The first whose title words match a job is used (default: <b>${esc(p.default_specialism)}</b>).</div>
         ${Object.entries(p.specialisms || {}).map(([a, sp]) => `<details style="margin:8px 0"><summary><b>${esc(a)}</b> · <span class="muted">${esc(sp.headline)}</span></summary><p class="muted">${esc(sp.summary)}</p><div>${(sp.match || []).map((m) => `<span class="chip mono">${esc(m)}</span>`).join("")}</div></details>`).join("")}
-        <div style="margin-top:10px">${(p.certifications || []).map((c) => `<span class="chip accent">${esc(c)}</span>`).join("")}</div></div>`;
+        <div style="margin-top:10px">${(p.certifications || []).map((c) => `<span class="chip accent">${esc(c)}</span>`).join("")}</div></div>
+      ${fileEditor()}`;
+  }
+
+  // The whole profile.yaml / titles.yaml (D45): checked by the server exactly as a run
+  // would load it; nothing is saved if it is invalid.
+  function fileEditor() {
+    if (!state.pfiles) { if (!state.pfilesLoading) loadProfileFiles(); return `<div class="panel"><h3>Edit profile files</h3><div class="faint">Loading…</div></div>`; }
+    const f = state.pfile, text = state.pdraft[f] ?? state.pfiles[f], changed = state.pdraft[f] !== undefined && state.pdraft[f] !== state.pfiles[f];
+    const tab = (k, label) => `<button class="btn small ${f === k ? "primary" : ""}" data-pfile="${k}">${label}${state.pdraft[k] !== undefined && state.pdraft[k] !== state.pfiles[k] ? " •" : ""}</button>`;
+    return `<div class="panel"><h3>Edit profile files</h3><div class="sub"><b>profile.yaml</b>: the facts every CV, letter and answer is built from (experience, projects, skills, certifications, specialisms). <b>titles.yaml</b>: the job titles you want (p1, p2) and never want (exclude). Checked before saving; the previous version is kept as .bak.</div>
+      <div class="row-actions" style="margin:6px 0">${tab("profile", "profile.yaml")}${tab("titles", "titles.yaml")}</div>
+      <textarea id="pfiletext" class="mono" spellcheck="false" rows="28" style="width:100%;font-size:12.5px;line-height:1.45;tab-size:2" ${state.pfiles.editable ? "" : "readonly"} aria-label="${f}.yaml">${esc(text)}</textarea>
+      <div class="row-actions" style="margin-top:6px">${state.pfiles.editable ? `<button class="btn small primary" id="pfilesave" ${changed ? "" : "disabled"}>Save ${f}.yaml</button><button class="btn small" id="pfilereset" ${changed ? "" : "disabled"}>Discard changes</button>` : `<span class="faint">Read-only in this view.</span>`}</div>
+      ${state.pfileErr ? `<pre class="mono" style="white-space:pre-wrap;color:var(--bad);margin-top:8px">${esc(state.pfileErr)}</pre>` : ""}</div>`;
+  }
+  async function loadProfileFiles() {
+    state.pfilesLoading = true;
+    try { state.pfiles = await api("/api/profile/files"); } catch (e) { toast(`Profile files: ${e.message}`); }
+    state.pfilesLoading = false;
+    if (state.tab === "profile") render(false);
+  }
+  async function saveProfileFile() {
+    const f = state.pfile, text = state.pdraft[f];
+    if (text === undefined) return;
+    try {
+      await api("/api/profile/files", { method: "PUT", body: JSON.stringify({ file: f, text }) });
+      state.pfiles[f] = text; delete state.pdraft[f]; state.pfileErr = "";
+      toast(`${f}.yaml saved: used from the next run`);
+      await load();
+    } catch (e) { state.pfileErr = e.message; render(false); }
   }
 
   // ---------------------------------------------------------------- Settings
@@ -703,7 +734,7 @@
     const ro = state.editable ? "" : `<div class="banner show">Settings are read-only in this view.</div>`;
     const sw = (field, on) => `<label class="switch"><input type="checkbox" data-switch="${field}" ${on ? "checked" : ""}><span></span></label>`;
     const num = (field, v, min, max) => `<input type="number" data-num="${field}" value="${esc(v)}" min="${min}" max="${max}" style="width:100px">`;
-    return `<div class="page-h"><h2>Settings</h2><div class="hint">Saved into config/config.yaml and config/titles.yaml (each change is checked; the previous file is kept as .bak). Used from the next run.</div></div>${ro}
+    return `<div class="page-h"><h2>Settings</h2><div class="hint">Saved into your profile's config.yaml and titles.yaml (each change is checked; the previous file is kept as .bak). Used from the next run.</div></div>${ro}
       ${state.sugg.length ? `<div class="panel" style="border-color:rgb(var(--a3) / .45)"><h3>What the agent learned from your choices</h3><div class="sub">From jobs you turned down, marked not a fit, or applied to. Apply a rule, or dismiss it for good.</div>
         ${state.sugg.map((g) => `<div class="q"><div><b>${suggTitle(g)}</b><div class="faint">${esc(g.why)}</div></div><span></span><span class="row-actions"><button class="btn small primary" data-sugg="apply:${esc(g.key)}">Apply</button><button class="btn small" data-sugg="dismiss:${esc(g.key)}">Dismiss</button></span></div>`).join("")}</div>` : ""}
       <div class="panel"><h3>Search</h3><div class="sub">LinkedIn's public job search runs each title for jobs posted since the last run (at most 24 h).</div>
@@ -795,7 +826,7 @@
     };
     $("drawer").innerHTML = `
       <div style="display:flex;justify-content:space-between;gap:10px"><div><div class="faint mono">job ${j.id} · ${esc(SOURCE[j.source] || j.source)}</div><h2>${esc(j.title)}</h2><div class="muted">${company(j)}${j.location ? " · " + esc(j.location) : ""}</div><div style="margin-top:6px">${meta(j)}</div></div><button class="btn small" id="dclose">Esc</button></div>
-      <div class="row-actions" style="margin:14px 0 4px">${isManual(j) ? `<button class="btn small primary" data-assist="${j.id}">Open pre-filled</button>` : ""}${link(j.apply_url_direct, "Company form", "btn small")}${link(j.apply_url, "Listing")}${link(j.gmail_draft_url, "Gmail draft")}
+      <div class="row-actions" style="margin:14px 0 4px">${j.mailto ? mailLink(j.mailto, "Write the email", "btn small primary") : isManual(j) ? `<button class="btn small primary" data-assist="${j.id}">Open pre-filled</button>` : ""}${link(j.apply_url_direct, "Company form", "btn small")}${link(j.apply_url, "Listing")}${link(j.gmail_draft_url, "Gmail draft")}
         ${["skipped", "needs_review"].includes(j.status) && !j.discard_reason ? `<button class="btn small primary" data-status="${j.id}:new">Prepare anyway</button>` : ""}${j.discard_reason ? `<button class="btn small" data-undiscard="${j.id}">Undo “Not a fit”</button>` : ""}${j.status === "ready" ? `<button class="btn small good" data-status="${j.id}:applied">Mark applied</button>` : ""}${!done && j.status !== "skipped" ? notFit(j.id) : ""}
         ${j.company ? `<button class="btn small" data-fav="${esc(j.company)}">${fav ? "★ Favorite" : "☆ Favorite"}</button><button class="btn small ${blk ? "danger" : ""}" data-block="${esc(j.company)}">${blk ? "Blocked" : "Block company"}</button>` : ""}
         ${due ? `<button class="btn small primary" data-follow="${j.id}">Draft follow-up</button>` : ""}</div>
@@ -872,6 +903,9 @@
     const op = t.closest("[data-open]"); if (op && !t.closest("a, button, select, input")) { openDrawer(+op.dataset.open); return; }
     const an = t.closest("[data-answer]");
     if (an) { const v = document.querySelector(`[data-qinput="${an.dataset.answer}"]`).value.trim(); if (!v) return toast("Type an answer first"); return saveAnswer(an.dataset.key, v, +an.dataset.answer); }
+    const pf = t.closest("[data-pfile]"); if (pf) { state.pfile = pf.dataset.pfile; state.pfileErr = ""; return render(false); }
+    if (t.id === "pfilesave") return saveProfileFile();
+    if (t.id === "pfilereset") { delete state.pdraft[state.pfile]; state.pfileErr = ""; return render(false); }
     const asv = t.closest("[data-asave]"); if (asv) return saveAnswer(asv.dataset.asave, document.querySelector(`[data-akey="${CSS.escape(asv.dataset.asave)}"]`).value);
     const ad = t.closest("[data-adel]"); if (ad) { if (confirm(`Remove the answer "${ad.dataset.adel}"?`)) saveAnswer(ad.dataset.adel, ""); return; }
     if (t.id === "addanswer") { const k = $("newkey").value.trim(), v = $("newval").value.trim(); if (!k || !v) return toast("Fill in both the key and the answer"); return saveAnswer(k, v); }
@@ -904,6 +938,13 @@
     if (t.dataset.num) { const v = +t.value; const [a, b] = t.dataset.num.split("."); return saveSettings(b ? { thresholds: { ...state.settings.thresholds, [b]: v } } : { [a]: v }); }
   });
   document.addEventListener("input", (e) => {
+    if (e.target.id === "pfiletext") {
+      // Keep the draft without re-rendering (the cursor stays where it is).
+      state.pdraft[state.pfile] = e.target.value;
+      const changed = e.target.value !== state.pfiles[state.pfile];
+      for (const id of ["pfilesave", "pfilereset"]) { const b = $(id); if (b) b.disabled = !changed; }
+      return;
+    }
     if (e.target.id !== "q") return;
     state.q = e.target.value; state.kf = -1; const pos = e.target.selectionStart; render(false);
     const q = $("q"); q.focus(); q.setSelectionRange(pos, pos);

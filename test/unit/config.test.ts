@@ -1,13 +1,14 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
-import { ConfigError, parseConfig } from '../../src/config.js';
+import { ConfigError, loadConfig, mergeConfig, parseConfig } from '../../src/config.js';
 
 type Raw = Record<string, Record<string, unknown>>;
 
 /** The committed example with its one placeholder (digest.to) filled in. */
 function validRaw(): Raw {
-  const raw = parse(readFileSync('config/config.example.yaml', 'utf8')) as Raw;
+  const raw = parse(readFileSync('config/defaults.yaml', 'utf8')) as Raw;
   raw['digest'] = { ...raw['digest'], to: 'someone@example.com' };
   return raw;
 }
@@ -20,9 +21,34 @@ describe('config loader', () => {
     expect(cfg.llm.tailor_model).toBeTruthy();
   });
 
-  it('rejects the example as committed, because digest.to is a TODO placeholder', () => {
-    const raw = parse(readFileSync('config/config.example.yaml', 'utf8')) as unknown;
+  it('accepts the shipped defaults as they are (a profile config only changes keys)', () => {
+    const raw = parse(readFileSync('config/defaults.yaml', 'utf8')) as unknown;
+    expect(parseConfig(raw).gmail.enabled).toBe(false);
+  });
+
+  it('needs digest.to when the digest is on', () => {
+    const raw = validRaw();
+    raw['digest'] = { enabled: true, to: null };
     expect(() => parseConfig(raw)).toThrow(/digest\.to/);
+  });
+
+  it('merges a profile config over the defaults: maps key by key, lists replaced', () => {
+    const merged = mergeConfig(validRaw(), {
+      filters: { countries: ['Jordan'] },
+      search: { linkedin: { titles: ['Data Analyst'] } },
+    }) as Raw;
+    const cfg = parseConfig(merged);
+    expect(cfg.filters.countries).toEqual(['Jordan']);
+    expect(cfg.filters.allow_remote).toBe(true);
+    expect(cfg.search.linkedin.titles).toEqual(['Data Analyst']);
+    expect(cfg.search.linkedin.max_pages).toBe(5);
+  });
+
+  it('loads every profile config under profiles/ merged over the defaults', () => {
+    for (const n of readdirSync('profiles')) {
+      const f = join('profiles', n, 'config.yaml');
+      if (existsSync(f)) expect(() => loadConfig(f)).not.toThrow();
+    }
   });
 
   it('rejects any TODO placeholder, e.g. in the WhatsApp allowlist', () => {

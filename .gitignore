@@ -1,17 +1,24 @@
-# Personal data and secrets: never committed (CLAUDE.md hard rule 4)
+# Personal data and secrets: never committed (docs/privacy-security.md).
+# Everything a user owns lives in their profile folder; only the fictional example is shared.
+profiles/*
+!profiles/example/
+profiles/example/data/
+profiles/example/output/
+profiles/example/secrets/
+profiles/example/.env
+profiles/example/.review-pending
+
+# The old single-user layout (before profiles, D45), in case a checkout still has it
 .env
 .env.*
-!.env.example
 secrets/
 data/
 output/
 backups/
 config/config.yaml
 config/companies.yaml
-
-# Everything in profile/ is personal except the fake example
-profile/*
-!profile/master_profile.example.yaml
+config/titles.yaml
+profile/
 
 # Node / build
 node_modules/

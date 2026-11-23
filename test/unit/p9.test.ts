@@ -42,17 +42,17 @@ let dir: string;
 let cfgPath: string;
 let titlesPath: string;
 let cfg: Config;
-const profile = loadProfile('profile/master_profile.example.yaml');
+const profile = loadProfile('test/fixtures/profile.yaml');
 
 beforeAll(() => {
   dir = mkdtempSync(join(tmpdir(), 'p9-'));
   cfgPath = join(dir, 'config.yaml');
   titlesPath = join(dir, 'titles.yaml');
-  const text = readFileSync('config/config.example.yaml', 'utf8')
+  const text = readFileSync('config/defaults.yaml', 'utf8')
     .replace('to: TODO@gmail.com', 'to: me@example.com')
-    .replace('titles: config/titles.yaml', `titles: ${titlesPath}`);
+    .replace('titles: titles.yaml', `titles: ${titlesPath}`);
   writeFileSync(cfgPath, text);
-  copyFileSync('config/titles.yaml', titlesPath);
+  copyFileSync('test/fixtures/titles.yaml', titlesPath);
   cfg = loadConfig(cfgPath);
 });
 afterAll(() => {
@@ -153,7 +153,7 @@ describe('LinkedIn search (D38)', () => {
           linkedin: { ...cfg.search.linkedin, titles: ['Cloud Engineer'], retry_wait_seconds: 5 },
         },
       },
-      matcher: TitleMatcher.fromFile('config/titles.yaml'),
+      matcher: TitleMatcher.fromFile('test/fixtures/titles.yaml'),
       now: NOW,
       log,
       sleep: () => Promise.resolve(),
@@ -188,7 +188,7 @@ describe('LinkedIn search (D38)', () => {
           linkedin: { ...cfg.search.linkedin, titles: ['Cloud Engineer'], retry_wait_seconds: 5 },
         },
       },
-      matcher: TitleMatcher.fromFile('config/titles.yaml'),
+      matcher: TitleMatcher.fromFile('test/fixtures/titles.yaml'),
       now: NOW,
       log,
       sleep: () => Promise.resolve(),
@@ -253,7 +253,7 @@ describe('company lists in scoring (D39)', () => {
     } as CheckedJob;
     const ctx = {
       cfg: { ...c, preferences: { blocked_companies: ['Acme'], favorite_companies: [] } },
-      matcher: TitleMatcher.fromFile('config/titles.yaml'),
+      matcher: TitleMatcher.fromFile('test/fixtures/titles.yaml'),
       runDate: '2026-11-23',
     };
     expect(hardFilter(job, ctx).reason).toBe('blocked_company');
@@ -465,7 +465,7 @@ describe('audit follow-ups (D42) and dashboard actions (D43)', () => {
     } as CheckedJob;
     const on = {
       cfg: { ...cfg, filters: { ...cfg.filters, skip_senior_titles: true } },
-      matcher: TitleMatcher.fromFile('config/titles.yaml'),
+      matcher: TitleMatcher.fromFile('test/fixtures/titles.yaml'),
       runDate: '2026-11-23',
     };
     expect(hardFilter(base, on).reason).toBe('senior_title');

@@ -1,4 +1,4 @@
-# titles.yaml — title tiers (PLAN.md section 6). Regexes are case-insensitive,
+# test/fixtures/titles.yaml: the title tiers tests use (PLAN.md section 6). Regexes are case-insensitive,
 # matched against the normalized title (Arabic titles are translated by `extract`).
 
 p1:

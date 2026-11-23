@@ -7,7 +7,7 @@
 import { mkdirSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
 import type { Config } from '../config.js';
-import { retryAnsweredForms } from '../apply/apply.js';
+import { mailtoLink, retryAnsweredForms } from '../apply/apply.js';
 import { formEligible, FormFiller } from '../apply/forms.js';
 import { jsonLdJobPosting, linkedinGuestJob, linkedinJobId } from '../collect/pages/jobpage.js';
 import { PoliteHttp } from '../util/http.js';
@@ -45,6 +45,10 @@ interface ManualRow {
   cover_text: string | null;
   why_this_role: string | null;
   manual_reason: string | null;
+  channel: string;
+  to_email: string | null;
+  subject: string | null;
+  body: string | null;
 }
 
 export async function assistCommand(cfg: Config, opts: { job?: number }, io: Io): Promise<void> {
@@ -65,7 +69,8 @@ export async function assistCommand(cfg: Config, opts: { job?: number }, io: Io)
       db
         .prepare(
           `SELECT j.id, j.raw_item_id, j.title, j.company, j.apply_url, j.apply_url_direct,
-             a.package_dir, a.cv_pdf, a.cover_text, a.why_this_role, a.manual_reason
+             a.package_dir, a.cv_pdf, a.cover_text, a.why_this_role, a.manual_reason,
+             a.channel, a.to_email, a.subject, a.body
            FROM jobs j JOIN applications a ON a.job_id = j.id
            WHERE j.status = 'ready' AND a.mode IN ('manual', 'package')
            ORDER BY j.priority, j.fit_score DESC`,
@@ -84,6 +89,23 @@ export async function assistCommand(cfg: Config, opts: { job?: number }, io: Io)
       );
       io.out(`  why by hand: ${r.manual_reason ?? 'apply on the site'}`);
       io.out(`  CV: ${r.cv_pdf ?? '-'}`);
+      if (r.channel === 'email' && r.to_email) {
+        // Without Gmail (D45): the email is ready; the user's mail app sends it.
+        const copied = r.body ? toClipboard(r.body) : false;
+        io.out(`  email to ${r.to_email}, subject: ${r.subject ?? ''}`);
+        io.out(
+          `  ${copied ? 'email text copied to the clipboard' : `email text in ${r.package_dir ?? '-'}/apply.md`}`,
+        );
+        io.out(`  or open: ${mailtoLink(r.to_email, r.subject ?? '', r.body ?? '')}`);
+        const a = await ask('  [Enter] I sent it   [s] skip   [q] quit > ');
+        if (a === 'q') break;
+        if (a === 's') continue;
+        const at = new Date().toISOString();
+        db.prepare('UPDATE applications SET sent_at = ? WHERE job_id = ?').run(at, r.id);
+        updateJobStatus(db, r.id, 'applied', 'ahmed', at);
+        io.out('  marked applied');
+        continue;
+      }
       if (!url) {
         io.out('  no link: see the package (apply.md)');
         continue;

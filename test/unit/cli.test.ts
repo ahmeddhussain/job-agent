@@ -27,6 +27,11 @@ const COMMANDS = [
   'skipped',
   'retry-forms',
   'recheck-dates',
+  'profile:list',
+  'profile:use',
+  'profile:reviewed',
+  'init',
+  'demo:seed',
 ];
 
 function makeProgram() {
@@ -42,7 +47,7 @@ describe('cli', () => {
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), 'job-agent-test-'));
     configPath = join(dir, 'config.yaml');
-    const example = readFileSync('config/config.example.yaml', 'utf8')
+    const example = readFileSync('config/defaults.yaml', 'utf8')
       .replace('to: TODO@gmail.com', 'to: someone@example.com')
       .replace('db: data/agent.db', `db: ${join(dir, 'agent.db')}`)
       .replace('lock_file: data/run.lock', `lock_file: ${join(dir, 'run.lock')}`);
@@ -84,7 +89,7 @@ describe('cli', () => {
   it('config:check validates and summarizes the config', async () => {
     const { program, lines } = makeProgram();
     await program.parseAsync(['node', 'agent', '-c', configPath, 'config:check']);
-    expect(lines[0]).toBe(`config OK: ${configPath}`);
+    expect(lines[0]).toBe(`config OK: ${configPath} (merged over config/defaults.yaml)`);
     expect(lines.join('\n')).toContain('apply.mode=draft');
   });
 

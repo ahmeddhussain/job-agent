@@ -1,8 +1,9 @@
 // CLI actions for P7: `agent run` (live or --dry-run), `agent add` (a post by hand) and
 // `agent reprocess <job> --from score|tailor`.
-import { copyFileSync, readFileSync, rmSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import type { Config } from '../config.js';
+import { copyFileSync, existsSync, readFileSync, rmSync } from 'node:fs';
+import { dirname, join, resolve } from 'node:path';
+import { ConfigError, type Config } from '../config.js';
+import { REVIEW_MARKER } from '../profiles.js';
 import { collectAlerts } from '../collect/alerts.js';
 import { collectAts, loadCompanies } from '../collect/ats/collect.js';
 import { companiesToPoll } from '../collect/ats/discover.js';
@@ -68,8 +69,10 @@ export function claude(cfg: Config, calls: LlmCallRecord[]): ClaudeCli {
   });
 }
 
-/** Gmail if authorized and reachable, else null with the reason (the run continues without it). */
+/** Gmail if enabled, authorized and reachable, else null with the reason (the run continues). */
 async function gmailOrNull(cfg: Config): Promise<{ g: GmailFacade | null; why: string | null }> {
+  if (!cfg.gmail.enabled)
+    return { g: null, why: 'not connected (gmail.enabled: false): email jobs become packages' };
   try {
     const g = new GmailFacade(gmailAuthClient(cfg));
     await g.myAddress();
@@ -149,7 +152,16 @@ function depsFor(
   };
 }
 
+/** A profile drafted by `agent init` is used only after its owner has checked it (D45). */
+export function assertReviewed(): void {
+  if (existsSync(REVIEW_MARKER))
+    throw new ConfigError(
+      `this profile has not been reviewed yet: read ${resolve(REVIEW_MARKER)}, check profile.yaml and titles.yaml, then run ./agent.sh reviewed`,
+    );
+}
+
 export async function runCommand(cfg: Config, flags: RunFlags, io: Io): Promise<number> {
+  assertReviewed();
   const release = acquireLock(cfg.run.lock_file, 'agent run');
   const dryRun = flags.dryRun === true;
   const { db, path } = openRunDb(cfg, dryRun);
@@ -159,11 +171,11 @@ export async function runCommand(cfg: Config, flags: RunFlags, io: Io): Promise<
     if (since && Number.isNaN(since.getTime()))
       throw new Error(`--since: not a date: ${flags.since ?? ''}`);
     const gm = await gmailOrNull(cfg);
-    if (!gm.g) io.out(`Gmail unavailable: ${gm.why ?? ''}`);
+    if (!gm.g) io.out(`Gmail ${cfg.gmail.enabled ? 'unavailable' : 'off'}: ${gm.why ?? ''}`);
     const want = (s: string) => flags.collect !== false && (!flags.source || flags.source === s);
 
     const sources: SourceRun[] = [];
-    if (want('whatsapp') && cfg.whatsapp.groups.length > 0)
+    if (want('whatsapp') && cfg.whatsapp.enabled && cfg.whatsapp.groups.length > 0)
       sources.push({
         name: 'whatsapp',
         collect: (runId) => collectWhatsAppForRun(cfg, db, runId, since),
@@ -189,7 +201,7 @@ export async function runCommand(cfg: Config, flags: RunFlags, io: Io): Promise<
           };
         },
       });
-    if (want('alerts') && cfg.alerts.enabled)
+    if (want('alerts') && cfg.alerts.enabled && cfg.gmail.enabled)
       sources.push({
         name: 'alerts',
         collect: async (runId) => {

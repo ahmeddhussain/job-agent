@@ -79,7 +79,7 @@ describe('WhatsApp is read-only (hard rule 1)', () => {
   });
 });
 
-const raw = parse(readFileSync('config/config.example.yaml', 'utf8')) as Record<
+const raw = parse(readFileSync('config/defaults.yaml', 'utf8')) as Record<
   string,
   Record<string, unknown>
 >;

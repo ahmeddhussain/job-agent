@@ -24,13 +24,13 @@ import type { GmailWriter } from '../../src/gmail/client.js';
 import type { Llm, LlmRequest } from '../../src/llm/types.js';
 import { loadProfile } from '../../src/profile/load.js';
 
-const raw = parse(readFileSync('config/config.example.yaml', 'utf8')) as Record<
+const raw = parse(readFileSync('config/defaults.yaml', 'utf8')) as Record<
   string,
   Record<string, unknown>
 >;
 raw['digest'] = { ...raw['digest'], to: 'me@example.com' };
 const cfg: Config = parseConfig(raw);
-const profile = loadProfile('profile/master_profile.example.yaml');
+const profile = loadProfile('test/fixtures/profile.yaml');
 const log = pino({ level: 'silent' });
 let dir: string;
 let cv: string;

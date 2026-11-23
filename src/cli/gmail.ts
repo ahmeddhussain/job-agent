@@ -20,9 +20,15 @@ const facade = (cfg: Config) => new GmailFacade(gmailAuthClient(cfg));
 
 export async function gmailAuthCommand(cfg: Config, io: Io): Promise<void> {
   await authorize(cfg, io.out);
+  if (!cfg.gmail.enabled)
+    io.out('Authorized. Now switch it on in your profile config.yaml:  gmail: { enabled: true }');
 }
 
 export async function gmailCheckCommand(cfg: Config, io: Io): Promise<void> {
+  if (!cfg.gmail.enabled) {
+    io.out('Gmail is off (gmail.enabled: false): email jobs become packages you send yourself');
+    return;
+  }
   const auth = gmailAuthClient(cfg);
   const g = new GmailFacade(auth);
   const me = await g.myAddress();
@@ -154,7 +160,7 @@ export async function digestCommand(
     io.out(`Subject: ${d.subject}\n\n${d.text}`);
     if (opts.send) {
       await sendDigest(facade(cfg), cfg, d);
-      io.out(`sent to ${cfg.digest.to}`);
+      io.out(`sent to ${cfg.digest.to ?? 'your address'}`);
     }
   } finally {
     db.close();

@@ -1,6 +1,6 @@
 // GmailFacade: the ONLY module that may import @googleapis/gmail (security A10).
 // It exposes reading, draft creation and draft inspection; sending exists for two
-// guarded uses only (send mode, and the digest to Ahmed himself). There is no delete,
+// guarded uses only (send mode, and the digest to the user's own address). There is no delete,
 // trash, label change, filter or settings call anywhere; a test enforces it.
 import { gmail, type gmail_v1 } from '@googleapis/gmail';
 import type { OAuth2Client } from 'google-auth-library';
@@ -39,7 +39,7 @@ export interface GmailWriter extends GmailReader {
   threadMessages(
     threadId: string,
   ): Promise<{ id: string; labelIds: string[]; from: string; internalDate: string }[]>;
-  /** Only callers: apply in send mode (all guards passed) and the digest to Ahmed. */
+  /** Only callers: apply in send mode (all guards passed) and the digest to the user's own address. */
   sendRaw(raw: string): Promise<{ messageId: string; threadId: string }>;
   sendDraft(draftId: string): Promise<{ messageId: string; threadId: string }>;
 }

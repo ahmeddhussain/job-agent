@@ -1,12 +1,15 @@
-# config.example.yaml: copy to config/config.yaml (gitignored) and edit.
-# Any value starting with TODO fails validation, so placeholders can't reach a run.
+# defaults.yaml: every setting with its default (shipped; do not edit for your own use).
+# Your profile's config.yaml (profiles/<name>/config.yaml) holds only what you change;
+# it is merged over this file key by key (lists are replaced, not appended).
+# Relative paths are inside the profile folder. Any value starting with TODO fails
+# validation, so placeholders can't reach a run. Reference: docs/configuration.md.
 
 timezone: Africa/Cairo
 
 paths:
   db: data/agent.db
-  profile: profile/master_profile.yaml
-  titles: config/titles.yaml
+  profile: profile.yaml # your facts: the only source for CVs and letters
+  titles: titles.yaml # which job titles you want (tiers) and never want
   env: .env # secrets file, read privately (never exported)
 
 run:
@@ -15,12 +18,13 @@ run:
   lock_file: data/run.lock
 
 whatsapp:
+  enabled: false # optional source: link with ./agent.sh whatsapp-login (docs/sources.md)
   session_path: data/wa-session # equivalent to a logged-in WhatsApp — keep private
   groups: [] # allowlist of group names or ids; fill from `agent wa:groups` (P4)
   fetch_limit: 500 # per group per run
   settle_seconds: 20 # wait after `ready` for history sync
   ready_timeout_seconds: 120 # normal start; a linked session is ready well before this
-  auth_timeout_seconds: 60 # library wait for WhatsApp Web's socket (default 30 s is tight on this VM)
+  auth_timeout_seconds: 60 # library wait for WhatsApp Web's socket (the library's 30 s is tight on slow machines)
   login_timeout_seconds: 300 # wa:login: time to scan the QR
   web_cache_path: data/wa-web-cache # pins the WhatsApp Web version that worked (webVersionCache: local)
   author_salt_file: data/wa-author-salt # members' ids are stored only as salted hashes
@@ -33,12 +37,13 @@ whatsapp:
     fetch_limit: 100
 
 gmail:
+  enabled: false # optional: email drafts, job-alert emails, digest (docs/gmail-setup.md)
   client_file: secrets/gmail_client.json # Desktop OAuth client (docs/gmail-setup.md)
   token_file: secrets/gmail_token.json # written by `agent gmail:auth`, owner-only
   max_alert_chars: 60000 # cap per alert; Indeed links are ~650-char click trackers (#18)
 
 alerts:
-  enabled: true
+  enabled: false # needs Gmail
   skip_from: [ jobalerts-noreply@linkedin.com, jobs-noreply@linkedin.com ] # D38: LinkedIn search replaces its alerts
   gmail_label: job-alerts # Gmail filter puts LinkedIn/Wuzzuf/Bayt/Indeed alerts here
   skip_subjects:
@@ -56,7 +61,7 @@ search:
   linkedin:
     # D38: public job search, logged out (edit titles in the dashboard: Settings)
     enabled: true
-    titles: [ DevOps Engineer, Cloud Engineer, IT Engineer, Infrastructure Engineer, Technical Support, Application Support, Platform Engineer, Monitoring Engineer ]
+    titles: [] # the job titles to search (set by ./agent.sh init; editable in Settings)
     locations: [ Egypt ]
     max_pages: 5 # 10 jobs per page
     min_interval_seconds: 6
@@ -65,7 +70,7 @@ search:
 
 ats:
   enabled: true
-  companies_file: config/companies.yaml
+  companies_file: companies.yaml # optional: companies whose job boards are polled
   min_interval_seconds: 1
   user_agent: "job-agent/1.0 (personal job search)"
   keep_locations: [ Egypt, Cairo, Giza, Alexandria, "6th of October", "New Cairo", Remote, EMEA, MENA, "Middle East" ]
@@ -86,7 +91,7 @@ enrich:
   thin_requirements: 3
 
 llm:
-  provider: claude_cli # headless Claude Code on the Pro subscription (D17)
+  provider: claude_cli # headless Claude Code on your Claude subscription (D17)
   cli:
     binary: claude # use an absolute path in config.yaml (no PATH lookup)
     pinned_version: "2.1.317" # tested version (D17); a different version logs a warning
@@ -102,7 +107,7 @@ llm:
   max_retries: 3
 
 filters:
-  countries: [ Egypt ] # anywhere in these countries is fine (Ahmed, 2026-11-20)
+  countries: [ Egypt ] # jobs anywhere in these countries are fine
   allow_remote: true
   max_years_required: 3 # more than this is skipped; no seniority-word rules (D21)
   max_job_age_days: 30 # D34: alerts also recommend old jobs; skip those older than this
@@ -166,20 +171,20 @@ forms:
 cv:
   max_pages: 1 # R14: every applied CV is exactly one page
   min_fill: 0.93 # grow back (more bullets) if the page is less full than this
-  min_projects: 4 # Ahmed: at least 4 projects on every CV
+  min_projects: 4 # at least this many projects on every CV
   max_projects: 6 # extra stack-only projects fill free space up to this
   max_skills_dropped: 6 # least relevant skills that may go before a top project's 2nd bullet (0 = keep all)
-  font_pt: { max: 10, min: 9, step: 0.5 } # his CV is 10 pt Carlito; shrink before cutting content
+  font_pt: { max: 10, min: 9, step: 0.5 } # 10 pt Carlito; shrink before cutting content
   max_trim_rounds: 20 # each round re-renders locally (~1 s), no model call
 
 ats_check:
   # R15 / PLAN 8.6: always runs before every application; blocks on failure
-  required_headings: [ Profile, Education, Certifications, Experience, Projects, Skills, Languages ] # his CV's order
+  required_headings: [ Profile, Education, Certifications, Experience, Projects, Skills, Languages ] # the CV template's sections
   min_keyword_coverage: 0.70 # share of profile-backed job requirements that must appear in the CV
 
 digest:
-  enabled: true
-  to: TODO@gmail.com
+  enabled: false # a summary email after each run (needs Gmail)
+  to: null # where the digest goes
 
 dashboard:
   weekly_goal: 15 # applications per week (goal ring on Today; editable in Settings)

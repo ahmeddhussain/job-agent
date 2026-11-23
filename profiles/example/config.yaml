@@ -1,0 +1,29 @@
+# config.yaml: only the settings this profile changes. Everything else comes from
+# config/defaults.yaml (read it for every option and its meaning). Relative paths are
+# inside this folder. Reference: docs/configuration.md.
+
+timezone: Africa/Cairo
+
+search:
+  linkedin:
+    titles: [Cloud Engineer, DevOps Engineer, IT Support Engineer, Technical Support Engineer]
+    locations: [Egypt]
+
+filters:
+  countries: [Egypt]
+  max_years_required: 2
+
+ats:
+  keep_locations: [Egypt, Alexandria, Cairo, Remote]
+
+# Optional sources, off until you connect them (docs/sources.md):
+# whatsapp:
+#   enabled: true
+#   groups: [ "Some jobs group" ]   # from ./agent.sh whatsapp-groups
+# gmail:
+#   enabled: true                   # then ./agent.sh gmail-auth
+# alerts:
+#   enabled: true                   # job-alert emails from Wuzzuf, Indeed, Bayt...
+# digest:
+#   enabled: true
+#   to: you@gmail.com

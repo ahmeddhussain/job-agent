@@ -28,7 +28,7 @@ rules=(
 
 # Also backups of any of these (settings edits and conversions write *.bak / *.pre-*), and
 # every personal profile folder except the shipped example (profiles/<name>/).
-forbidden_path='(^|/)\.env$|(^|/)\.env\.[^/]+$|^secrets/|^data/|^output/|^backups/|^profile/master_profile\.yaml|^config/config\.yaml|^config/companies\.yaml|\.(pem|key|p12|pfx)$|(^|/)\.secrets-blocklist$|wa-session|\.bak$|\.bak-|\.pre-[a-z]+$|^profiles/[^/]+/'
+forbidden_path='(^|/)\.env$|(^|/)\.env\.[^/]+$|^secrets/|^data/|^output/|^backups/|^profile/master_profile\.yaml|^config/config\.yaml|^config/companies\.yaml|\.(pem|key|p12|pfx)$|(^|/)\.secrets-blocklist$|wa-session|\.bak$|\.bak-|\.pre-[a-z]+$|^profiles/[^/]+/|^profiles/\.active$'
 allowed_path='(^|/)\.env\.example$|^profiles/example/'
 
 blocked=()

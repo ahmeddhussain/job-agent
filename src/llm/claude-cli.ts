@@ -1,5 +1,5 @@
 // Every model call goes through the official Claude Code CLI in headless mode, on
-// Ahmed's subscription (D17). Security controls A1-A5 from docs/security.md live here.
+// Ahmed's subscription (D17). Security controls A1-A5 from docs/dev/security.md live here.
 import { spawn } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';

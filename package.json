@@ -1,8 +1,23 @@
 {
   "name": "job-agent",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
-  "description": "Daily read-only job-hunting agent: collect, dedupe, score, tailor a one-page CV and cover letter, draft the application, track it.",
+  "description": "Your own job-application agent: finds jobs, writes a truthful one-page CV and cover letter for each good match, and applies. Runs locally on a Claude subscription.",
+  "keywords": [
+    "job-search",
+    "cv",
+    "resume",
+    "cover-letter",
+    "claude",
+    "automation",
+    "ats"
+  ],
+  "license": "MIT",
+  "author": "Ahmed Khater",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ahmeddhussain/job-agent.git"
+  },
   "type": "module",
   "engines": {
     "node": ">=22.12.0"

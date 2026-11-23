@@ -36,11 +36,12 @@ import { acquireLock, LockedError } from '../../src/util/lock.js';
 import { canonicalizeUrl, unwrapTracking } from '../../src/util/url.js';
 import { loadFixtures } from '../helpers/fixtures.js';
 
-const raw = parse(readFileSync('config/config.example.yaml', 'utf8')) as Record<
+const raw = parse(readFileSync('config/defaults.yaml', 'utf8')) as Record<
   string,
   Record<string, unknown>
 >;
 raw['digest'] = { ...raw['digest'], to: 'me@example.com' };
+raw['gmail'] = { ...raw['gmail'], enabled: true };
 const cfg: Config = parseConfig(raw);
 const log = pino({ level: 'silent' });
 const NOW = new Date('2026-11-22T12:00:00Z');
@@ -471,8 +472,8 @@ class FixtureLlm implements Llm {
 }
 
 describe('agent run end to end (fixtures, recorded model outputs, fake Gmail)', () => {
-  const profile = loadProfile('profile/master_profile.example.yaml');
-  const matcher = TitleMatcher.fromFile('config/titles.yaml');
+  const profile = loadProfile('test/fixtures/profile.yaml');
+  const matcher = TitleMatcher.fromFile('test/fixtures/titles.yaml');
   let renderer: Renderer;
   let out: string;
   const byHash = new Map<string, string>();
@@ -592,6 +593,30 @@ describe('agent run end to end (fixtures, recorded model outputs, fake Gmail)', 
     expect(r2.stats.items.processed).toBe(0);
     expect(drafts).toHaveLength(1);
     expect(db.prepare(`SELECT count(*) FROM runs WHERE status = 'success'`).pluck().get()).toBe(2);
+  }, 240_000);
+
+  it('without Gmail (only Claude): the email job becomes a send-it-yourself package (D45)', async () => {
+    const db = freshDb();
+    seed(db);
+    const lines: string[] = [];
+    const d = deps(db, new FixtureLlm(byHash, byTitle), gmail([]), lines);
+    const r = await runAgent({
+      ...d,
+      cfg: { ...d.cfg, gmail: { ...d.cfg.gmail, enabled: false } },
+      gmailRead: null,
+      gmailWrite: null,
+    });
+    expect(r.error, lines.join('\n')).toBeNull();
+    const app = db
+      .prepare(
+        `SELECT a.* FROM applications a JOIN jobs j ON j.id = a.job_id WHERE a.channel = 'email'`,
+      )
+      .get() as { mode: string; package_dir: string; to_email: string; manual_reason: string };
+    expect(app.mode).toBe('manual');
+    expect(app.manual_reason).toMatch(/Gmail is not connected/);
+    const pkg = readFileSync(join(app.package_dir, 'apply.md'), 'utf8');
+    expect(pkg).toContain(`**Send an email to:** ${app.to_email}`);
+    expect(pkg).toMatch(/mailto:[^?\s]+@[^?\s]+\?subject=/);
   }, 240_000);
 
   it('stops at the usage limit without losing or half-storing items (R18)', async () => {

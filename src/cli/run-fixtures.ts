@@ -11,15 +11,22 @@ import { loadProfile } from '../profile/load.js';
 import { loadDotEnv } from '../util/env.js';
 import { logger } from '../util/logger.js';
 import type { Io } from './program.js';
+import { REPO_ROOT } from '../util/root.js';
 
-export const RECORDINGS_DIR = join('test', 'fixtures', 'llm');
+export const RECORDINGS_DIR = join(REPO_ROOT, 'test', 'fixtures', 'llm');
+/**
+ * The fixture gates test the code, not a user's setup: they use the profile and title
+ * tiers the fixtures' expectations and recordings were made with (D45).
+ */
+export const FIXTURE_PROFILE = join(REPO_ROOT, 'test', 'fixtures', 'profile.yaml');
+export const FIXTURE_TITLES = join(REPO_ROOT, 'test', 'fixtures', 'titles.yaml');
 /** Fixed evaluation date so deadlines in fixtures give the same answer every time. */
 export const FIXTURE_RUN_DATE = '2026-11-20';
 
 export interface FixtureFlags {
   record?: boolean;
   replay?: boolean;
-  profile?: string;
+  profileFile?: string;
 }
 
 export async function runFixturesCommand(
@@ -53,8 +60,8 @@ export async function runFixturesCommand(
 
   const run = await runFixtures({
     cfg,
-    profile: loadProfile(flags.profile ?? cfg.paths.profile),
-    matcher: TitleMatcher.fromFile(cfg.paths.titles),
+    profile: loadProfile(flags.profileFile ?? FIXTURE_PROFILE),
+    matcher: TitleMatcher.fromFile(FIXTURE_TITLES),
     llm,
     fixtures: loadFixtures(),
     runDate: FIXTURE_RUN_DATE,

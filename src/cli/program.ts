@@ -1,7 +1,9 @@
 // The `agent` command tree. Built by a factory so tests can run it without a process.
+import { join, resolve } from 'node:path';
 import { Argument, Command, Option } from 'commander';
 import { loadConfig } from '../config.js';
 import { listTables, migrate, openDb } from '../db/index.js';
+import { resolveProfile } from '../profiles.js';
 
 export class NotImplementedError extends Error {
   override name = 'NotImplementedError';
@@ -14,16 +16,48 @@ export interface Io {
   out: (line: string) => void;
 }
 
-const defaultConfigPath = (): string => process.env['CONFIG_PATH'] ?? 'config/config.yaml';
+/** Commands that work without a profile (they create or choose one). */
+const NO_PROFILE = new Set(['init', 'profile:list', 'profile:use']);
+
+const INVOKED_FROM = process.cwd();
+
+/**
+ * A path the user typed, relative to where they typed it (agent.sh passes its caller's
+ * directory, since the CLI itself runs inside the profile folder: D45).
+ */
+export const userPath = (p: string): string =>
+  resolve(process.env['JOB_AGENT_CALLER_CWD'] ?? INVOKED_FROM, p);
 
 export function buildProgram(io: Io): Command {
   const program = new Command()
     .name('agent')
-    .description('Daily job-application agent (README.md, PLAN.md)')
-    .option('-c, --config <path>', 'config file', defaultConfigPath())
+    .description('Job-application agent: collect, score, tailor, apply, track (README.md)')
+    .option('-p, --profile <name>', 'profile to use (profiles/<name>; default: the active one)')
+    .option('-c, --config <path>', 'a config file outside the profiles (tests, development)')
     .showHelpAfterError();
 
-  const configPath = (): string => program.opts<{ config: string }>().config;
+  let selected: string | null = null;
+  // Before every command: choose the profile and run inside its folder, so its relative
+  // paths (data/, output/, secrets/, profile.yaml) are its own. Child processes (the
+  // dashboard's runs) inherit the choice through the environment.
+  program.hook('preAction', (_cmd, action) => {
+    if (NO_PROFILE.has(action.name())) return;
+    const o = program.opts<{ profile?: string; config?: string }>();
+    const explicit = o.config ?? (o.profile ? undefined : process.env['CONFIG_PATH']);
+    if (explicit) {
+      selected = userPath(explicit);
+      process.env['CONFIG_PATH'] = selected;
+      return;
+    }
+    const p = resolveProfile(o.profile);
+    process.chdir(p.dir);
+    process.env['JOB_AGENT_PROFILE'] = p.name;
+    selected = join(p.dir, 'config.yaml');
+  });
+  const configPath = (): string => {
+    if (!selected) throw new Error('no profile selected');
+    return selected;
+  };
 
   program
     .command('run')
@@ -42,7 +76,10 @@ export function buildProgram(io: Io): Command {
     .option('--no-collect', 'read only items already stored (e.g. added with `agent add`)')
     .option('--record', 'with --fixtures: save model outputs to test/fixtures/llm')
     .option('--replay', 'with --fixtures: use saved model outputs, no Claude calls')
-    .option('--profile <path>', 'with --fixtures: profile file (default: paths.profile)')
+    .option(
+      '--profile-file <path>',
+      'with --fixtures: profile file (default: test/fixtures/profile.yaml)',
+    )
     .action(
       async (opts: {
         dryRun?: boolean;
@@ -52,8 +89,9 @@ export function buildProgram(io: Io): Command {
         collect?: boolean;
         record?: boolean;
         replay?: boolean;
-        profile?: string;
+        profileFile?: string;
       }) => {
+        if (opts.profileFile) opts.profileFile = userPath(opts.profileFile);
         if (opts.fixtures) {
           if (!opts.dryRun) throw new Error('--fixtures needs --dry-run');
           if (opts.record && opts.replay) throw new Error('--record and --replay are exclusive');
@@ -76,7 +114,7 @@ export function buildProgram(io: Io): Command {
     .option('--posted <iso>', 'when it was posted (default: now)')
     .action(async (file: string | undefined, opts: { name?: string; posted?: string }) => {
       const { addCommand } = await import('./run.js');
-      addCommand(loadConfig(configPath()), file, opts, io);
+      addCommand(loadConfig(configPath()), file === undefined ? file : userPath(file), opts, io);
     });
 
   program
@@ -147,13 +185,15 @@ export function buildProgram(io: Io): Command {
     .option('--record', 'save the tailor outputs to test/fixtures/llm')
     .option('--replay', 'use saved tailor outputs, no Claude calls')
     .option('--out <dir>', 'output directory (default: <apply.output_dir>/fixtures)')
-    .option('--profile <path>', 'profile file (default: paths.profile)')
+    .option('--profile-file <path>', 'profile file (default: test/fixtures/profile.yaml)')
     .action(
       async (
         ids: string[],
-        opts: { record?: boolean; replay?: boolean; out?: string; profile?: string },
+        opts: { record?: boolean; replay?: boolean; out?: string; profileFile?: string },
       ) => {
         if (opts.record && opts.replay) throw new Error('--record and --replay are exclusive');
+        if (opts.profileFile) opts.profileFile = userPath(opts.profileFile);
+        if (opts.out) opts.out = userPath(opts.out);
         const { tailorFixturesCommand } = await import('./tailor-fixtures.js');
         const code = await tailorFixturesCommand(loadConfig(configPath()), ids, opts, io);
         if (code !== 0) process.exitCode = code;
@@ -228,7 +268,11 @@ export function buildProgram(io: Io): Command {
         if (!opts.file || !opts.group) throw new Error('whatsapp-export needs --file and --group');
         wa.collectExportCommand(
           cfg,
-          { file: opts.file, group: opts.group, ...(opts.dryRun ? { dryRun: true } : {}) },
+          {
+            file: userPath(opts.file),
+            group: opts.group,
+            ...(opts.dryRun ? { dryRun: true } : {}),
+          },
           io,
         );
       },
@@ -310,11 +354,63 @@ export function buildProgram(io: Io): Command {
     .description('validate the config file and print a summary (no secrets)')
     .action(() => {
       const cfg = loadConfig(configPath());
-      io.out(`config OK: ${configPath()}`);
+      io.out(`config OK: ${configPath()} (merged over config/defaults.yaml)`);
+      io.out(`  profile: ${process.env['JOB_AGENT_PROFILE'] ?? '(none: --config)'}`);
       io.out(`  apply.mode=${cfg.apply.mode}  cv.max_pages=${cfg.cv.max_pages}`);
       io.out(`  models: extract=${cfg.llm.extract_model} tailor=${cfg.llm.tailor_model}`);
       io.out(`  countries: ${cfg.filters.countries.join(', ')}`);
-      io.out(`  whatsapp groups allowlisted: ${cfg.whatsapp.groups.length}`);
+      io.out(
+        `  sources: whatsapp=${cfg.whatsapp.enabled ? 'on' : 'off'} linkedin=${cfg.search.linkedin.enabled ? 'on' : 'off'} alerts=${cfg.alerts.enabled && cfg.gmail.enabled ? 'on' : 'off'} company boards=${cfg.ats.enabled ? 'on' : 'off'}`,
+      );
+      io.out(
+        `  gmail: ${cfg.gmail.enabled ? 'on (email drafts)' : 'off (email jobs become packages)'}`,
+      );
+      io.out(`  whatsapp groups allowlisted: ${String(cfg.whatsapp.groups.length)}`);
+    });
+
+  program
+    .command('profile:list')
+    .description('list the profiles and which one is active')
+    .action(async () => {
+      const { profileListCommand } = await import('./profiles.js');
+      profileListCommand(program.opts<{ profile?: string }>().profile, io);
+    });
+
+  program
+    .command('profile:use')
+    .description('make a profile the default for every command')
+    .argument('<name>', 'profile name (profiles/<name>)')
+    .action(async (name: string) => {
+      const { profileUseCommand } = await import('./profiles.js');
+      profileUseCommand(name, io);
+    });
+
+  program
+    .command('demo:seed')
+    .description('fill the example profile with fictional jobs, to try the dashboard')
+    .action(async () => {
+      const { demoSeedCommand } = await import('../dev/demo.js');
+      demoSeedCommand(loadConfig(configPath()), io.out);
+    });
+
+  program
+    .command('profile:reviewed')
+    .description('after checking profile.yaml and titles.yaml: validate them and allow runs')
+    .action(async () => {
+      const { reviewedCommand } = await import('./init.js');
+      const cfg = loadConfig(configPath());
+      reviewedCommand(process.cwd(), cfg.paths.profile, cfg.paths.titles, io);
+    });
+
+  program
+    .command('init')
+    .description('create your profile: config, facts from your CV (via Claude), titles')
+    .option('--name <name>', 'profile name (default: asked)')
+    .option('--cv <file>', 'your current CV (PDF, DOCX, TXT or Markdown)')
+    .option('--from-example', 'start from the fictional example instead of a CV')
+    .action(async (opts: { name?: string; cv?: string; fromExample?: boolean }) => {
+      const { initCommand } = await import('./init.js');
+      await initCommand({ ...opts, ...(opts.cv ? { cv: userPath(opts.cv) } : {}) }, io);
     });
 
   program

@@ -1,8 +1,15 @@
-// Loads config/config.yaml and validates it with zod. Every model ID, threshold,
-// cap and path lives here, never in code (CLAUDE.md hard rule 5).
+// Loads the configuration and validates it with zod. Every model ID, threshold, cap and
+// path lives in config, never in code (CLAUDE.md hard rule 5).
+// Layers (D45): config/defaults.yaml (shipped) with the profile's config.yaml merged over
+// it key by key; lists and scalars in the profile replace the default.
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { parse } from 'yaml';
 import { z } from 'zod';
+import { REPO_ROOT } from './util/root.js';
+
+/** The shipped defaults every profile config is merged over. */
+export const DEFAULTS_PATH = join(REPO_ROOT, 'config', 'defaults.yaml');
 
 const positiveInt = z.number().int().positive();
 const ratio = z.number().min(0).max(1);
@@ -29,6 +36,8 @@ export const ConfigSchema = z.strictObject({
     lock_file: realString,
   }),
   whatsapp: z.strictObject({
+    /** Optional source: off until the number is linked (./agent.sh whatsapp-login). */
+    enabled: z.boolean(),
     session_path: realString,
     groups: z.array(realString),
     fetch_limit: positiveInt,
@@ -48,6 +57,8 @@ export const ConfigSchema = z.strictObject({
     }),
   }),
   gmail: z.strictObject({
+    /** Optional: without Gmail, email jobs become "send it yourself" packages. */
+    enabled: z.boolean(),
     client_file: realString,
     token_file: realString,
     max_alert_chars: positiveInt,
@@ -124,7 +135,7 @@ export const ConfigSchema = z.strictObject({
     /** Older jobs are skipped as stale when the posting date is known (D34). */
     max_job_age_days: positiveInt,
   }),
-  /** Ahmed's lists (D39): never apply to blocked companies; always prepare favorites. */
+  /** The user's lists (D39): never apply to blocked companies; always prepare favorites. */
   preferences: z.strictObject({
     blocked_companies: z.array(z.string().min(1).max(120)),
     favorite_companies: z.array(z.string().min(1).max(120)),
@@ -199,12 +210,16 @@ export const ConfigSchema = z.strictObject({
     required_headings: z.array(realString).min(1),
     min_keyword_coverage: ratio,
   }),
-  digest: z.strictObject({
-    enabled: z.boolean(),
-    to: realString.pipe(z.email()),
-  }),
+  digest: z
+    .strictObject({
+      enabled: z.boolean(),
+      to: z.email().nullable(),
+    })
+    .refine((d) => !d.enabled || d.to !== null, {
+      message: 'digest.enabled needs digest.to (an email address)',
+    }),
   dashboard: z.strictObject({
-    /** Applications per week Ahmed aims for (Today's goal ring, editable in Settings). */
+    /** Applications per week the user aims for (Today's goal ring, editable in Settings). */
     weekly_goal: z.number().int().min(1).max(200),
     host: realString,
     port: z.number().int().min(1).max(65535),
@@ -227,14 +242,41 @@ export function parseConfig(raw: unknown, source = 'config'): Config {
   return result.data;
 }
 
-export function loadConfig(path: string): Config {
+const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === 'object' && v !== null && !Array.isArray(v);
+
+/** Deep merge: maps merge key by key; lists, scalars and null in `over` replace `base`. */
+export function mergeConfig(base: unknown, over: unknown): unknown {
+  if (over === undefined) return base;
+  if (!isPlainObject(base) || !isPlainObject(over)) return over;
+  const out: Record<string, unknown> = { ...base };
+  for (const [k, v] of Object.entries(over)) out[k] = mergeConfig(base[k], v);
+  return out;
+}
+
+function readYaml(path: string, hint: string): unknown {
   let text: string;
   try {
     text = readFileSync(path, 'utf8');
   } catch (err) {
-    throw new ConfigError(
-      `cannot read ${path} (copy config/config.example.yaml to it first): ${String(err)}`,
-    );
+    throw new ConfigError(`cannot read ${path} (${hint}): ${String(err)}`);
   }
-  return parseConfig(parse(text), path);
+  try {
+    return parse(text) as unknown;
+  } catch (err) {
+    throw new ConfigError(`${path} is not valid YAML: ${String(err)}`);
+  }
+}
+
+/** The shipped defaults with `override` (a profile's config.yaml contents) merged over. */
+export function withDefaults(override: unknown): unknown {
+  return mergeConfig(readYaml(DEFAULTS_PATH, 'the shipped defaults are missing'), override ?? {});
+}
+
+/** Loads a config file merged over the shipped defaults (a full file works the same). */
+export function loadConfig(path: string): Config {
+  const override = readYaml(path, 'create a profile first: ./agent.sh init');
+  if (override !== null && override !== undefined && !isPlainObject(override))
+    throw new ConfigError(`${path} must be a YAML map of settings`);
+  return parseConfig(withDefaults(override), path);
 }

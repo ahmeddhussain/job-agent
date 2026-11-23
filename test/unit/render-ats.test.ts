@@ -14,13 +14,13 @@ import { Renderer, renderTemplate } from '../../src/render/renderer.js';
 import type { TailorOutput } from '../../src/tailor/schema.js';
 import { vocabularyFor } from '../../src/tailor/vocab.js';
 
-const raw = parse(readFileSync('config/config.example.yaml', 'utf8')) as Record<
+const raw = parse(readFileSync('config/defaults.yaml', 'utf8')) as Record<
   string,
   Record<string, unknown>
 >;
 raw['digest'] = { ...raw['digest'], to: 'someone@example.com' };
 const cfg = parseConfig(raw);
-const profile = loadProfile('profile/master_profile.example.yaml');
+const profile = loadProfile('test/fixtures/profile.yaml');
 const vocab = vocabularyFor(profile);
 const recording = (id: string) =>
   JSON.parse(readFileSync(`test/fixtures/llm/${id}.tailor.1.json`, 'utf8')) as TailorOutput;

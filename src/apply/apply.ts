@@ -100,6 +100,32 @@ function packageText(d: ApplyDeps, job: JobRow, p: Prepared, waLink: string | nu
   return lines.join('\n');
 }
 
+/** A mailto: link with the prepared email (the CV still has to be attached by hand). */
+export function mailtoLink(to: string, subject: string, body: string): string {
+  return `mailto:${encodeURIComponent(to).replace(/%40/g, '@')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+/** Without Gmail (D45): the email is written out for the user to send from any mail app. */
+function emailPackageText(job: JobRow, p: Prepared, to: string): string {
+  return [
+    `# ${job.title}${job.company ? ` · ${job.company}` : ''}`,
+    '',
+    `**Send an email to:** ${to}`,
+    `**Write it in your mail app:** ${mailtoLink(to, p.subject, p.body)}`,
+    `**Attach the CV:** ${p.cvPath}`,
+    `**Why this role (for the interview):** ${p.whyThisRole}`,
+    '',
+    `## Subject`,
+    '',
+    p.subject,
+    '',
+    '## Email',
+    '',
+    p.body.trim(),
+    '',
+  ].join('\n');
+}
+
 export async function applyJob(d: ApplyDeps, job: JobRow, p: Prepared): Promise<ApplyResult> {
   const at = () => d.now().toISOString();
   const insertApp = (v: {
@@ -161,6 +187,22 @@ export async function applyJob(d: ApplyDeps, job: JobRow, p: Prepared): Promise<
     if (!guard.ok) {
       updateJobStatus(d.db, job.id, guard.status, 'agent', at(), guard.reason);
       return { status: guard.status, mode: null, detail: guard.detail };
+    }
+    if (!d.dryRun && !d.cfg.gmail.enabled) {
+      writeFileSync(join(p.dir, 'apply.md'), emailPackageText(job, p, job.apply_email));
+      insertApp({
+        channel: 'email',
+        to: job.apply_email,
+        mode: 'manual',
+        packageDir: p.dir,
+        manualReason: 'send this email yourself (Gmail is not connected); attach the CV',
+      });
+      updateJobStatus(d.db, job.id, 'ready', 'agent', at(), null);
+      return {
+        status: 'ready',
+        mode: 'manual',
+        detail: `send it yourself to ${job.apply_email} (${join(p.dir, 'apply.md')})`,
+      };
     }
     if (d.dryRun || !d.gmail) {
       insertApp({ channel: 'email', to: job.apply_email, mode: 'draft' });

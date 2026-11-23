@@ -2,6 +2,7 @@
 // what the pipeline is expected to make of it; P2 reuses the same files for extraction.
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { REPO_ROOT } from '../util/root.js';
 import type { Angle } from '../pipeline/titles.js';
 import type { RawSource } from '../pipeline/dedupe.js';
 
@@ -41,7 +42,7 @@ export interface Fixture {
   };
 }
 
-export const FIXTURE_DIR = 'test/fixtures/posts';
+export const FIXTURE_DIR = join(REPO_ROOT, 'test', 'fixtures', 'posts');
 
 /** All fixtures, oldest post first (the order a real run would see them). */
 export function loadFixtures(): Fixture[] {

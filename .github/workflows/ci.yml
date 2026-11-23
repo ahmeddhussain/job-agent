@@ -40,4 +40,4 @@ jobs:
       - name: shellcheck
         run: shellcheck agent.sh scripts/*.sh .githooks/pre-commit
       - name: Audit (production dependencies, high and above)
-        run: npm audit --omit=dev --audit-level=high || echo "::warning::npm audit findings (see docs/decisions.md D22 for accepted ones)"
+        run: npm audit --omit=dev --audit-level=high || echo "::warning::npm audit findings (see docs/dev/decisions.md D22 for accepted ones)"

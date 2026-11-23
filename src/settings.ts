@@ -1,10 +1,10 @@
 // Settings edited from the dashboard (D39) are written back to the YAML files they live in
-// (config/config.yaml, config/titles.yaml), so the files stay the single source of truth:
-// comments are kept, the result is validated before writing, the previous file is kept as
-// .bak, and the write is atomic.
+// (the profile's config.yaml and titles.yaml), so the files stay the single source of
+// truth: comments are kept, the result (merged over the shipped defaults, D45) is validated
+// before writing, the previous file is kept as .bak, and the write is atomic.
 import { copyFileSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { parse, parseDocument, type Document } from 'yaml';
-import { parseConfig, type Config } from './config.js';
+import { loadConfig, parseConfig, withDefaults, type Config } from './config.js';
 import { TitleMatcher } from './pipeline/titles.js';
 
 export class SettingsError extends Error {
@@ -21,6 +21,29 @@ function writeYaml(path: string, doc: Document, validate: (js: unknown) => void)
   copyFileSync(path, `${path}.bak`);
   const tmp = `${path}.tmp`;
   writeFileSync(tmp, doc.toString(), { mode: 0o600 });
+  renameSync(tmp, path);
+}
+
+/** Replaces a whole YAML file (the dashboard's file editor) after `validate` accepts it. */
+export function writeValidatedText(
+  path: string,
+  text: string,
+  validate: (js: unknown) => void,
+): void {
+  let js: unknown;
+  try {
+    js = parse(text) as unknown;
+  } catch (err) {
+    throw new SettingsError(`not valid YAML: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  try {
+    validate(js);
+  } catch (err) {
+    throw new SettingsError(err instanceof Error ? err.message : String(err));
+  }
+  copyFileSync(path, `${path}.bak`);
+  const tmp = `${path}.tmp`;
+  writeFileSync(tmp, text.endsWith('\n') ? text : `${text}\n`, { mode: 0o600 });
   renameSync(tmp, path);
 }
 
@@ -96,7 +119,7 @@ export function updateSettings(
     for (const t of ['p1', 'p2', 'p3'] as const)
       doc.setIn(['scoring', 'thresholds', t], change.thresholds[t]);
   }
-  writeYaml(configPath, doc, (js) => parseConfig(js, configPath));
+  writeYaml(configPath, doc, (js) => parseConfig(withDefaults(js), configPath));
   if (change.excluded_titles) {
     const words = cleanList(change.excluded_titles);
     for (const w of words) {
@@ -112,5 +135,5 @@ export function updateSettings(
       new TitleMatcher(js);
     });
   }
-  return parseConfig(parse(readFileSync(configPath, 'utf8')), configPath);
+  return loadConfig(configPath);
 }

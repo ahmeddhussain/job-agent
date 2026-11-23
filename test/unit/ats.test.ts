@@ -12,13 +12,13 @@ import { migrate, openDb, type Db } from '../../src/db/index.js';
 import { TitleMatcher } from '../../src/pipeline/titles.js';
 import { isPrivateAddress, PoliteHttp } from '../../src/util/http.js';
 
-const raw = parse(readFileSync('config/config.example.yaml', 'utf8')) as Record<
+const raw = parse(readFileSync('config/defaults.yaml', 'utf8')) as Record<
   string,
   Record<string, unknown>
 >;
 raw['digest'] = { ...raw['digest'], to: 'me@example.com' };
 const cfg: Config = parseConfig(raw);
-const matcher = TitleMatcher.fromFile('config/titles.yaml');
+const matcher = TitleMatcher.fromFile('test/fixtures/titles.yaml');
 const log = pino({ level: 'silent' });
 const NOW = new Date('2026-11-22T12:00:00Z');
 const fixture = (f: string) => readFileSync(`test/fixtures/ats/${f}`, 'utf8');

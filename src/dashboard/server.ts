@@ -1,5 +1,5 @@
 // Tracker API and page (PLAN 10, D10, D32). Fastify on 127.0.0.1 only.
-// Security (docs/security.md A15–A17):
+// Security (docs/dev/security.md A15–A17):
 // - binds to a loopback address; refuses to start on anything else;
 // - Host header allowlist, so a web page can't reach the API through DNS rebinding;
 // - writes need Content-Type: application/json and, when sent, a same-origin Origin
@@ -17,13 +17,15 @@ import { updateJobStatus, type Status } from '../db/jobs.js';
 import { insertRawItem, prepareRawItem } from '../pipeline/dedupe.js';
 import { sha256 } from '../util/hash.js';
 import { pendingQuestions } from '../apply/questions.js';
-import { loadProfile } from '../profile/load.js';
+import { mailtoLink } from '../apply/apply.js';
+import { loadProfile, parseProfile } from '../profile/load.js';
 import { AnswerError, setAnswer } from '../profile/answers.js';
 import { draftUrl, GmailFacade, type GmailWriter } from '../gmail/client.js';
 import { gmailAuthClient } from '../gmail/auth.js';
 import type { Llm } from '../llm/types.js';
 import { claude } from '../cli/run.js';
-import { readSettings, updateSettings } from '../settings.js';
+import { readSettings, SettingsError, updateSettings, writeValidatedText } from '../settings.js';
+import { TitleMatcher } from '../pipeline/titles.js';
 import {
   applySuggestion,
   bulk,
@@ -78,6 +80,10 @@ const AnswerBody = z.strictObject({
   /** The form question this answers (form_questions.id), if any. */
   question_id: z.number().int().positive().optional(),
 });
+const ProfileFileBody = z.strictObject({
+  file: z.enum(['profile', 'titles']),
+  text: z.string().min(1).max(400_000),
+});
 const FileParams = z.object({
   id: z.coerce.number().int().positive(),
   kind: z.enum(['cv', 'cover', 'cv_md', 'package', 'form']),
@@ -118,6 +124,8 @@ interface Row {
   company_board: string | null;
   app_mode: string | null;
   manual_reason: string | null;
+  app_subject: string | null;
+  app_body: string | null;
   job_posted_at: string | null;
   post_text: string | null;
   requirements: string | null;
@@ -182,6 +190,11 @@ function toJob(r: Row) {
     skip_reason: r.skip_reason,
     has_reply: r.has_reply === 1,
     gmail_draft_url: r.gmail_message_id && !r.sent_at ? draftUrl(r.gmail_message_id) : null,
+    // Without Gmail, an email job is sent by hand from a prepared mailto: link (D45).
+    mailto:
+      r.app_mode === 'manual' && r.apply_channel === 'email' && r.apply_email && r.app_subject
+        ? mailtoLink(r.apply_email, r.app_subject, r.app_body ?? '')
+        : null,
     files: {
       ...(r.cv_pdf ? { cv: `/files/${String(r.id)}/cv` } : {}),
       ...(r.cover_text ? { cover: `/files/${String(r.id)}/cover` } : {}),
@@ -502,6 +515,7 @@ export function buildDashboard(cfg: Config, db: Db, opts: DashboardOptions = {})
            1 + (SELECT count(*) FROM jobs d WHERE d.duplicate_of = j.id) AS seen,
            a.gmail_message_id, a.sent_at, a.cv_pdf, a.cv_md, a.cover_text, a.package_dir,
            a.why_this_role, a.ats_report, a.mode AS app_mode, a.manual_reason,
+           a.subject AS app_subject, a.body AS app_body,
            a.sent_at AS sent_at_app, a.form_report, substr(r.text, 1, 2500) AS post_text,
            a.followup_at, (SELECT reason FROM discards x WHERE x.job_id = j.id) AS discard_reason,
            CASE WHEN c.id IS NULL THEN NULL ELSE c.ats || '/' || COALESCE(c.board, c.url) END AS company_board
@@ -666,6 +680,35 @@ export function buildDashboard(cfg: Config, db: Db, opts: DashboardOptions = {})
       certifications: p.certifications.map((c) => c.name),
       projects: p.projects.map((e) => e.name ?? e.title ?? e.id),
     });
+  });
+
+  // The whole profile.yaml / titles.yaml, edited in the dashboard (D45): validated exactly
+  // like a run would load it, the previous file kept as .bak.
+  app.get('/api/profile/files', (_req, reply) =>
+    reply.send({
+      profile_name: process.env['JOB_AGENT_PROFILE'] ?? null,
+      editable: Boolean(opts.configPath),
+      profile: readFileSync(cfg.paths.profile, 'utf8'),
+      titles: readFileSync(cfg.paths.titles, 'utf8'),
+    }),
+  );
+
+  app.put('/api/profile/files', { bodyLimit: 512 * 1024 }, (req, reply) => {
+    if (!opts.configPath) return reply.code(409).send({ error: 'the profile is read-only here' });
+    const b = ProfileFileBody.safeParse(req.body);
+    if (!b.success) return reply.code(400).send({ error: z.prettifyError(b.error) });
+    try {
+      if (b.data.file === 'profile')
+        writeValidatedText(cfg.paths.profile, b.data.text, (js) => parseProfile(js, 'profile.yaml'));
+      else
+        writeValidatedText(cfg.paths.titles, b.data.text, (js) => {
+          new TitleMatcher(js);
+        });
+      return reply.send({ ok: true });
+    } catch (err) {
+      if (err instanceof SettingsError) return reply.code(400).send({ error: err.message });
+      throw err;
+    }
   });
 
   app.put('/api/profile/answers', (req, reply) => {

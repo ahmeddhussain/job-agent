@@ -1,0 +1,25 @@
+# titles.yaml: which job titles you want, as case-insensitive regexes matched against the
+# job title (Arabic titles are translated first). A title in p1 is applied to at a lower
+# fit score than p2; other titles only at a high score (P3); `exclude` always wins.
+# Edit here or in the dashboard (Settings, Profile). Reference: docs/profiles.md.
+
+p1:
+  # the roles you want most
+  - 'cloud\s+(engineer|support|operations|administrator)'
+  - 'dev\s?ops'
+  - '\bit\s+(support|specialist|engineer)'
+  - 'help[\s-]?desk'
+  - 'technical\s+support'
+
+p2:
+  # adjacent roles you are qualified for
+  - 'systems?\s+(administrator|engineer)'
+  - 'linux\s+(admin|administrator|engineer)'
+  - 'infra(structure)?\s+engineer'
+  - 'monitoring|observability'
+
+exclude:
+  # never, whatever the score
+  - 'sales'
+  - 'teacher|instructor'
+  - '\bintern(ship)?\b'

@@ -14,7 +14,7 @@ import { syncGmail } from '../../src/gmail/sync.js';
 import { explainGmailError, GmailAuthError } from '../../src/gmail/auth.js';
 import { buildDigest, sendDigest } from '../../src/pipeline/digest.js';
 
-const raw = parse(readFileSync('config/config.example.yaml', 'utf8')) as Record<
+const raw = parse(readFileSync('config/defaults.yaml', 'utf8')) as Record<
   string,
   Record<string, unknown>
 >;

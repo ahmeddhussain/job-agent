@@ -16,7 +16,12 @@ import { vocabularyFor } from '../tailor/vocab.js';
 import { loadDotEnv } from '../util/env.js';
 import { logger } from '../util/logger.js';
 import type { Io } from './program.js';
-import { FIXTURE_RUN_DATE, RECORDINGS_DIR } from './run-fixtures.js';
+import {
+  FIXTURE_PROFILE,
+  FIXTURE_RUN_DATE,
+  FIXTURE_TITLES,
+  RECORDINGS_DIR,
+} from './run-fixtures.js';
 
 export const GATE_FIXTURES = ['01-devops-email-en', '11-app-support-form', '12-network-backoffice'];
 
@@ -24,7 +29,7 @@ export interface TailorFlags {
   record?: boolean;
   replay?: boolean;
   out?: string;
-  profile?: string;
+  profileFile?: string;
 }
 
 function liveLlm(cfg: Config, calls: LlmCallRecord[]): ClaudeCli {
@@ -49,7 +54,7 @@ export async function tailorFixturesCommand(
   flags: TailorFlags,
   io: Io,
 ): Promise<number> {
-  const profile = loadProfile(flags.profile ?? cfg.paths.profile);
+  const profile = loadProfile(flags.profileFile ?? FIXTURE_PROFILE);
   const vocab = vocabularyFor(profile);
   const wanted = ids.length > 0 ? ids : GATE_FIXTURES;
   const outRoot = flags.out ?? join(cfg.apply.output_dir, 'fixtures');
@@ -58,7 +63,7 @@ export async function tailorFixturesCommand(
   const scored = await runFixtures({
     cfg,
     profile,
-    matcher: TitleMatcher.fromFile(cfg.paths.titles),
+    matcher: TitleMatcher.fromFile(FIXTURE_TITLES),
     llm: new ReplayLlm(RECORDINGS_DIR),
     fixtures: loadFixtures(),
     runDate: FIXTURE_RUN_DATE,

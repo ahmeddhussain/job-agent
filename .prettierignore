@@ -1,10 +1,9 @@
-# Hand-written kit files and data are not reformatted
-PLAN.md
+# Hand-written docs, kit files and data are not reformatted
 CLAUDE.md
 dashboard/
 docs/
-profile/
 config/
+profiles/
 data/
 output/
 backups/

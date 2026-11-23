@@ -1,5 +1,6 @@
 // The truth validator and the tailor step's retry/fallback (PLAN 8.1, P3 gate).
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
 import { parseConfig } from '../../src/config.js';
@@ -11,13 +12,13 @@ import { tailorJob, type TailorJob } from '../../src/tailor/tailor.js';
 import { describe as describeErrors, validateTailor } from '../../src/tailor/validate.js';
 import { numbersIn, vocabularyFor } from '../../src/tailor/vocab.js';
 
-const raw = parse(readFileSync('config/config.example.yaml', 'utf8')) as Record<
+const raw = parse(readFileSync('config/defaults.yaml', 'utf8')) as Record<
   string,
   Record<string, unknown>
 >;
 raw['digest'] = { ...raw['digest'], to: 'someone@example.com' };
 const cfg = parseConfig(raw);
-const profile = loadProfile('profile/master_profile.example.yaml');
+const profile = loadProfile('test/fixtures/profile.yaml');
 const vocab = vocabularyFor(profile);
 const job = { title: 'DevOps Engineer', company: 'Nilecode Systems' };
 
@@ -186,15 +187,23 @@ describe("Ahmed's CV rules (D25)", () => {
     expect(c.filter((x) => /^\d{11}$/.test(x.text))).toHaveLength(1);
   });
 
-  // .secrets-blocklist and the real profile are gitignored: this runs on Ahmed's machine, not in CI.
-  it.runIf(existsSync('.secrets-blocklist') && existsSync('profile/master_profile.yaml'))(
-    'never prints the private number (it is not in the profile at all)',
+  // .secrets-blocklist and real profiles are gitignored: this runs on a user's machine, not in CI.
+  const privateProfiles = existsSync('profiles')
+    ? readdirSync('profiles')
+        .filter((n) => n !== 'example')
+        .map((n) => join('profiles', n, 'profile.yaml'))
+        .filter((f) => existsSync(f))
+    : [];
+  it.runIf(existsSync('.secrets-blocklist') && privateProfiles.length > 0)(
+    'never prints a blocklisted number (it is in no profile at all)',
     () => {
       const blocklist = readFileSync('.secrets-blocklist', 'utf8')
         .split('\n')
         .filter((l) => /^\d+$/.test(l));
-      const text = readFileSync('profile/master_profile.yaml', 'utf8');
-      for (const n of blocklist) expect(text).not.toContain(n);
+      for (const f of privateProfiles) {
+        const text = readFileSync(f, 'utf8');
+        for (const n of blocklist) expect(text).not.toContain(n);
+      }
     },
   );
 

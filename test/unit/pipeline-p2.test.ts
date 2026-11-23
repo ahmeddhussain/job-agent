@@ -29,14 +29,14 @@ import {
 import { loadDotEnv } from '../../src/util/env.js';
 import { loadFixtures } from '../helpers/fixtures.js';
 
-const raw = parse(readFileSync('config/config.example.yaml', 'utf8')) as Record<
+const raw = parse(readFileSync('config/defaults.yaml', 'utf8')) as Record<
   string,
   Record<string, unknown>
 >;
 raw['digest'] = { ...raw['digest'], to: 'someone@example.com' };
 const cfg = parseConfig(raw);
-const profile = loadProfile('profile/master_profile.example.yaml');
-const matcher = TitleMatcher.fromFile('config/titles.yaml');
+const profile = loadProfile('test/fixtures/profile.yaml');
+const matcher = TitleMatcher.fromFile('test/fixtures/titles.yaml');
 
 describe('P2 gate on recorded model outputs', () => {
   it("reproduces every fixture's expected fields", async () => {
@@ -158,7 +158,7 @@ describe('profile loader (PLAN 8.1, D11)', () => {
   });
 
   it('rejects evidence that points at an id that does not exist', () => {
-    const p = parse(readFileSync('profile/master_profile.example.yaml', 'utf8')) as {
+    const p = parse(readFileSync('test/fixtures/profile.yaml', 'utf8')) as {
       specialisms: { devops: { evidence: string[]; detailed_projects: string[] } };
       default_specialism: string;
     };

@@ -74,8 +74,9 @@ export function buildDigest(
 
 export async function sendDigest(gmail: GmailWriter, cfg: Config, d: Digest): Promise<void> {
   const me = await gmail.myAddress();
-  if (cfg.digest.to.toLowerCase() !== me) {
-    throw new Error(`digest.to (${cfg.digest.to}) must be your own Gmail address (${me})`);
+  const to = cfg.digest.to ?? '(not set)';
+  if (to.toLowerCase() !== me) {
+    throw new Error(`digest.to (${to}) must be your own Gmail address (${me})`);
   }
   await gmail.sendRaw(
     buildMime({ fromName: 'Job agent', fromEmail: me, to: me, subject: d.subject, text: d.text }),

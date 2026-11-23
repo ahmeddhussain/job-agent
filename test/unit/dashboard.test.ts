@@ -10,7 +10,7 @@ import { parseConfig, type Config } from '../../src/config.js';
 import { buildDashboard } from '../../src/dashboard/server.js';
 import { migrate, openDb, type Db } from '../../src/db/index.js';
 
-const raw = parse(readFileSync('config/config.example.yaml', 'utf8')) as Record<
+const raw = parse(readFileSync('config/defaults.yaml', 'utf8')) as Record<
   string,
   Record<string, unknown>
 >;
@@ -175,6 +175,55 @@ describe('dashboard API', () => {
     });
     expect(xorigin.statusCode).toBe(403);
     expect(db.prepare('SELECT status FROM jobs WHERE id = 1').pluck().get()).toBe('applied');
+  });
+
+  it('edits profile.yaml and titles.yaml: invalid text is refused, valid text saved with a .bak (D45)', async () => {
+    const pdir = join(dir, 'prof');
+    mkdirSync(pdir);
+    const profilePath = join(pdir, 'profile.yaml');
+    const titlesPath = join(pdir, 'titles.yaml');
+    const configPath = join(pdir, 'config.yaml');
+    writeFileSync(profilePath, readFileSync('profiles/example/profile.yaml', 'utf8'));
+    writeFileSync(titlesPath, readFileSync('profiles/example/titles.yaml', 'utf8'));
+    writeFileSync(configPath, '');
+    const c = { ...cfg, paths: { ...cfg.paths, profile: profilePath, titles: titlesPath } };
+    const app = buildDashboard(c, db, { configPath });
+    const put = (file: string, text: string) =>
+      app.inject({
+        method: 'PUT',
+        url: '/api/profile/files',
+        headers: { ...HOST, 'content-type': 'application/json' },
+        payload: { file, text },
+      });
+
+    const got = await app.inject({ method: 'GET', url: '/api/profile/files', headers: HOST });
+    expect(got.json<{ profile: string }>().profile).toContain('Mona');
+
+    const before = readFileSync(profilePath, 'utf8');
+    const bad = await put(
+      'profile',
+      before.replace('default_specialism: cloud', 'default_specialism: nope'),
+    );
+    expect(bad.statusCode).toBe(400);
+    expect(bad.json<{ error: string }>().error).toMatch(/default_specialism/);
+    expect(readFileSync(profilePath, 'utf8')).toBe(before);
+    expect((await put('titles', 'p1: [ "(" ]\np2: []\nexclude: []\n')).statusCode).toBe(400);
+
+    const good = await put(
+      'profile',
+      before.replace('Notice period: Two weeks', 'Notice period: One month'),
+    );
+    expect(good.statusCode).toBe(200);
+    expect(readFileSync(profilePath, 'utf8')).toContain('Notice period: One month');
+    expect(readFileSync(`${profilePath}.bak`, 'utf8')).toBe(before);
+
+    const ro = await buildDashboard(c, db).inject({
+      method: 'PUT',
+      url: '/api/profile/files',
+      headers: { ...HOST, 'content-type': 'application/json' },
+      payload: { file: 'titles', text: 'p1: []\np2: []\nexclude: []\n' },
+    });
+    expect(ro.statusCode).toBe(409);
   });
 
   it('serves the page', async () => {

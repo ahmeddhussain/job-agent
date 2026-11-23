@@ -316,7 +316,7 @@ export async function runAgent(d: RunDeps): Promise<RunReport> {
   if (d.sendDigest && cfg.digest.enabled) {
     try {
       await d.sendDigest(digest);
-      d.out(`digest sent to ${cfg.digest.to}`);
+      d.out(`digest sent to ${cfg.digest.to ?? ''}`);
     } catch (err) {
       d.out(`digest FAILED: ${String(err)}`);
     }
