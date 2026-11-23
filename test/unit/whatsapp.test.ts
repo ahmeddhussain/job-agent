@@ -12,7 +12,12 @@ import {
   worthKeeping,
 } from '../../src/collect/whatsapp/collect.js';
 import { exportRef, parseWhatsAppExport, zonedToUtc } from '../../src/collect/whatsapp/export.js';
-import type { WaChat, WaMessage, WhatsAppReader } from '../../src/collect/whatsapp/readonly.js';
+import type {
+  WaChannel,
+  WaChat,
+  WaMessage,
+  WhatsAppReader,
+} from '../../src/collect/whatsapp/readonly.js';
 import { parseConfig, type Config } from '../../src/config.js';
 import { migrate, openDb, type Db } from '../../src/db/index.js';
 
@@ -92,7 +97,16 @@ class FakeReader implements WhatsAppReader {
   constructor(
     private readonly chats: WaChat[],
     private readonly msgs: Record<string, WaMessage[]>,
+    private readonly channels: WaChannel[] = [],
   ) {}
+  getChannels() {
+    this.calls.push('getChannels');
+    return Promise.resolve(this.channels);
+  }
+  fetchChannelMessages(id: string, limit: number) {
+    this.calls.push(`fetchChannelMessages:${id}:${String(limit)}`);
+    return Promise.resolve((this.msgs[id] ?? []).slice(-limit));
+  }
   getChats() {
     this.calls.push('getChats');
     return Promise.resolve(this.chats);
@@ -224,6 +238,49 @@ describe('collectWhatsApp', () => {
       }),
     ).rejects.toThrow(/clock is about 18\.0 h behind/);
     expect(db.prepare('SELECT COUNT(*) FROM source_state').pluck().get()).toBe(0);
+  });
+
+  it('reads every followed channel except excluded ones, as whatsapp_channel items (D37)', async () => {
+    const reader = new FakeReader(
+      chats,
+      {
+        'c1@newsletter': [msg('cm1', 2, JOB, { author: null }), msg('cm-old', 40, JOB)],
+        'c2@newsletter': [msg('cm2', 1, JOB)],
+      },
+      [
+        { id: 'c1@newsletter', name: 'Egypt DevOps Jobs' },
+        { id: 'c2@newsletter', name: 'Memes' },
+      ],
+    );
+    const res = await collectWhatsApp({
+      wa: reader,
+      db,
+      cfg: {
+        ...cfg,
+        whatsapp: {
+          ...cfg.whatsapp,
+          channels: { follow_all: true, exclude: ['memes'], fetch_limit: 100 },
+        },
+      },
+      now: NOW,
+      salt: 's',
+      log,
+    });
+    expect(reader.calls).not.toContain('fetchChannelMessages:c2@newsletter:100');
+    const rows = db
+      .prepare(
+        `SELECT source, source_ref, source_name, author FROM raw_items WHERE source = 'whatsapp_channel'`,
+      )
+      .all();
+    expect(rows).toEqual([
+      {
+        source: 'whatsapp_channel',
+        source_ref: 'cm1',
+        source_name: 'Egypt DevOps Jobs',
+        author: null,
+      },
+    ]);
+    expect(res.groups.map((g) => g.name)).toContain('Egypt DevOps Jobs (channel)');
   });
 
   it('pre-filter and allowlist helpers', () => {

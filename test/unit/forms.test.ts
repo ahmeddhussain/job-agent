@@ -325,6 +325,7 @@ describe('send all reviewed drafts', () => {
       search: () => Promise.resolve([]),
       getMessage: () => Promise.reject(new Error('unused')),
       createDraft: () => Promise.reject(new Error('unused')),
+      deleteOwnDraft: () => Promise.resolve(),
       draftExists: (id) => Promise.resolve(existing.has(id)),
       threadMessages: () => Promise.resolve([]),
       sendRaw: () => Promise.reject(new Error('unused')),

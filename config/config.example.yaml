@@ -26,6 +26,10 @@ whatsapp:
   author_salt_file: data/wa-author-salt   # members' ids are stored only as salted hashes
   min_text_chars: 40               # shorter messages need an email or link to be kept
   export_date_order: dmy           # exported chats from an Egyptian phone: day/month/year
+  channels:                        # D37: WhatsApp Channels you follow (read-only)
+    follow_all: true
+    exclude: []                      # channel names or ids to leave out
+    fetch_limit: 100
 
 gmail:
   client_file: secrets/gmail_client.json   # Desktop OAuth client (docs/gmail-setup.md)
@@ -33,6 +37,8 @@ gmail:
   max_alert_chars: 60000           # cap per alert; Indeed links are ~650-char click trackers (#18)
 
 alerts:
+  enabled: true
+  skip_from: [jobalerts-noreply@linkedin.com, jobs-noreply@linkedin.com]   # D38: LinkedIn search replaces its alerts
   gmail_label: job-alerts          # Gmail filter puts LinkedIn/Wuzzuf/Bayt/Indeed alerts here
   skip_subjects:                   # labelled emails that are about YOUR applications, not new jobs
     - 'your application (was|has been) (sent|viewed|submitted|received)'
@@ -44,7 +50,18 @@ alerts:
   fetch_linkedin_public_page: true # logged-out, no cookies, ≤ 1 req / 5 s
   linkedin_min_interval_seconds: 5
 
+search:
+  linkedin:                        # D38: public job search, logged out (edit titles in the dashboard: Settings)
+    enabled: true
+    titles: [DevOps Engineer, Cloud Engineer, IT Engineer, Infrastructure Engineer, Technical Support, Application Support, Platform Engineer, Monitoring Engineer]
+    locations: [Egypt]
+    max_pages: 5                   # 10 jobs per page
+    min_interval_seconds: 6
+    retries: 2                     # a refused page (HTTP 429) is retried after a pause
+    retry_wait_seconds: 45
+
 ats:
+  enabled: true
   companies_file: config/companies.yaml
   min_interval_seconds: 1
   user_agent: "job-agent/1.0 (personal job search)"
@@ -85,6 +102,13 @@ filters:
   allow_remote: true
   max_years_required: 3            # more than this is skipped; no seniority-word rules (D21)
   max_job_age_days: 30          # D34: alerts also recommend old jobs; skip those older than this
+
+preferences:                 # D39: edited in the dashboard (Settings, or a job's company buttons)
+  blocked_companies: []      # never apply
+  favorite_companies: []     # always prepared, even below the fit threshold
+
+followup:                    # D40
+  after_days: 7              # email applications with no reply after this get a follow-up draft (on request)
 
 scoring:
   weights:                         # final score = skills * w.skills + experience * w.experience (D21)

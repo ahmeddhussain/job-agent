@@ -64,7 +64,9 @@ export async function collectAlerts(o: {
       ? new Date(Date.parse(row) - cfg.run.overlap_minutes * 60_000)
       : new Date(o.now.getTime() - cfg.run.first_run_lookback_hours * 3_600_000));
   // Gmail's after: takes epoch seconds; the label name is config data, quoted.
-  const q = `label:"${cfg.alerts.gmail_label.replace(/"/g, '')}" after:${String(Math.floor(since.getTime() / 1000))}`;
+  // Senders replaced by a better source (LinkedIn's search, D38) are left out in the query.
+  const notFrom = cfg.alerts.skip_from.map((f) => ` -from:${f.replace(/[^\w@.+-]/g, '')}`).join('');
+  const q = `label:"${cfg.alerts.gmail_label.replace(/"/g, '')}" after:${String(Math.floor(since.getTime() / 1000))}${notFrom}`;
   const ids = await o.gmail.search(q, 200);
   const items: AlertsResult['items'] = [];
   const skipped: string[] = [];

@@ -95,3 +95,20 @@ export const FormAnswersSchema = z.strictObject({
     .max(80),
 });
 export type FormAnswers = z.infer<typeof FormAnswersSchema>;
+
+export const InterviewPrepSchema = z.strictObject({
+  questions: z
+    .array(
+      z.strictObject({
+        question: z.string().max(300),
+        why: z.string().max(200),
+        answer_points: z.array(z.string().max(300)).min(1).max(5),
+        evidence: z.array(z.string().max(60)).max(8),
+      }),
+    )
+    .min(3)
+    .max(10),
+  gaps: z.array(z.strictObject({ gap: z.string().max(200), how: z.string().max(300) })).max(8),
+  questions_to_ask: z.array(z.string().max(250)).max(5),
+});
+export type InterviewPrep = z.infer<typeof InterviewPrepSchema>;

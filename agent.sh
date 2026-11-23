@@ -76,9 +76,15 @@ shift || true
 case "$cmd" in
   run)
     gmail_hint
-    agent run "$@"
+    status=0
+    agent run "$@" || status=$?
+    # A desktop notification when the run ends (if the desktop session is reachable).
+    if command -v notify-send >/dev/null 2>&1; then
+      (use_desktop 2>/dev/null && notify-send "Job Agent" "Run finished (exit $status): open ./agent.sh dashboard") || true
+    fi
     echo
     echo "Next: ./agent.sh dashboard (review), ./agent.sh apply (finish the rest), ./agent.sh send (send drafts)"
+    exit "$status"
     ;;
   dry-run) agent run --dry-run "$@" ;;
   dashboard) dashboard "/#${1:-today}" ;;

@@ -43,9 +43,17 @@ export interface ReadOnlyOptions {
 }
 
 /** The minimal read surface the collector depends on (lets tests use a fake). */
+export interface WaChannel {
+  id: string;
+  name: string;
+}
+
 export interface WhatsAppReader {
   getChats(): Promise<WaChat[]>;
   fetchMessages(chatId: string, limit: number): Promise<WaMessage[]>;
+  /** Channels the account follows (D37). Reading only: no follow, unfollow, mute or react. */
+  getChannels(): Promise<WaChannel[]>;
+  fetchChannelMessages(channelId: string, limit: number): Promise<WaMessage[]>;
   destroy(): Promise<void>;
 }
 
@@ -161,6 +169,27 @@ export class ReadOnlyWhatsApp implements WhatsAppReader {
       timestamp: m.timestamp,
       body: m.body,
       author: m.author ?? null,
+      type: m.type,
+      fromMe: m.fromMe,
+    }));
+  }
+
+  async getChannels(): Promise<WaChannel[]> {
+    const channels = await this.client.getChannels();
+    return channels.map((c) => ({ id: c.id._serialized, name: c.name }));
+  }
+
+  /** Channel.fetchMessages loads earlier messages only (verified in 1.34.8: no sendSeen). */
+  async fetchChannelMessages(channelId: string, limit: number): Promise<WaMessage[]> {
+    const channel = (await this.client.getChatById(channelId)) as unknown as {
+      fetchMessages(o: { limit: number }): Promise<wweb.Message[]>;
+    };
+    const msgs = await channel.fetchMessages({ limit });
+    return msgs.map((m) => ({
+      id: m.id._serialized,
+      timestamp: m.timestamp,
+      body: m.body,
+      author: null, // channel posts are the channel's own
       type: m.type,
       fromMe: m.fromMe,
     }));

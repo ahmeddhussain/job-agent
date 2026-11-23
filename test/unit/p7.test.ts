@@ -130,7 +130,12 @@ describe('migration 002', () => {
        VALUES (1, 't', 't', 'form', 'f', 'now', 'now')`,
     ).run();
     const res = migrate(db);
-    expect(res.applied).toEqual(['002_run.sql', '003_forms.sql', '004_dates_questions.sql']);
+    expect(res.applied).toEqual([
+      '002_run.sql',
+      '003_forms.sql',
+      '004_dates_questions.sql',
+      '005_search_channels.sql',
+    ]);
     expect(
       db.prepare('SELECT count(*) FROM raw_items WHERE processed_at IS NULL').pluck().get(),
     ).toBe(1);
@@ -502,6 +507,7 @@ describe('agent run end to end (fixtures, recorded model outputs, fake Gmail)', 
           threadId: 't',
         });
       },
+      deleteOwnDraft: () => Promise.resolve(),
       draftExists: () => Promise.resolve(true),
       threadMessages: () => Promise.resolve([]),
       sendRaw: () => Promise.reject(new Error('no sending in tests')),

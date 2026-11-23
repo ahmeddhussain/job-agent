@@ -33,6 +33,7 @@ export function buildProgram(io: Io): Command {
     .addOption(
       new Option('--source <name>', 'collect one source only').choices([
         'whatsapp',
+        'linkedin',
         'alerts',
         'ats',
       ]),
@@ -136,7 +137,7 @@ export function buildProgram(io: Io): Command {
     .description('serve the tracker on 127.0.0.1 (dashboard.host:port)')
     .action(async () => {
       const { serveDashboard } = await import('../dashboard/server.js');
-      await serveDashboard(loadConfig(configPath()), io);
+      await serveDashboard(loadConfig(configPath()), io, configPath());
     });
 
   program
@@ -179,7 +180,13 @@ export function buildProgram(io: Io): Command {
     .command('collect')
     .description('collect new posts from one source into the database (no model calls)')
     .addArgument(
-      new Argument('<source>', 'source').choices(['whatsapp', 'whatsapp-export', 'alerts', 'ats']),
+      new Argument('<source>', 'source').choices([
+        'whatsapp',
+        'whatsapp-export',
+        'linkedin',
+        'alerts',
+        'ats',
+      ]),
     )
     .option('--since <iso>', 'override the watermark (ISO-8601)')
     .option('--dry-run', 'count only; write nothing')
@@ -198,6 +205,11 @@ export function buildProgram(io: Io): Command {
         },
       ) => {
         const cfg = loadConfig(configPath());
+        if (source === 'linkedin') {
+          const r = await import('./run.js');
+          await r.collectLinkedinCommand(cfg, opts, io);
+          return;
+        }
         if (source === 'ats') {
           const a = await import('./ats.js');
           await a.collectAtsCommand(cfg, opts, io);

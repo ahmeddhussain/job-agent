@@ -19,11 +19,14 @@ describe('database', () => {
       '002_run.sql',
       '003_forms.sql',
       '004_dates_questions.sql',
+      '005_search_channels.sql',
     ]);
     expect(listTables(db)).toEqual([
       'applications',
       'companies',
       'company_probes',
+      'discards',
+      'dismissed_suggestions',
       'form_questions',
       'jobs',
       'llm_calls',
@@ -44,6 +47,7 @@ describe('database', () => {
       '002_run.sql',
       '003_forms.sql',
       '004_dates_questions.sql',
+      '005_search_channels.sql',
     ]);
   });
 

@@ -98,12 +98,26 @@ describe('Gmail facade limits (security A10)', () => {
     ).toEqual([FACADE]);
   });
 
-  it('the facade never deletes, trashes, relabels or changes settings', () => {
+  it('the facade never trashes, relabels or changes settings; it deletes only drafts (D39)', () => {
     const code = readFileSync(FACADE, 'utf8');
-    expect(code).not.toMatch(
-      /\.(delete|trash|untrash|modify|batchModify|batchDelete|insert|import)\s*\(/,
+    expect(code).not.toMatch(/\.(trash|untrash|modify|batchModify|batchDelete|insert|import)\s*\(/);
+    // The one delete: users.drafts.delete, inside deleteOwnDraft. No message is ever deleted.
+    const deletes = [...code.matchAll(/(\w+)\.delete\s*\(/g)].map((m) => m[1]);
+    expect(deletes).toEqual(['drafts']);
+    expect(code).toMatch(/async deleteOwnDraft[\s\S]{0,200}users\.drafts\.delete/);
+  });
+
+  it('deleteOwnDraft is called only with draft ids the agent stored', () => {
+    const callers = src.filter(
+      (f) => f !== FACADE && /deleteOwnDraft\(/.test(readFileSync(f, 'utf8')),
     );
-    expect(code).not.toMatch(/\.(labels|settings|filters|forwardingAddresses|sendAs)\./);
+    for (const f of callers) {
+      const code = readFileSync(f, 'utf8');
+      expect(code, f).toMatch(/gmail_draft_id/);
+    }
+    expect(readFileSync(FACADE, 'utf8')).not.toMatch(
+      /\.(labels|settings|filters|forwardingAddresses|sendAs)\./,
+    );
   });
 
   it('sending is called only from the digest and the apply stage', () => {
@@ -119,6 +133,11 @@ describe('Gmail facade limits (security A10)', () => {
 });
 
 class FakeGmail implements GmailWriter {
+  deleted: string[] = [];
+  deleteOwnDraft(id: string) {
+    this.deleted.push(id);
+    return Promise.resolve();
+  }
   sent: string[] = [];
   searches: string[] = [];
   drafts = new Set<string>();
@@ -210,8 +229,8 @@ describe('alerts', () => {
     g.messages.set('a1', alert);
     const r1 = await collectAlerts({ gmail: g, db, cfg, now: NOW, log });
     expect(g.searches[0]).toBe(
-      `label:"job-alerts" after:${String(Math.floor((NOW.getTime() - 24 * 3_600_000) / 1000))}`,
-    );
+      `label:"job-alerts" after:${String(Math.floor((NOW.getTime() - 24 * 3_600_000) / 1000))} -from:jobalerts-noreply@linkedin.com -from:jobs-noreply@linkedin.com`,
+    ); // LinkedIn's alerts are left out: its search replaces them (D38)
     expect(r1.inserted).toBe(1);
     const r2 = await collectAlerts({
       gmail: g,

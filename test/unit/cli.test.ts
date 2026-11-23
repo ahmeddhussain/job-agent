@@ -92,7 +92,7 @@ describe('cli', () => {
     const first = makeProgram();
     await first.program.parseAsync(['node', 'agent', '-c', configPath, 'db:migrate']);
     expect(first.lines).toContain(
-      'applied: 001_init.sql, 002_run.sql, 003_forms.sql, 004_dates_questions.sql',
+      'applied: 001_init.sql, 002_run.sql, 003_forms.sql, 004_dates_questions.sql, 005_search_channels.sql',
     );
 
     const second = makeProgram();

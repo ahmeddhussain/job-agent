@@ -198,5 +198,66 @@ export async function collectWhatsApp(o: CollectOptions): Promise<CollectResult>
       'whatsapp group collected',
     );
   }
+  // Channels (D37): every channel the account follows, unless excluded; same window,
+  // same text-only filter, one watermark per channel.
+  if (cfg.whatsapp.channels.follow_all) {
+    const exclude = new Set(cfg.whatsapp.channels.exclude.map((x) => x.toLowerCase()));
+    const channels = (await o.wa.getChannels()).filter(
+      (c) => !exclude.has(c.name.toLowerCase()) && !exclude.has(c.id.toLowerCase()),
+    );
+    for (const ch of channels) {
+      const since = windowStart(db, cfg, ch.id, o.now, o.since);
+      let msgs: WaMessage[];
+      try {
+        msgs = await o.wa.fetchChannelMessages(ch.id, cfg.whatsapp.channels.fetch_limit);
+      } catch (err) {
+        warnings.push(`channel "${ch.name}" could not be read: ${String(err).slice(0, 120)}`);
+        continue;
+      }
+      const inWindow = msgs.filter(
+        (m) => m.timestamp * 1000 >= since.getTime() && m.timestamp * 1000 <= o.now.getTime(),
+      );
+      const kept = inWindow.filter(
+        (m) => TEXT_TYPES.has(m.type) && worthKeeping(m.body, cfg.whatsapp.min_text_chars),
+      );
+      let inserted = 0;
+      if (!o.dryRun) {
+        const collectedAt = o.now.toISOString();
+        db.transaction(() => {
+          for (const m of kept) {
+            const item = prepareRawItem({
+              source: 'whatsapp_channel',
+              source_ref: m.id,
+              source_name: ch.name,
+              posted_at: new Date(m.timestamp * 1000).toISOString(),
+              text: m.body,
+              run_id: o.runId ?? null,
+            });
+            if (insertRawItem(db, item, collectedAt).inserted) inserted++;
+          }
+          db.prepare(
+            `INSERT INTO source_state (source, last_success_at) VALUES (?, ?)
+             ON CONFLICT (source) DO UPDATE SET last_success_at = excluded.last_success_at`,
+          ).run(watermarkKey(ch.id), o.now.toISOString());
+        })();
+      }
+      groups.push({
+        id: ch.id,
+        name: `${ch.name} (channel)`,
+        since: since.toISOString(),
+        fetched: msgs.length,
+        inWindow: inWindow.length,
+        kept: kept.length,
+        inserted,
+        limitHit: false,
+        oldest: msgs.length
+          ? new Date(Math.min(...msgs.map((x) => x.timestamp)) * 1000).toISOString()
+          : null,
+        newest: msgs.length
+          ? new Date(Math.max(...msgs.map((x) => x.timestamp)) * 1000).toISOString()
+          : null,
+      });
+    }
+  }
   return { groups, inserted: groups.reduce((a, g) => a + g.inserted, 0), warnings };
 }

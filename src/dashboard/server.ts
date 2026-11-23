@@ -17,10 +17,28 @@ import { updateJobStatus } from '../db/jobs.js';
 import { pendingQuestions } from '../apply/questions.js';
 import { loadProfile } from '../profile/load.js';
 import { AnswerError, setAnswer } from '../profile/answers.js';
-import { draftUrl } from '../gmail/client.js';
+import { draftUrl, GmailFacade, type GmailWriter } from '../gmail/client.js';
+import { gmailAuthClient } from '../gmail/auth.js';
+import type { Llm } from '../llm/types.js';
+import { claude } from '../cli/run.js';
+import { readSettings, updateSettings } from '../settings.js';
+import {
+  applySuggestion,
+  bulk,
+  DISCARD_REASONS,
+  discardJob,
+  dismissSuggestion,
+  draftFollowup,
+  followupsDue,
+  interviewPrep,
+  sourceScoreboard,
+  suggestions,
+} from './actions.js';
+import { RunManager } from './runner.js';
 import type { Io } from '../cli/program.js';
 
 const PAGE = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'dashboard', 'index.html');
+const FONTS_DIR = join(dirname(PAGE), 'fonts');
 const STATUSES = [
   'new',
   'skipped',
@@ -103,6 +121,9 @@ interface Row {
   apply_phone: string | null;
   sent_at_app: string | null;
   form_report: string | null;
+  interview_prep: string | null;
+  discard_reason: string | null;
+  followup_at: string | null;
 }
 
 function toJob(r: Row) {
@@ -185,6 +206,15 @@ function toJob(r: Row) {
     apply_phone: r.apply_phone,
     form_filled: form?.filled ?? [],
     form_unanswered: form?.unanswered ?? [],
+    interview_prep: (() => {
+      try {
+        return JSON.parse(r.interview_prep ?? 'null') as unknown;
+      } catch {
+        return null;
+      }
+    })(),
+    discard_reason: r.discard_reason,
+    followup_at: r.followup_at,
     fit_summary: reasons.summary ?? null,
     why_this_role: r.why_this_role,
     ats_keywords: ats?.keywordCoverage ?? null,
@@ -193,8 +223,54 @@ function toJob(r: Row) {
   };
 }
 
-export function buildDashboard(cfg: Config, db: Db): FastifyInstance {
+export interface DashboardOptions {
+  /** The config file settings are written to (D39); without it, settings are read-only. */
+  configPath?: string;
+  /** Gmail for deleting discarded drafts and drafting follow-ups; null when unavailable. */
+  gmail?: () => Promise<GmailWriter | null>;
+  /** The model client for interview prep (D41). */
+  llm?: () => Llm;
+  runner?: RunManager;
+}
+
+const SettingsBody = z
+  .strictObject({
+    search_titles: z.array(z.string().min(2).max(80)).max(30),
+    search_locations: z.array(z.string().min(2).max(60)).min(1).max(5),
+    linkedin_enabled: z.boolean(),
+    channels_follow_all: z.boolean(),
+    channels_exclude: z.array(z.string().min(1).max(120)).max(100),
+    alerts_enabled: z.boolean(),
+    ats_enabled: z.boolean(),
+    max_job_age_days: z.number().int().min(1).max(365),
+    max_years_required: z.number().int().min(0).max(20),
+    thresholds: z.strictObject({
+      p1: z.number().int().min(0).max(100),
+      p2: z.number().int().min(0).max(100),
+      p3: z.number().int().min(0).max(100),
+    }),
+    blocked_companies: z.array(z.string().min(1).max(120)).max(500),
+    favorite_companies: z.array(z.string().min(1).max(120)).max(500),
+    excluded_titles: z.array(z.string().min(2).max(80)).max(200),
+  })
+  .partial();
+const DiscardBody = z.strictObject({
+  reason: z.enum(DISCARD_REASONS),
+  note: z.string().max(500).optional(),
+});
+const BulkBody = z.strictObject({
+  ids: z.array(z.number().int().positive()).min(1).max(500),
+  action: z.enum(['prepare', 'skip', 'applied', 'discard']),
+  reason: z.enum(DISCARD_REASONS).optional(),
+});
+const KeyBody = z.strictObject({ key: z.string().min(3).max(200) });
+const RunBody = z.strictObject({ dry_run: z.boolean().optional() });
+const FONTS = new Set(['Inter.woff2', 'SpaceGrotesk.woff2', 'JetBrainsMono.woff2', 'fonts.css']);
+
+export function buildDashboard(cfg: Config, db: Db, opts: DashboardOptions = {}): FastifyInstance {
   const app = Fastify({ logger: false, bodyLimit: 64 * 1024 });
+  // Settings edits replace the config in use (D39).
+  let current = cfg;
   const port = String(cfg.dashboard.port);
   const allowedHosts = new Set([`127.0.0.1:${port}`, `localhost:${port}`, `[::1]:${port}`]);
   const outputRoot = (() => {
@@ -218,9 +294,9 @@ export function buildDashboard(cfg: Config, db: Db): FastifyInstance {
     void reply.headers({
       'X-Content-Type-Options': 'nosniff',
       'Referrer-Policy': 'no-referrer',
-      'X-Frame-Options': 'DENY',
-      'Content-Security-Policy':
-        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'",
+      // The CV preview frames /files/* from this same page; nothing else may frame anything.
+      'X-Frame-Options': req.url.startsWith('/files/') ? 'SAMEORIGIN' : 'DENY',
+      'Content-Security-Policy': `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-src 'self'; frame-ancestors ${req.url.startsWith('/files/') ? "'self'" : "'none'"}; base-uri 'none'; form-action 'none'`,
       'Cache-Control': 'no-store',
     });
   });
@@ -229,6 +305,107 @@ export function buildDashboard(cfg: Config, db: Db): FastifyInstance {
     reply.type('text/html; charset=utf-8').send(readFileSync(PAGE, 'utf8')),
   );
   app.get('/healthz', (_req, reply) => reply.send({ ok: true }));
+  app.get('/fonts/:name', (req, reply) => {
+    const name = (req.params as { name: string }).name;
+    if (!FONTS.has(name)) return reply.code(404).send({ error: 'no such font' });
+    return reply
+      .type(name.endsWith('.css') ? 'text/css; charset=utf-8' : 'font/woff2')
+      .header('Cache-Control', 'max-age=86400')
+      .send(readFileSync(join(FONTS_DIR, name)));
+  });
+
+  // ------------------------------------------------------------------ settings (D39)
+  app.get('/api/settings', (_req, reply) =>
+    reply.send({ settings: readSettings(current), editable: Boolean(opts.configPath) }),
+  );
+  app.put('/api/settings', (req, reply) => {
+    if (!opts.configPath) return reply.code(409).send({ error: 'settings are read-only here' });
+    const b = SettingsBody.safeParse(req.body);
+    if (!b.success) return reply.code(400).send({ error: z.prettifyError(b.error) });
+    try {
+      current = updateSettings(opts.configPath, current.paths.titles, b.data);
+      return reply.send({ ok: true, settings: readSettings(current) });
+    } catch (err) {
+      return reply.code(400).send({ error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
+  // ------------------------------------------------------------------ discard + learning
+  app.post('/api/jobs/:id/discard', async (req, reply) => {
+    const id = Number((req.params as { id: string }).id);
+    const b = DiscardBody.safeParse(req.body);
+    if (!Number.isInteger(id) || !b.success) return reply.code(400).send({ error: 'bad request' });
+    try {
+      const r = await discardJob(db, (await opts.gmail?.()) ?? null, id, b.data.reason, b.data.note ?? null);
+      return await reply.send({ ok: true, ...r, suggestions: suggestions(db, current) });
+    } catch (err) {
+      return reply.code(400).send({ error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+  app.get('/api/suggestions', (_req, reply) => reply.send({ suggestions: suggestions(db, current) }));
+  app.post('/api/suggestions/apply', (req, reply) => {
+    const b = KeyBody.safeParse(req.body);
+    if (!b.success) return reply.code(400).send({ error: 'bad request' });
+    if (!opts.configPath) return reply.code(409).send({ error: 'settings are read-only here' });
+    const s = suggestions(db, current).find((x) => x.key === b.data.key);
+    if (!s) return reply.code(404).send({ error: 'no such suggestion' });
+    current = applySuggestion(opts.configPath, current, s);
+    return reply.send({ ok: true, settings: readSettings(current), suggestions: suggestions(db, current) });
+  });
+  app.post('/api/suggestions/dismiss', (req, reply) => {
+    const b = KeyBody.safeParse(req.body);
+    if (!b.success) return reply.code(400).send({ error: 'bad request' });
+    dismissSuggestion(db, b.data.key);
+    return reply.send({ ok: true, suggestions: suggestions(db, current) });
+  });
+  app.post('/api/jobs/bulk', async (req, reply) => {
+    const b = BulkBody.safeParse(req.body);
+    if (!b.success) return reply.code(400).send({ error: z.prettifyError(b.error) });
+    const gmail = b.data.action === 'discard' ? ((await opts.gmail?.()) ?? null) : null;
+    return reply.send(await bulk(db, gmail, b.data.ids, b.data.action, b.data.reason));
+  });
+
+  // ------------------------------------------------------------------ follow-ups, prep, sources
+  app.get('/api/followups', (_req, reply) => reply.send({ due: followupsDue(db, current) }));
+  app.post('/api/jobs/:id/followup', async (req, reply) => {
+    const id = Number((req.params as { id: string }).id);
+    if (!Number.isInteger(id)) return reply.code(400).send({ error: 'bad id' });
+    const gmail = (await opts.gmail?.()) ?? null;
+    if (!gmail) return reply.code(503).send({ error: 'Gmail is not available (./agent.sh gmail-auth)' });
+    try {
+      const d = await draftFollowup(db, gmail, loadProfile(current.paths.profile), id);
+      return await reply.send({ ok: true, draft_url: draftUrl(d.draftId) });
+    } catch (err) {
+      return reply.code(400).send({ error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+  app.post('/api/jobs/:id/prep', async (req, reply) => {
+    const id = Number((req.params as { id: string }).id);
+    if (!Number.isInteger(id)) return reply.code(400).send({ error: 'bad id' });
+    if (!opts.llm) return reply.code(503).send({ error: 'interview prep needs the model client' });
+    try {
+      const prep = await interviewPrep(db, opts.llm(), current, loadProfile(current.paths.profile), id);
+      return await reply.send({ ok: true, prep });
+    } catch (err) {
+      return reply.code(400).send({ error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+  app.get('/api/sources', (_req, reply) => reply.send({ sources: sourceScoreboard(db) }));
+
+  // ------------------------------------------------------------------ run now
+  app.get('/api/run', (_req, reply) =>
+    reply.send(opts.runner?.status() ?? { running: false, lines: [], unavailable: true }),
+  );
+  app.post('/api/run', (req, reply) => {
+    const b = RunBody.safeParse(req.body ?? {});
+    if (!b.success) return reply.code(400).send({ error: 'bad request' });
+    if (!opts.runner) return reply.code(503).send({ error: 'runs can only be started from the agent.sh dashboard' });
+    try {
+      return reply.send(opts.runner.start(b.data.dry_run ?? false));
+    } catch (err) {
+      return reply.code(409).send({ error: err instanceof Error ? err.message : String(err) });
+    }
+  });
 
   app.get('/api/jobs', (req, reply) => {
     const q = JobsQuery.safeParse(req.query);
@@ -261,6 +438,7 @@ export function buildDashboard(cfg: Config, db: Db): FastifyInstance {
            a.gmail_message_id, a.sent_at, a.cv_pdf, a.cv_md, a.cover_text, a.package_dir,
            a.why_this_role, a.ats_report, a.mode AS app_mode, a.manual_reason,
            a.sent_at AS sent_at_app, a.form_report, substr(r.text, 1, 2500) AS post_text,
+           a.followup_at, (SELECT reason FROM discards x WHERE x.job_id = j.id) AS discard_reason,
            CASE WHEN c.id IS NULL THEN NULL ELSE c.ats || '/' || COALESCE(c.board, c.url) END AS company_board
          FROM jobs j JOIN raw_items r ON r.id = j.raw_item_id
          LEFT JOIN applications a ON a.job_id = j.id
@@ -482,7 +660,7 @@ export function buildDashboard(cfg: Config, db: Db): FastifyInstance {
   return app;
 }
 
-export async function serveDashboard(cfg: Config, io: Io): Promise<void> {
+export async function serveDashboard(cfg: Config, io: Io, configPath: string): Promise<void> {
   if (!LOOPBACK.has(cfg.dashboard.host))
     throw new Error(
       `dashboard.host must be a loopback address (127.0.0.1); got ${cfg.dashboard.host}. ` +
@@ -490,7 +668,23 @@ export async function serveDashboard(cfg: Config, io: Io): Promise<void> {
     );
   const db = openDb(cfg.paths.db);
   migrate(db);
-  const app = buildDashboard(cfg, db);
+  let gmail: GmailFacade | null | undefined;
+  const app = buildDashboard(cfg, db, {
+    configPath,
+    gmail: async () => {
+      if (gmail !== undefined) return gmail;
+      try {
+        const g = new GmailFacade(gmailAuthClient(cfg));
+        await g.myAddress();
+        gmail = g;
+      } catch {
+        gmail = null; // the dashboard works without Gmail; actions that need it say so
+      }
+      return gmail;
+    },
+    llm: () => claude(cfg, []),
+    runner: new RunManager(),
+  });
   const close = async () => {
     await app.close();
     db.close();

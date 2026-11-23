@@ -25,7 +25,16 @@ export interface GmailReader {
 }
 
 export interface GmailWriter extends GmailReader {
-  createDraft(raw: string): Promise<{ draftId: string; messageId: string; threadId: string }>;
+  /** With threadId, the draft joins that conversation (follow-ups, D40). */
+  createDraft(
+    raw: string,
+    threadId?: string,
+  ): Promise<{ draftId: string; messageId: string; threadId: string }>;
+  /**
+   * Deletes a draft the agent itself created (D39: a job marked "Not a fit"). Callers pass
+   * only ids stored in applications.gmail_draft_id; nothing else in Gmail is ever deleted.
+   */
+  deleteOwnDraft(draftId: string): Promise<void>;
   draftExists(draftId: string): Promise<boolean>;
   threadMessages(
     threadId: string,
@@ -109,11 +118,11 @@ export class GmailFacade implements GmailWriter {
     };
   }
 
-  async createDraft(raw: string) {
+  async createDraft(raw: string, threadId?: string) {
     const r = await this.api.users.drafts
       .create({
         userId: 'me',
-        requestBody: { message: { raw } },
+        requestBody: { message: { raw, ...(threadId ? { threadId } : {}) } },
       })
       .catch(explainGmailError);
     return {
@@ -121,6 +130,11 @@ export class GmailFacade implements GmailWriter {
       messageId: r.data.message?.id ?? '',
       threadId: r.data.message?.threadId ?? '',
     };
+  }
+
+  async deleteOwnDraft(draftId: string): Promise<void> {
+    if (!/^[A-Za-z0-9_-]{6,}$/.test(draftId)) throw new Error('not a draft id');
+    await this.api.users.drafts.delete({ userId: 'me', id: draftId }).catch(explainGmailError);
   }
 
   async draftExists(draftId: string): Promise<boolean> {

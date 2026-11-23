@@ -180,6 +180,6 @@ describe('dashboard API', () => {
   it('serves the page', async () => {
     const r = await buildDashboard(cfg, db).inject({ method: 'GET', url: '/', headers: HOST });
     expect(r.statusCode).toBe(200);
-    expect(r.body).toMatch(/Job Tracker/);
+    expect(r.body).toMatch(/<title>Job Agent<\/title>/);
   });
 });

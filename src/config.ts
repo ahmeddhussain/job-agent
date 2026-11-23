@@ -40,6 +40,12 @@ export const ConfigSchema = z.strictObject({
     author_salt_file: realString,
     min_text_chars: positiveInt,
     export_date_order: z.enum(['dmy', 'mdy']),
+    /** D37: read every channel the account follows (except these names or ids). */
+    channels: z.strictObject({
+      follow_all: z.boolean(),
+      exclude: z.array(realString),
+      fetch_limit: positiveInt,
+    }),
   }),
   gmail: z.strictObject({
     client_file: realString,
@@ -47,12 +53,28 @@ export const ConfigSchema = z.strictObject({
     max_alert_chars: positiveInt,
   }),
   alerts: z.strictObject({
+    enabled: z.boolean(),
+    /** Senders whose alerts are ignored (LinkedIn's, once its search replaces them: D38). */
+    skip_from: z.array(z.string().min(3)),
     gmail_label: realString,
     skip_subjects: z.array(z.string().min(3)),
     fetch_linkedin_public_page: z.boolean(),
     linkedin_min_interval_seconds: z.number().min(5),
   }),
+  search: z.strictObject({
+    /** D38: LinkedIn's public job search, one search per title and location per run. */
+    linkedin: z.strictObject({
+      enabled: z.boolean(),
+      titles: z.array(z.string().min(2).max(80)).max(30),
+      locations: z.array(z.string().min(2).max(60)).min(1).max(5),
+      max_pages: z.number().int().min(1).max(10),
+      min_interval_seconds: z.number().min(3),
+      retries: z.number().int().min(0).max(5),
+      retry_wait_seconds: z.number().int().min(5).max(300),
+    }),
+  }),
   ats: z.strictObject({
+    enabled: z.boolean(),
     companies_file: realString,
     min_interval_seconds: z.number().min(1),
     user_agent: realString,
@@ -99,6 +121,15 @@ export const ConfigSchema = z.strictObject({
     max_years_required: z.number().int().min(0),
     /** Older jobs are skipped as stale when the posting date is known (D34). */
     max_job_age_days: positiveInt,
+  }),
+  /** Ahmed's lists (D39): never apply to blocked companies; always prepare favorites. */
+  preferences: z.strictObject({
+    blocked_companies: z.array(z.string().min(1).max(120)),
+    favorite_companies: z.array(z.string().min(1).max(120)),
+  }),
+  /** D40: follow-up drafts for email applications without a reply. */
+  followup: z.strictObject({
+    after_days: positiveInt,
   }),
   scoring: z.strictObject({
     weights: z

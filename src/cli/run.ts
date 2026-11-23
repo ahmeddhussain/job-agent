@@ -6,6 +6,7 @@ import type { Config } from '../config.js';
 import { collectAlerts } from '../collect/alerts.js';
 import { collectAts, loadCompanies } from '../collect/ats/collect.js';
 import { companiesToPoll } from '../collect/ats/discover.js';
+import { collectLinkedinSearch } from '../collect/linkedin.js';
 import { migrate, openDb, type Db } from '../db/index.js';
 import { getJob, rowToCheckedJob, updateJobStatus } from '../db/jobs.js';
 import { gmailAuthClient } from '../gmail/auth.js';
@@ -33,6 +34,16 @@ import { acquireLock } from '../util/lock.js';
 import { logger } from '../util/logger.js';
 import type { Io } from './program.js';
 import { collectWhatsAppForRun } from './whatsapp.js';
+
+/** One paced client for every LinkedIn request in a run (search and job pages share the limit). */
+export function linkedinClient(cfg: Config): PoliteHttp {
+  return new PoliteHttp({
+    userAgent: cfg.ats.user_agent,
+    minIntervalMs:
+      Math.max(cfg.alerts.linkedin_min_interval_seconds, cfg.search.linkedin.min_interval_seconds) *
+      1000,
+  });
+}
 
 export interface RunFlags {
   dryRun?: boolean;
@@ -96,6 +107,7 @@ function depsFor(
     RunDeps,
     'gmailRead' | 'gmailWrite' | 'sources' | 'dryRun' | 'sendDigest' | 'forms'
   > & {
+    linkedinHttp?: PoliteHttp;
     calls: LlmCallRecord[];
     llm: ClaudeCli;
     outputRoot: string;
@@ -123,10 +135,7 @@ function depsFor(
       timeoutMs: 8000,
       attempts: 1,
     }),
-    linkedinHttp: new PoliteHttp({
-      userAgent: cfg.ats.user_agent,
-      minIntervalMs: cfg.alerts.linkedin_min_interval_seconds * 1000,
-    }),
+    linkedinHttp: extra.linkedinHttp ?? linkedinClient(cfg),
     matcher: TitleMatcher.fromFile(cfg.paths.titles),
     openRenderer: () => Renderer.open(),
     now: () => new Date(),
@@ -159,7 +168,28 @@ export async function runCommand(cfg: Config, flags: RunFlags, io: Io): Promise<
         name: 'whatsapp',
         collect: (runId) => collectWhatsAppForRun(cfg, db, runId, since),
       });
-    if (want('alerts'))
+    const linkedinHttp = linkedinClient(cfg);
+    if (want('linkedin') && cfg.search.linkedin.enabled && cfg.search.linkedin.titles.length > 0)
+      sources.push({
+        name: 'linkedin',
+        collect: async (runId) => {
+          const r = await collectLinkedinSearch({
+            http: linkedinHttp,
+            db,
+            cfg,
+            matcher: TitleMatcher.fromFile(cfg.paths.titles),
+            now: new Date(),
+            log: logger,
+            runId,
+          });
+          const incomplete = r.results.filter((x) => !x.complete).map((x) => x.title);
+          return {
+            inserted: r.inserted,
+            detail: `${String(r.results.length)} searches, ${String(r.results.reduce((a, x) => a + x.found, 0))} jobs listed, ${String(r.inserted)} new matching titles${r.refused ? `; LinkedIn refused ${String(r.refused)} pages` : ''}${incomplete.length ? ` (continued next run: ${incomplete.join(', ')})` : ''}`,
+          };
+        },
+      });
+    if (want('alerts') && cfg.alerts.enabled)
       sources.push({
         name: 'alerts',
         collect: async (runId) => {
@@ -179,7 +209,7 @@ export async function runCommand(cfg: Config, flags: RunFlags, io: Io): Promise<
           };
         },
       });
-    if (want('ats'))
+    if (want('ats') && cfg.ats.enabled)
       sources.push({
         name: 'ats',
         collect: async (runId) => {
@@ -226,6 +256,7 @@ export async function runCommand(cfg: Config, flags: RunFlags, io: Io): Promise<
         outputRoot: dryRun ? join(cfg.apply.output_dir, 'dry-run') : cfg.apply.output_dir,
         sendDigest: !dryRun && g ? (dg) => sendDigest(g, cfg, dg) : null,
         forms,
+        linkedinHttp,
       }),
     ).finally(() => forms.close());
     if (dryRun || !g)
@@ -369,5 +400,35 @@ export async function reprocessCommand(
   } finally {
     db.close();
     release();
+  }
+}
+
+/** `agent collect linkedin [--dry-run]`: the search alone, for checking titles and refusals. */
+export async function collectLinkedinCommand(
+  cfg: Config,
+  opts: { dryRun?: boolean },
+  io: Io,
+): Promise<void> {
+  const db = openDb(cfg.paths.db);
+  migrate(db);
+  try {
+    const r = await collectLinkedinSearch({
+      http: linkedinClient(cfg),
+      db,
+      cfg,
+      matcher: TitleMatcher.fromFile(cfg.paths.titles),
+      now: new Date(),
+      log: logger,
+      ...(opts.dryRun ? { dryRun: true } : {}),
+    });
+    for (const x of r.results)
+      io.out(
+        `${x.title} (${x.location}): ${String(x.found)} listed in ${String(x.pages)} pages, ${String(x.kept)} matching titles, ${String(x.inserted)} new${x.complete ? '' : '  [incomplete: LinkedIn refused a page]'}`,
+      );
+    io.out(
+      `${opts.dryRun ? 'dry run: nothing stored' : `stored ${String(r.inserted)} new jobs`}; ${String(r.refused)} pages refused`,
+    );
+  } finally {
+    db.close();
   }
 }

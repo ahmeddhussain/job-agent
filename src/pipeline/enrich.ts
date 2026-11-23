@@ -18,6 +18,7 @@ import {
   linkedinJobId,
   type PageJob,
 } from '../collect/pages/jobpage.js';
+import { getWith429Retry } from '../collect/linkedin.js';
 import { UsageLimitError, type Llm } from '../llm/types.js';
 import type { PoliteHttp } from '../util/http.js';
 import { canonicalTitle, diceSimilarity } from '../util/text.js';
@@ -139,9 +140,12 @@ export async function enrichJob(
         hit = await boardFromText(d, link, jobRef, o.jobId ?? null);
       } else if (liId) {
         if (d.cfg.alerts.fetch_linkedin_public_page) {
-          const html = await d.linkedinHttp.get(
+          // LinkedIn refuses some requests (429): wait and retry like the search does (D38).
+          const html = await getWith429Retry(
+            d.linkedinHttp,
             `https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/${liId}`,
-            'text/html',
+            d.cfg.search.linkedin.retries,
+            d.cfg.search.linkedin.retry_wait_seconds * 1000,
           );
           page = linkedinGuestJob(html, d.now);
           pageFrom = link;

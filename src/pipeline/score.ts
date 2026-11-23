@@ -7,6 +7,7 @@ import { factIndex, languageId, profileForPrompt, type Profile } from '../profil
 import type { CheckedJob } from './extract.js';
 import { loadPrompt, fence } from './extract.js';
 import type { Angle, TitleMatcher } from './titles.js';
+import { normalizeCompany } from '../util/text.js';
 
 export type JobStatus = 'new' | 'skipped' | 'needs_review';
 
@@ -62,6 +63,12 @@ function locationOk(job: CheckedJob, cfg: Config): boolean {
 }
 
 /** Hard filters that need no model: returns a skip reason or null. No seniority-word rules (D21). */
+/** True when `company` is one of `list` (case, punctuation and legal suffixes ignored). */
+export function companyIn(company: string | null, list: string[]): boolean {
+  const c = normalizeCompany(company);
+  return c !== null && list.some((x) => normalizeCompany(x) === c);
+}
+
 export function hardFilter(
   job: CheckedJob,
   ctx: Pick<ScoreContext, 'cfg' | 'matcher' | 'runDate'>,
@@ -69,6 +76,8 @@ export function hardFilter(
   const d = ctx.matcher.classify(job.title);
   if (d.tier === null) return { reason: d.excluded, priority: null, angle: null };
   const base = { priority: d.tier, angle: d.angle };
+  if (companyIn(job.company, ctx.cfg.preferences.blocked_companies))
+    return { reason: 'blocked_company', ...base };
   if (job.years_min !== null && job.years_min > ctx.cfg.filters.max_years_required) {
     return { reason: 'over_experience', ...base };
   }
@@ -102,7 +111,7 @@ export function combineScores(skills: number, experience: number, cfg: Config): 
 }
 
 /** Known ids the model may cite as evidence: facts, entries and skills. */
-function evidenceIds(p: Profile): Set<string> {
+export function evidenceIds(p: Profile): Set<string> {
   return new Set([
     ...factIndex(p).keys(),
     ...[...p.experience, ...p.projects].map((e) => e.id),
@@ -188,7 +197,10 @@ export async function scoreJob(
   }
   const tier = hf.priority ?? 3;
   const threshold = ctx.cfg.scoring.thresholds[`p${tier}`];
-  if (scores.final < threshold)
+  // Favorite companies are prepared even below the threshold (D39).
+  const favorite = companyIn(job.company, ctx.cfg.preferences.favorite_companies);
+  if (favorite) flags.push('favorite_company');
+  if (scores.final < threshold && !favorite)
     return { ...withFit, status: 'skipped', skip_reason: 'low_fit', flags };
 
   const hasTarget =

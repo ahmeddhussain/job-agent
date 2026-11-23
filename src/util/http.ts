@@ -95,7 +95,9 @@ export class PoliteHttp {
         continue;
       }
       if (res.status === 429 || res.status === 503) {
-        const after = Math.min(Number(res.headers.get('retry-after') ?? 30) || 30, 120);
+        // Retry-After: 0 means "now"; a missing or unreadable header means 30 s.
+        const header = Number(res.headers.get('retry-after') ?? NaN);
+        const after = Math.min(Number.isFinite(header) && header >= 0 ? header : 30, 120);
         if (hop === 0) {
           await new Promise((r) => setTimeout(r, after * 1000));
           continue;
