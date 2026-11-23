@@ -1,9 +1,16 @@
 # titles.yaml — title tiers (PLAN.md section 6). Regexes are case-insensitive,
 # matched against the normalized title (Arabic titles are translated by `extract`).
 
-p1:   # Ahmed's priority titles
+p1:
+  # Ahmed's priority titles
   - 'dev\s?ops'
-  - 'cloud\s+(engineer|devops|operations|support\s+engineer|infrastructure)'
+  - 'cloud\s+(engineer|devops|operations|support\s+engineer|infrastructure|solutions?\s+engineer|platform|administrator|admin)'
+  - 'devsecops'
+  - 'kubernetes|\bk8s\b'
+  # Entry IT support is what Ahmed applies to (audit 2026-11-23: 6 applications, fit 48-66)
+  - '\bit\s+(support|specialist|administrator|technician)'
+  - 'help[\s-]?desk'
+  - 'service[\s-]+desk'
   - '\bit\s+engineer\b'
   - 'infra(structure)?\s+engineer'
   - 'technical\s+support'
@@ -14,7 +21,8 @@ p1:   # Ahmed's priority titles
   - 'monitoring'
   - 'observability'
 
-p2:   # adjacent roles he's qualified for
+p2:
+  # adjacent roles he's qualified for
   - '\bsre\b'
   - 'site\s+reliability'
   - 'systems?\s+(administrator|admin|engineer)'
@@ -29,24 +37,45 @@ p2:   # adjacent roles he's qualified for
   - 'ci\s?/?\s?cd'
   - 'automation\s+engineer'
   - '\bhpc\b'
-  - 'data\s?cent(er|re)\s+engineer'
+  - 'data\s?cent(er|re)\b.*\bengineer'
+  - '\bsoc\b.*\b(analyst|engineer)\b|security\s+operations'
+  - 'back\s?office\s+engineer'
+  - '\b(m365|microsoft\s+365|office\s+365)\b'
   - 'integration\s+engineer'
-  - '\bit\s+(support|specialist|administrator|technician)'
-  - 'help\s?desk'
-  - 'service\s+desk'
 
-exclude:   # never apply
-  - 'sales'
-  - 'marketing'
-  - 'account\s+manager'
-  - 'accountant'
-  - 'recruit(er|ment)'
-  - 'teacher|instructor|trainer'
-  - 'designer'
+exclude:
+  - sales
+  - marketing
+  - account\s+manager
+  - accountant
+  - recruit(er|ment)
+  - teacher|instructor|trainer
+  - designer
+  - \belectrical\b
 
-angles:   # which profile summary to start from
-  devops:     ['dev\s?ops', 'cloud', 'platform', 'infra', '\bsre\b', 'site\s+reliability', 'ci\s?/?\s?cd', 'release', 'automation']
-  support:    ['support', '\bit\b', 'help\s?desk', 'service\s+desk', 'tech\s?ops', 'integration']
-  monitoring: ['monitoring', 'observability', '\bnoc\b']
-  networking: ['network']
-  systems:    ['system', 'sysadmin', 'linux', '\bhpc\b', 'data\s?cent']
+angles:
+  # which profile summary to start from
+  devops:
+    [
+      'dev\s?ops',
+      'cloud',
+      'platform',
+      'infra',
+      '\bsre\b',
+      'site\s+reliability',
+      'ci\s?/?\s?cd',
+      'release',
+      'automation'
+    ]
+  support:
+    [
+      'support',
+      '\bit\b',
+      'help\s?desk',
+      'service\s+desk',
+      'tech\s?ops',
+      'integration'
+    ]
+  monitoring: [ 'monitoring', 'observability', '\bnoc\b' ]
+  networking: [ 'network' ]
+  systems: [ 'system', 'sysadmin', 'linux', '\bhpc\b', 'data\s?cent' ]

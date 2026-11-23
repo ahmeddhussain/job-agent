@@ -9,7 +9,7 @@ import { buildMime } from '../gmail/mime.js';
 import { InterviewPrepSchema, type InterviewPrep } from '../llm/schemas.js';
 import type { Llm } from '../llm/types.js';
 import { fence, loadPrompt } from '../pipeline/extract.js';
-import { evidenceIds } from '../pipeline/score.js';
+import { evidenceIds, SENIOR_TITLE } from '../pipeline/score.js';
 import { profileForPrompt, type Profile } from '../profile/load.js';
 import { signature } from '../apply/email.js';
 import { readSettings, updateSettings } from '../settings.js';
@@ -62,7 +62,7 @@ export async function discardJob(
 
 export interface Suggestion {
   key: string;
-  kind: 'exclude_title' | 'block_company';
+  kind: 'exclude_title' | 'block_company' | 'skip_senior' | 'threshold';
   value: string;
   why: string;
 }
@@ -134,11 +134,75 @@ export function suggestions(db: Db, cfg: Config): Suggestion[] {
           : `You discarded ${String(e.n)} jobs from ${e.name}.`,
       });
   }
+
+  // What Ahmed turned down without applying (Rejected or skipped by him, nothing sent) and
+  // what he applied to: the agent's two strongest signals (D42).
+  const turnedDown = db
+    .prepare(
+      // A job that was ever marked applied is not "turned down": a company may have
+      // rejected him (audit 2026-11-23: 20 jobs went applied → rejected).
+      `SELECT DISTINCT j.title FROM jobs j JOIN status_history h ON h.job_id = j.id
+       LEFT JOIN applications a ON a.job_id = j.id
+       WHERE h.by = 'ahmed' AND h.to_status IN ('rejected', 'skipped') AND a.sent_at IS NULL
+         AND j.status IN ('rejected', 'skipped')
+         AND NOT EXISTS (SELECT 1 FROM status_history x WHERE x.job_id = j.id AND x.to_status = 'applied')`,
+    )
+    .pluck()
+    .all() as string[];
+  const appliedTo = db
+    .prepare(
+      `SELECT j.title, j.fit_score, j.priority FROM jobs j
+       WHERE j.status IN ('applied', 'interview', 'offer') AND j.duplicate_of IS NULL`,
+    )
+    .all() as { title: string; fit_score: number | null; priority: number | null }[];
+
+  const seniorDown = turnedDown.filter((t) => SENIOR_TITLE.test(t)).length;
+  const seniorApplied = appliedTo.filter((a) => SENIOR_TITLE.test(a.title)).length;
+  if (
+    !settings.skip_senior_titles &&
+    seniorDown >= 3 &&
+    seniorApplied === 0 &&
+    !dismissed.has('skip_senior')
+  )
+    out.push({
+      key: 'skip_senior',
+      kind: 'skip_senior',
+      value: 'on',
+      why: `You turned down ${String(seniorDown)} Senior/Lead/Manager jobs and applied to none. Skip those titles unless the post asks for 2 years or fewer?`,
+    });
+
+  for (const [tier, key] of [
+    [1, 'p1'],
+    [2, 'p2'],
+    [3, 'p3'],
+  ] as const) {
+    const below = appliedTo.filter(
+      (a) => a.priority === tier && a.fit_score !== null && a.fit_score < settings.thresholds[key],
+    );
+    if (below.length < 2) continue;
+    const value = Math.max(30, Math.min(...below.map((a) => a.fit_score ?? 0)) - 2);
+    const k = `threshold:${key}:${String(value)}`;
+    if (!dismissed.has(k))
+      out.push({
+        key: k,
+        kind: 'threshold',
+        value: `${key}=${String(value)}`,
+        why: `You applied to ${String(below.length)} P${String(tier)} jobs the agent scored below its threshold (${String(settings.thresholds[key])}). Lower it to ${String(value)} so similar jobs are prepared?`,
+      });
+  }
   return out;
 }
 
 export function applySuggestion(configPath: string, cfg: Config, s: Suggestion): Config {
   const cur = readSettings(cfg);
+  if (s.kind === 'skip_senior')
+    return updateSettings(configPath, cfg.paths.titles, { skip_senior_titles: true });
+  if (s.kind === 'threshold') {
+    const [tier, v] = s.value.split('=') as ['p1' | 'p2' | 'p3', string];
+    return updateSettings(configPath, cfg.paths.titles, {
+      thresholds: { ...cur.thresholds, [tier]: Number(v) },
+    });
+  }
   return s.kind === 'exclude_title'
     ? updateSettings(configPath, cfg.paths.titles, {
         excluded_titles: [...cur.excluded_titles, `\\b${s.value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`],

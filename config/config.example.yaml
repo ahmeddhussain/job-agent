@@ -102,6 +102,7 @@ filters:
   allow_remote: true
   max_years_required: 3            # more than this is skipped; no seniority-word rules (D21)
   max_job_age_days: 30          # D34: alerts also recommend old jobs; skip those older than this
+  skip_senior_titles: false       # D42: suggested by the agent from your choices; you switch it on
 
 preferences:                 # D39: edited in the dashboard (Settings, or a job's company buttons)
   blocked_companies: []      # never apply
@@ -172,6 +173,7 @@ digest:
   to: TODO@gmail.com
 
 dashboard:
+  weekly_goal: 15                 # applications per week (goal ring on Today; editable in Settings)
   host: 127.0.0.1
   port: 8080
   stale_run_hours: 36              # last-run tile turns red after this

@@ -8,8 +8,21 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
+/** What the dashboard can start (D43): each is a fixed agent command, no request text. */
+export const JOBS = {
+  run: { label: 'Run', args: ['run'] },
+  dry_run: { label: 'Dry run', args: ['run', '--dry-run'] },
+  queue: { label: 'Process the queue', args: ['run', '--no-collect'] },
+  send: { label: 'Send reviewed drafts', args: ['send-drafts', '--yes'] },
+  retry: { label: 'Retry waiting forms', args: ['retry-forms'] },
+  recheck: { label: 'Recheck posting dates', args: ['recheck-dates'] },
+} as const;
+export type JobKind = keyof typeof JOBS;
+
 export interface RunStatus {
   running: boolean;
+  kind: JobKind | null;
+  label: string | null;
   dry_run: boolean;
   started_at: string | null;
   finished_at: string | null;
@@ -21,6 +34,8 @@ export class RunManager {
   private child: ChildProcess | null = null;
   private s: RunStatus = {
     running: false,
+    kind: null,
+    label: null,
     dry_run: false,
     started_at: null,
     finished_at: null,
@@ -30,9 +45,9 @@ export class RunManager {
 
   constructor(
     /** For tests: what to start instead of `npm run agent -- run`. */
-    private readonly command: { cmd: string; args: (dry: boolean) => string[] } = {
+    private readonly command: { cmd: string; args: (kind: JobKind) => string[] } = {
       cmd: 'npm',
-      args: (dry) => ['run', '-s', 'agent', '--', 'run', ...(dry ? ['--dry-run'] : [])],
+      args: (kind) => ['run', '-s', 'agent', '--', ...JOBS[kind].args],
     },
   ) {}
 
@@ -40,17 +55,19 @@ export class RunManager {
     return { ...this.s, lines: this.s.lines.slice(-400) };
   }
 
-  start(dryRun: boolean): RunStatus {
-    if (this.child) throw new Error('a run started from the dashboard is still going');
+  start(kind: JobKind): RunStatus {
+    if (this.child) throw new Error(`"${this.s.label ?? 'a job'}" is still going`);
     this.s = {
       running: true,
-      dry_run: dryRun,
+      kind,
+      label: JOBS[kind].label,
+      dry_run: kind === 'dry_run',
       started_at: new Date().toISOString(),
       finished_at: null,
       exit_code: null,
       lines: [],
     };
-    const child = spawn(this.command.cmd, this.command.args(dryRun), {
+    const child = spawn(this.command.cmd, this.command.args(kind), {
       cwd: ROOT,
       env: process.env,
       stdio: ['ignore', 'pipe', 'pipe'],

@@ -119,6 +119,8 @@ export const ConfigSchema = z.strictObject({
     countries: z.array(realString).min(1),
     allow_remote: z.boolean(),
     max_years_required: z.number().int().min(0),
+    /** D42: skip Senior/Lead/Head… titles unless the post asks for at most 2 years. */
+    skip_senior_titles: z.boolean(),
     /** Older jobs are skipped as stale when the posting date is known (D34). */
     max_job_age_days: positiveInt,
   }),
@@ -204,6 +206,8 @@ export const ConfigSchema = z.strictObject({
     to: realString.pipe(z.email()),
   }),
   dashboard: z.strictObject({
+    /** Applications per week Ahmed aims for (Today's goal ring, editable in Settings). */
+    weekly_goal: z.number().int().min(1).max(200),
     host: realString,
     port: z.number().int().min(1).max(65535),
     stale_run_hours: positiveInt,

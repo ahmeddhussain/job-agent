@@ -424,7 +424,7 @@ describe('dashboard endpoints (D39-D41)', () => {
       method: 'POST',
       url: '/api/run',
       headers: H,
-      payload: { dry_run: true },
+      payload: { kind: 'queue' },
     });
     expect(start.json<{ running: boolean }>().running).toBe(true);
     for (let i = 0; i < 50 && runner.status().running; i++)
@@ -449,5 +449,104 @@ describe('dashboard endpoints (D39-D41)', () => {
         })
       ).statusCode,
     ).toBe(404);
+  });
+});
+
+describe('audit follow-ups (D42) and dashboard actions (D43)', () => {
+  const H = { host: '127.0.0.1:8080', 'content-type': 'application/json' };
+  it('the optional senior-title rule skips Senior titles unless the post asks for 2 years or fewer', () => {
+    const base = {
+      title: 'Senior DevOps Engineer',
+      company: 'X',
+      years_min: null,
+      deadline: null,
+      country: 'Egypt',
+      work_mode: 'onsite',
+    } as CheckedJob;
+    const on = {
+      cfg: { ...cfg, filters: { ...cfg.filters, skip_senior_titles: true } },
+      matcher: TitleMatcher.fromFile('config/titles.yaml'),
+      runDate: '2026-11-23',
+    };
+    expect(hardFilter(base, on).reason).toBe('senior_title');
+    expect(hardFilter({ ...base, years_min: 2 }, on).reason).toBeNull();
+    expect(hardFilter({ ...base, title: 'DevOps Engineer' }, on).reason).toBeNull();
+    expect(hardFilter(base, { ...on, cfg }).reason).toBeNull(); // off by default
+  });
+
+  it('learns "skip senior" from senior jobs turned down (never applied) and a threshold from applications below it', () => {
+    const d = db();
+    for (const t of ['Senior DevOps Engineer', 'Lead Cloud Engineer', 'IT Manager']) {
+      const id = addJob(d, t, 'Q', 'ready');
+      d.prepare(
+        `INSERT INTO status_history (job_id, from_status, to_status, by, at) VALUES (?, 'ready', 'rejected', 'ahmed', 'now')`,
+      ).run(id);
+      d.prepare(`UPDATE jobs SET status = 'rejected' WHERE id = ?`).run(id);
+    }
+    // A job marked applied and then rejected may be a company's rejection: not counted.
+    const maybe = addJob(d, 'Senior SRE', 'Q', 'rejected');
+    d.prepare(
+      `INSERT INTO status_history (job_id, from_status, to_status, by, at) VALUES (?, 'ready', 'applied', 'ahmed', 'now')`,
+    ).run(maybe);
+    for (const f of [50, 52]) {
+      const id = addJob(d, 'IT Help Desk', 'H', 'applied');
+      d.prepare('UPDATE jobs SET fit_score = ?, priority = 2 WHERE id = ?').run(f, id);
+    }
+    const s = suggestions(d, cfg);
+    expect(s.find((x) => x.kind === 'skip_senior')?.why).toMatch(/turned down 3/);
+    expect(s.find((x) => x.kind === 'threshold')?.value).toBe('p2=48');
+  });
+
+  it('quick add stores a post once; undo restores the status before "Not a fit"; no desktop, no apply window', async () => {
+    const d = db();
+    const app = buildDashboard(cfg, d, { configPath: cfgPath, gmail: () => Promise.resolve(null) });
+    const text =
+      'DevOps Engineer at Acme, Cairo. Linux, Docker, AWS. Send your CV to jobs@acme.example';
+    const a1 = await app.inject({ method: 'POST', url: '/api/add', headers: H, payload: { text } });
+    expect(a1.json<{ inserted: boolean }>().inserted).toBe(true);
+    expect(
+      (await app.inject({ method: 'POST', url: '/api/add', headers: H, payload: { text } })).json<{
+        inserted: boolean;
+      }>().inserted,
+    ).toBe(false);
+    expect(
+      (
+        await app.inject({
+          method: 'POST',
+          url: '/api/add',
+          headers: H,
+          payload: { text: 'short' },
+        })
+      ).statusCode,
+    ).toBe(400);
+
+    const id = addJob(d, 'Cloud Engineer', 'Acme', 'ready');
+    d.prepare(
+      `INSERT INTO status_history (job_id, from_status, to_status, by, at) VALUES (?, NULL, 'ready', 'agent', 'now')`,
+    ).run(id);
+    await app.inject({
+      method: 'POST',
+      url: `/api/jobs/${String(id)}/discard`,
+      headers: H,
+      payload: { reason: 'other' },
+    });
+    const u = await app.inject({
+      method: 'POST',
+      url: `/api/jobs/${String(id)}/undiscard`,
+      headers: H,
+      payload: {},
+    });
+    expect(u.json<{ status: string }>().status).toBe('ready');
+    expect(d.prepare('SELECT count(*) FROM discards').pluck().get()).toBe(0);
+    expect(
+      (
+        await app.inject({
+          method: 'POST',
+          url: `/api/jobs/${String(id)}/assist`,
+          headers: H,
+          payload: {},
+        })
+      ).statusCode,
+    ).toBe(503);
   });
 });

@@ -20,6 +20,7 @@ die() {
 
 # A visible browser (apply, dashboard) needs the desktop session. From a terminal on the
 # desktop these are set already; from SSH or an IDE terminal they may be missing.
+# With "soft", a missing desktop is not an error (the dashboard works without it).
 use_desktop() {
   if [[ -z "${DISPLAY:-}" && -z "${WAYLAND_DISPLAY:-}" ]]; then
     if [[ -S /tmp/.X11-unix/X0 ]]; then
@@ -27,7 +28,7 @@ use_desktop() {
       local auth
       auth="$(find "/run/user/$(id -u)" -maxdepth 1 -name '.mutter-Xwaylandauth.*' 2>/dev/null | head -n 1)"
       if [[ -n "$auth" ]]; then export XAUTHORITY="$auth"; fi
-    else
+    elif [[ "${1:-}" != soft ]]; then
       die "no desktop session found: run this from a terminal on the VM's desktop"
     fi
   fi
@@ -60,6 +61,8 @@ dashboard() {
     open_url "http://127.0.0.1:${PORT}${path}"
     return
   fi
+  # The dashboard's "Open pre-filled" needs the desktop for its browser window.
+  use_desktop soft
   agent dashboard &
   local pid=$!
   trap 'kill "$pid" 2>/dev/null || true' EXIT INT TERM
@@ -80,7 +83,7 @@ case "$cmd" in
     agent run "$@" || status=$?
     # A desktop notification when the run ends (if the desktop session is reachable).
     if command -v notify-send >/dev/null 2>&1; then
-      (use_desktop 2>/dev/null && notify-send "Job Agent" "Run finished (exit $status): open ./agent.sh dashboard") || true
+      (use_desktop soft && notify-send "Job Agent" "Run finished (exit $status): open ./agent.sh dashboard") || true
     fi
     echo
     echo "Next: ./agent.sh dashboard (review), ./agent.sh apply (finish the rest), ./agent.sh send (send drafts)"

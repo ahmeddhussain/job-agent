@@ -63,6 +63,10 @@ function locationOk(job: CheckedJob, cfg: Config): boolean {
 }
 
 /** Hard filters that need no model: returns a skip reason or null. No seniority-word rules (D21). */
+/** Titles Ahmed turns down unless the post asks for little experience (D42). */
+export const SENIOR_TITLE =
+  /\b(senior|sr\.?|lead|staff|principal|head|manager|director|architect|expert|consultant)\b/i;
+
 /** True when `company` is one of `list` (case, punctuation and legal suffixes ignored). */
 export function companyIn(company: string | null, list: string[]): boolean {
   const c = normalizeCompany(company);
@@ -78,6 +82,12 @@ export function hardFilter(
   const base = { priority: d.tier, angle: d.angle };
   if (companyIn(job.company, ctx.cfg.preferences.blocked_companies))
     return { reason: 'blocked_company', ...base };
+  if (
+    ctx.cfg.filters.skip_senior_titles &&
+    SENIOR_TITLE.test(job.title) &&
+    (job.years_min === null || job.years_min > 2)
+  )
+    return { reason: 'senior_title', ...base };
   if (job.years_min !== null && job.years_min > ctx.cfg.filters.max_years_required) {
     return { reason: 'over_experience', ...base };
   }

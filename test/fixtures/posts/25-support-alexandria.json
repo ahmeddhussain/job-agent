@@ -1,6 +1,6 @@
 {
   "id": "25-support-alexandria",
-  "description": "Support role in Alexandria: anywhere in Egypt is fine",
+  "description": "Support role in Alexandria: anywhere in Egypt is fine (IT support moved to tier 1 after the 2026-11-23 audit.)",
   "source": "whatsapp",
   "source_name": "IT Jobs Egypt",
   "source_ref": "wa-0025",
@@ -23,7 +23,7 @@
         "subject_hint": null,
         "deadline": null,
         "language": "en",
-        "tier": 2,
+        "tier": 1,
         "angle": "support",
         "excluded": null,
         "skip_reason": null,

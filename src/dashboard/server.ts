@@ -13,7 +13,9 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import type { Config } from '../config.js';
 import { migrate, openDb, type Db } from '../db/index.js';
-import { updateJobStatus } from '../db/jobs.js';
+import { updateJobStatus, type Status } from '../db/jobs.js';
+import { insertRawItem, prepareRawItem } from '../pipeline/dedupe.js';
+import { sha256 } from '../util/hash.js';
 import { pendingQuestions } from '../apply/questions.js';
 import { loadProfile } from '../profile/load.js';
 import { AnswerError, setAnswer } from '../profile/answers.js';
@@ -35,6 +37,7 @@ import {
   suggestions,
 } from './actions.js';
 import { RunManager } from './runner.js';
+import { AssistSession } from './assist.js';
 import type { Io } from '../cli/program.js';
 
 const PAGE = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'dashboard', 'index.html');
@@ -231,6 +234,8 @@ export interface DashboardOptions {
   /** The model client for interview prep (D41). */
   llm?: () => Llm;
   runner?: RunManager;
+  /** Opens "apply yourself" jobs in the visible browser (D43). */
+  assist?: AssistSession;
 }
 
 const SettingsBody = z
@@ -244,6 +249,8 @@ const SettingsBody = z
     ats_enabled: z.boolean(),
     max_job_age_days: z.number().int().min(1).max(365),
     max_years_required: z.number().int().min(0).max(20),
+    skip_senior_titles: z.boolean(),
+    weekly_goal: z.number().int().min(1).max(200),
     thresholds: z.strictObject({
       p1: z.number().int().min(0).max(100),
       p2: z.number().int().min(0).max(100),
@@ -264,7 +271,15 @@ const BulkBody = z.strictObject({
   reason: z.enum(DISCARD_REASONS).optional(),
 });
 const KeyBody = z.strictObject({ key: z.string().min(3).max(200) });
-const RunBody = z.strictObject({ dry_run: z.boolean().optional() });
+const AddBody = z.strictObject({
+  text: z.string().min(40).max(20_000),
+  name: z.string().max(80).optional(),
+});
+const RunBody = z.strictObject({
+  kind: z.enum(['run', 'dry_run', 'queue', 'send', 'retry', 'recheck']).optional(),
+  /** Older pages sent { dry_run }. */
+  dry_run: z.boolean().optional(),
+});
 const FONTS = new Set(['Inter.woff2', 'SpaceGrotesk.woff2', 'JetBrainsMono.woff2', 'fonts.css']);
 
 export function buildDashboard(cfg: Config, db: Db, opts: DashboardOptions = {}): FastifyInstance {
@@ -392,6 +407,56 @@ export function buildDashboard(cfg: Config, db: Db, opts: DashboardOptions = {})
   });
   app.get('/api/sources', (_req, reply) => reply.send({ sources: sourceScoreboard(db) }));
 
+  // ------------------------------------------------------------------ quick add, undo
+  app.post('/api/add', (req, reply) => {
+    const b = AddBody.safeParse(req.body);
+    if (!b.success) return reply.code(400).send({ error: 'paste the whole post (at least 40 characters)' });
+    const text = b.data.text.trim();
+    const r = insertRawItem(
+      db,
+      prepareRawItem({
+        source: 'manual',
+        source_ref: `manual:${sha256(text).slice(0, 16)}`,
+        source_name: b.data.name?.trim() || 'added in the dashboard',
+        posted_at: new Date().toISOString(),
+        text,
+      }),
+      new Date().toISOString(),
+    );
+    return reply.send({ ok: true, inserted: r.inserted, id: r.id });
+  });
+  app.post('/api/jobs/:id/undiscard', (req, reply) => {
+    const id = Number((req.params as { id: string }).id);
+    const row = db.prepare('SELECT 1 FROM discards WHERE job_id = ?').pluck().get(id);
+    if (!row) return reply.code(404).send({ error: 'not discarded' });
+    // Back to the status it had before "Not a fit" (its deleted Gmail draft can't come back).
+    const prev = (db
+      .prepare('SELECT to_status FROM status_history WHERE job_id = ? ORDER BY id DESC LIMIT 1 OFFSET 1')
+      .pluck()
+      .get(id) ?? 'new') as Status;
+    db.transaction(() => {
+      db.prepare('DELETE FROM discards WHERE job_id = ?').run(id);
+      updateJobStatus(db, id, prev === 'skipped' ? 'new' : prev, 'ahmed', new Date().toISOString(), null);
+    })();
+    return reply.send({ ok: true, status: prev === 'skipped' ? 'new' : prev });
+  });
+
+  // ------------------------------------------------------------------ apply from the dashboard
+  app.post('/api/jobs/:id/assist', async (req, reply) => {
+    const id = Number((req.params as { id: string }).id);
+    if (!Number.isInteger(id)) return reply.code(400).send({ error: 'bad id' });
+    if (!opts.assist) return reply.code(503).send({ error: 'the apply window is not available here' });
+    try {
+      return await reply.send(await opts.assist.open(id));
+    } catch (err) {
+      return reply.code(400).send({ error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+  app.post('/api/assist/close', async (_req, reply) => {
+    await opts.assist?.close();
+    return reply.send({ ok: true });
+  });
+
   // ------------------------------------------------------------------ run now
   app.get('/api/run', (_req, reply) =>
     reply.send(opts.runner?.status() ?? { running: false, lines: [], unavailable: true }),
@@ -401,7 +466,7 @@ export function buildDashboard(cfg: Config, db: Db, opts: DashboardOptions = {})
     if (!b.success) return reply.code(400).send({ error: 'bad request' });
     if (!opts.runner) return reply.code(503).send({ error: 'runs can only be started from the agent.sh dashboard' });
     try {
-      return reply.send(opts.runner.start(b.data.dry_run ?? false));
+      return reply.send(opts.runner.start(b.data.kind ?? (b.data.dry_run ? 'dry_run' : 'run')));
     } catch (err) {
       return reply.code(409).send({ error: err instanceof Error ? err.message : String(err) });
     }
@@ -447,7 +512,15 @@ export function buildDashboard(cfg: Config, db: Db, opts: DashboardOptions = {})
          ORDER BY r.posted_at DESC, j.id DESC LIMIT 2000`,
       )
       .all(args) as Row[];
-    return reply.send({ jobs: rows.map(toJob) });
+    const hist = new Map<number, { to: string; by: string; at: string }[]>();
+    for (const h of db
+      .prepare('SELECT job_id, to_status, by, at FROM status_history ORDER BY id')
+      .all() as { job_id: number; to_status: string; by: string; at: string }[]) {
+      const l = hist.get(h.job_id) ?? [];
+      l.push({ to: h.to_status, by: h.by, at: h.at });
+      hist.set(h.job_id, l);
+    }
+    return reply.send({ jobs: rows.map((r) => ({ ...toJob(r), history: hist.get(r.id) ?? [] })) });
   });
 
   app.get('/api/stats', (_req, reply) => {
@@ -684,6 +757,7 @@ export async function serveDashboard(cfg: Config, io: Io, configPath: string): P
     },
     llm: () => claude(cfg, []),
     runner: new RunManager(),
+    assist: new AssistSession(() => cfg, db, () => claude(cfg, [])),
   });
   const close = async () => {
     await app.close();

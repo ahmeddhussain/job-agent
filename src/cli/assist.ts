@@ -4,7 +4,6 @@
 // company forms come pre-filled (CV attached, answers typed) for him to check and
 // submit; LinkedIn Easy Apply and other board pages open on the job with the cover
 // letter on the clipboard. Nothing is clicked on his behalf in those windows.
-import { spawnSync } from 'node:child_process';
 import { mkdirSync } from 'node:fs';
 import { createInterface } from 'node:readline/promises';
 import type { Config } from '../config.js';
@@ -20,6 +19,7 @@ import { GmailFacade } from '../gmail/client.js';
 import { loadProfile } from '../profile/load.js';
 import { sourceLabel } from '../run/orchestrator.js';
 import { acquireLock } from '../util/lock.js';
+import { toClipboard } from '../util/clipboard.js';
 import { logger } from '../util/logger.js';
 import type { Io } from './program.js';
 import { claude } from './run.js';
@@ -31,19 +31,6 @@ async function ask(question: string): Promise<string> {
   } finally {
     rl.close();
   }
-}
-
-/** Puts text on the desktop clipboard (Wayland or X11), if a clipboard tool exists. */
-function toClipboard(text: string): boolean {
-  for (const [cmd, args] of [
-    ['wl-copy', []],
-    ['xclip', ['-selection', 'clipboard']],
-    ['xsel', ['--clipboard', '--input']],
-  ] as const) {
-    const r = spawnSync(cmd, [...args], { input: text, timeout: 3000 });
-    if (r.status === 0) return true;
-  }
-  return false;
 }
 
 interface ManualRow {

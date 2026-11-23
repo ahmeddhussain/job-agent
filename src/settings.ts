@@ -34,6 +34,8 @@ export interface Settings {
   ats_enabled: boolean;
   max_job_age_days: number;
   max_years_required: number;
+  skip_senior_titles: boolean;
+  weekly_goal: number;
   thresholds: { p1: number; p2: number; p3: number };
   blocked_companies: string[];
   favorite_companies: string[];
@@ -52,6 +54,8 @@ export function readSettings(cfg: Config): Settings {
     ats_enabled: cfg.ats.enabled,
     max_job_age_days: cfg.filters.max_job_age_days,
     max_years_required: cfg.filters.max_years_required,
+    skip_senior_titles: cfg.filters.skip_senior_titles,
+    weekly_goal: cfg.dashboard.weekly_goal,
     thresholds: cfg.scoring.thresholds,
     blocked_companies: cfg.preferences.blocked_companies,
     favorite_companies: cfg.preferences.favorite_companies,
@@ -69,6 +73,8 @@ const PATHS: Record<Exclude<keyof Settings, 'excluded_titles' | 'thresholds'>, s
   ats_enabled: ['ats', 'enabled'],
   max_job_age_days: ['filters', 'max_job_age_days'],
   max_years_required: ['filters', 'max_years_required'],
+  skip_senior_titles: ['filters', 'skip_senior_titles'],
+  weekly_goal: ['dashboard', 'weekly_goal'],
   blocked_companies: ['preferences', 'blocked_companies'],
   favorite_companies: ['preferences', 'favorite_companies'],
 };
