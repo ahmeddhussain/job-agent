@@ -465,3 +465,12 @@ repo, commit 1769845).
   - quick add of a pasted post;
   - undo after status changes and "Not a fit";
   - keyboard shortcuts (`/`, `j`/`k`, `Enter`, `1`–`9`, `r`, `?`).
+
+### D42 addendum: Ahmed's 20 "Rejected" jobs were dismissals (2026-11-23)
+
+- **What they were:** Ahmed confirmed the 20 jobs he moved Applied → Rejected were his way of dismissing jobs before "Not a fit" existed.
+- **Conversion:** they became "Not a fit" in one transaction, after a backup (`data/agent.db.bak-2026-11-23-dismissals`): "too senior" for the 12 Senior/Lead/Manager titles, "other" for the 8 others. "Other" teaches nothing about titles, so DevOps titles are never suggested for exclusion.
+- **Effects:**
+  - The applied count is the true 6, and the applications-per-day chart counts only jobs still applied to.
+  - Learning counts every "Not a fit" job as turned down. The senior-title suggestion now rests on 15 such jobs, still Ahmed's switch.
+  - Company-block suggestions ignore job-specific reasons (too senior, already applied, location).

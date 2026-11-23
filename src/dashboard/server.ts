@@ -556,8 +556,12 @@ export function buildDashboard(cfg: Config, db: Db, opts: DashboardOptions = {})
     }
     const counts = db
       .prepare(
-        `SELECT substr(at, 1, 10) d, count(DISTINCT job_id) n FROM status_history
-         WHERE to_status = 'applied' AND at >= ? GROUP BY d`,
+        // Only jobs still counted as applied to: a job later marked "Not a fit" was a
+        // dismissal, not an application (audit 2026-11-23).
+        `SELECT substr(h.at, 1, 10) d, count(DISTINCT h.job_id) n FROM status_history h
+         JOIN jobs j ON j.id = h.job_id
+         WHERE h.to_status = 'applied' AND h.at >= ?
+           AND j.status IN ('applied', 'interview', 'offer', 'rejected') GROUP BY d`,
       )
       .all(days[0]?.date ?? '') as { d: string; n: number }[];
     for (const c of counts) {

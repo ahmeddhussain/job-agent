@@ -116,6 +116,8 @@ export function suggestions(db: Db, cfg: Config): Suggestion[] {
   for (const r of rows) {
     const c = normalizeCompany(r.company);
     if (!c || !r.company) continue;
+    // "Too senior", "already applied" and "location" are about the job, not the company.
+    if (['too_senior', 'already_applied', 'location'].includes(r.reason)) continue;
     const e = companies.get(c) ?? { name: r.company, n: 0, company: false };
     e.n++;
     e.company ||= r.reason === 'company';
@@ -145,7 +147,9 @@ export function suggestions(db: Db, cfg: Config): Suggestion[] {
        LEFT JOIN applications a ON a.job_id = j.id
        WHERE h.by = 'ahmed' AND h.to_status IN ('rejected', 'skipped') AND a.sent_at IS NULL
          AND j.status IN ('rejected', 'skipped')
-         AND NOT EXISTS (SELECT 1 FROM status_history x WHERE x.job_id = j.id AND x.to_status = 'applied')`,
+         AND NOT EXISTS (SELECT 1 FROM status_history x WHERE x.job_id = j.id AND x.to_status = 'applied')
+       UNION
+       SELECT j.title FROM discards d JOIN jobs j ON j.id = d.job_id`,
     )
     .pluck()
     .all() as string[];

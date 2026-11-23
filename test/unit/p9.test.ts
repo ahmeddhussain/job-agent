@@ -497,6 +497,15 @@ describe('audit follow-ups (D42) and dashboard actions (D43)', () => {
     expect(s.find((x) => x.kind === 'threshold')?.value).toBe('p2=48');
   });
 
+  it('a company is never suggested for blocking because of job-specific reasons', async () => {
+    const d = db();
+    await discardJob(d, null, addJob(d, 'Senior DevOps Engineer', 'Capgemini'), 'too_senior', null);
+    await discardJob(d, null, addJob(d, 'DevOps Engineer', 'Capgemini'), 'location', null);
+    expect(suggestions(d, cfg).some((x) => x.kind === 'block_company')).toBe(false);
+    await discardJob(d, null, addJob(d, 'Cloud Engineer', 'Capgemini'), 'company', null);
+    expect(suggestions(d, cfg).map((x) => x.key)).toContain('block_company:capgemini');
+  });
+
   it('quick add stores a post once; undo restores the status before "Not a fit"; no desktop, no apply window', async () => {
     const d = db();
     const app = buildDashboard(cfg, d, { configPath: cfgPath, gmail: () => Promise.resolve(null) });

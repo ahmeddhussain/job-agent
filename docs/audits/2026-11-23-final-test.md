@@ -32,7 +32,8 @@ Each skip reason was then checked against its post, and Ahmed's own decisions we
 | 2 | IT support/helpdesk ranked below what Ahmed applies to | He applied to 6 support/helpdesk jobs (fit 48–66); IT Support (Hitachi Rail, 53) was skipped and he rescued it by hand | IT support/specialist/administrator and help/service desk → P1 (threshold 45) |
 | 3 | "Senior" jobs prepared that he never wants | 8 Senior/Lead/Manager jobs turned down without applying, 0 applied | Learned suggestion "skip senior titles unless ≤ 2 years" (D42), his choice |
 | 4 | Learning ignored Rejected and applications | Only "Not a fit" was learned from | Learns from jobs turned down without applying and from applications below threshold (D42) |
-| 5 | 20 jobs went Applied → Rejected the next day | Status history | **Open question for Ahmed:** company rejections, or a way to dismiss? Learning doesn't count them either way |
+| 5 | 20 jobs went Applied → Rejected the next day | Status history; Ahmed confirmed they were his dismissals | Converted to "Not a fit" (12 too senior, 8 other) after a database backup (`data/agent.db.bak-2026-11-23-dismissals`); the applied count is now the true 6, and the applications-per-day chart counts only jobs still applied to |
+| 6 | Company-block suggestions from the wrong reason | After the conversion, "block Capgemini/Valeo" appeared from too-senior dismissals | Too senior, already applied and location reasons no longer count toward blocking a company |
 
 ## Verdict
 
