@@ -56,11 +56,13 @@ grep -qE '^\s*groups:\s*\[\s*\]' config/config.yaml || wa=1
 [[ -f secrets/gmail_token.json ]] && gm=1
 
 # 3. Move everything that is the user's into the profile folder.
-mkdir -p -m 700 "$dest" "$dest/archive"
+mkdir -p "$dest/archive"
+chmod 700 "$dest" "$dest/archive"
 for d in data output secrets backups; do
   if [[ -e "$d" ]]; then mv "$d" "$dest/$d"; fi
 done
-mkdir -p -m 700 "$dest/data" "$dest/output" "$dest/secrets"
+mkdir -p "$dest/data" "$dest/output" "$dest/secrets"
+chmod 700 "$dest/data" "$dest/output" "$dest/secrets"
 if [[ -f .env ]]; then mv .env "$dest/.env"; fi
 mv profile/master_profile.yaml "$dest/profile.yaml"
 if [[ -f config/companies.yaml ]]; then
