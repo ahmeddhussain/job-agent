@@ -1,8 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { TitleMatcher } from '../../src/pipeline/titles.js';
+import { loadProfile } from '../../src/profile/load.js';
+import { specialismFor } from '../../src/profile/specialisms.js';
 import { loadFixtures } from '../helpers/fixtures.js';
 
 const matcher = TitleMatcher.fromFile('config/titles.yaml');
+// Specialisms come from the profile (D44); the example profile defines the five used here.
+const profile = loadProfile('profile/master_profile.example.yaml');
 
 const cases = loadFixtures().flatMap((f) => f.expected.jobs.map((j) => ({ fixture: f.id, ...j })));
 
@@ -18,14 +22,30 @@ describe('title matcher (PLAN section 6)', () => {
     }
   });
 
-  it.each(cases)('$fixture: "$title" → tier $tier, angle $angle', (c) => {
+  it.each(cases)('$fixture: "$title" → tier $tier, specialism $angle', (c) => {
     const d = matcher.classify(c.title);
     expect(d.tier).toBe(c.tier);
     if (d.tier === null) {
       expect(d.excluded).toBe(c.excluded);
     } else {
-      expect(d.angle).toBe(c.angle);
+      expect(specialismFor(profile, c.title)).toBe(c.angle);
     }
+  });
+
+  it('specialisms are data: any names, profile order decides, default when nothing matches', () => {
+    const base = profile.specialisms['devops'];
+    if (!base) throw new Error('example profile has no devops specialism');
+    const p = {
+      ...profile,
+      specialisms: {
+        frontend: { ...base, match: ['front.?end', 'react'] },
+        data: { ...base, match: ['data', 'analyst'] },
+      },
+      default_specialism: 'data',
+    };
+    expect(specialismFor(p, 'React Developer')).toBe('frontend');
+    expect(specialismFor(p, 'Frontend Data Visualisation Engineer')).toBe('frontend'); // order
+    expect(specialismFor(p, 'Accountant')).toBe('data'); // default
   });
 
   it('does not exclude seniority words (D21): years decide, not the title', () => {
@@ -35,13 +55,6 @@ describe('title matcher (PLAN section 6)', () => {
 
   it('fails loudly on an invalid regex in titles.yaml', () => {
     const bad = { p1: ['('], p2: ['x'], exclude: ['x'] };
-    const angles = {
-      devops: ['x'],
-      support: ['x'],
-      monitoring: ['x'],
-      networking: ['x'],
-      systems: ['x'],
-    };
-    expect(() => new TitleMatcher({ ...bad, angles })).toThrow(/invalid regex/);
+    expect(() => new TitleMatcher(bad)).toThrow(/invalid regex/);
   });
 });

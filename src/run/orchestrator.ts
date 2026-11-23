@@ -23,6 +23,7 @@ import { findJobDuplicate, findRawDuplicate } from '../pipeline/dedupe.js';
 import { enrichJob, type Enrichment } from '../pipeline/enrich.js';
 import { extractJobs, type CheckedJob } from '../pipeline/extract.js';
 import { fitScore, hardFilter, scoreJob, type Decision } from '../pipeline/score.js';
+import { specialismFor } from '../profile/specialisms.js';
 import { normalizeTitle } from '../util/text.js';
 import type { TitleMatcher } from '../pipeline/titles.js';
 import type { Profile } from '../profile/load.js';
@@ -485,10 +486,9 @@ export async function tailorQueue(
         summary?: string;
         scores?: { skills: number };
       };
-      const cls = d.matcher.classify(job.title);
-      // A job Ahmed moved back to "new" from skipped may be an excluded title or have no
-      // fit data yet: his choice wins; the angle comes from the title words.
-      const angle = cls.tier !== null ? cls.angle : d.matcher.angle(normalizeTitle(job.title));
+      // The specialism comes from the profile (D44); a job Ahmed moved back to "new" may
+      // be an excluded title or have no fit data yet: his choice wins.
+      const angle = specialismFor(d.profile, job.title);
       let fit: FitResult;
       if (reasons.matched) {
         fit = {

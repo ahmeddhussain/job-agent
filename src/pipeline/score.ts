@@ -6,7 +6,8 @@ import type { Llm } from '../llm/types.js';
 import { factIndex, languageId, profileForPrompt, type Profile } from '../profile/load.js';
 import type { CheckedJob } from './extract.js';
 import { loadPrompt, fence } from './extract.js';
-import type { Angle, TitleMatcher } from './titles.js';
+import type { TitleMatcher } from './titles.js';
+import { specialismFor, type Angle } from '../profile/specialisms.js';
 import { normalizeCompany } from '../util/text.js';
 
 export type JobStatus = 'new' | 'skipped' | 'needs_review';
@@ -76,10 +77,10 @@ export function companyIn(company: string | null, list: string[]): boolean {
 export function hardFilter(
   job: CheckedJob,
   ctx: Pick<ScoreContext, 'cfg' | 'matcher' | 'runDate'>,
-): { reason: string | null; priority: 1 | 2 | 3 | null; angle: Angle | null } {
+): { reason: string | null; priority: 1 | 2 | 3 | null } {
   const d = ctx.matcher.classify(job.title);
-  if (d.tier === null) return { reason: d.excluded, priority: null, angle: null };
-  const base = { priority: d.tier, angle: d.angle };
+  if (d.tier === null) return { reason: d.excluded, priority: null };
+  const base = { priority: d.tier };
   if (companyIn(job.company, ctx.cfg.preferences.blocked_companies))
     return { reason: 'blocked_company', ...base };
   if (
@@ -181,7 +182,9 @@ export async function scoreJob(
 ): Promise<Decision> {
   const flags = [...job.flags];
   const hf = hardFilter(job, ctx);
-  const base = { priority: hf.priority, angle: hf.angle, fit: null, scores: null, tailor: false };
+  // Which of the candidate's specialisms fits this title (D44: defined in the profile).
+  const angle = hf.priority === null ? null : specialismFor(ctx.profile, job.title);
+  const base = { priority: hf.priority, angle, fit: null, scores: null, tailor: false };
   if (hf.reason) return { ...base, status: 'skipped', skip_reason: hf.reason, flags };
 
   const scam = scamSignals(rawText);

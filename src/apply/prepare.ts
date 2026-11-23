@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import type { Config } from '../config.js';
 import type { FitResult } from '../llm/schemas.js';
 import type { Llm } from '../llm/types.js';
-import type { Angle } from '../pipeline/titles.js';
+import type { Angle } from '../profile/specialisms.js';
 import type { Profile } from '../profile/load.js';
 import { atsCheck, type AtsReport } from '../render/ats.js';
 import {
@@ -83,7 +83,7 @@ export async function prepareApplication(
   const t = await tailorJob(d.llm, d.cfg, d.profile, d.vocab, angle, tj, key);
   const cvPath = join(dir, fileName(d.profile, 'CV', job.company, job.title));
   const ctx = renderContextFor(
-    d.cfg,
+    d.profile,
     angle,
     [job.title, ...job.requirements, ...job.nice_to_have].join('\n'),
     (text) => d.vocab.find(text),

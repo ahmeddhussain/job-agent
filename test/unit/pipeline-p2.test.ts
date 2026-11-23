@@ -159,10 +159,17 @@ describe('profile loader (PLAN 8.1, D11)', () => {
 
   it('rejects evidence that points at an id that does not exist', () => {
     const p = parse(readFileSync('profile/master_profile.example.yaml', 'utf8')) as {
-      cover_letter: { angles: { devops: { evidence: string[] } } };
+      specialisms: { devops: { evidence: string[]; detailed_projects: string[] } };
+      default_specialism: string;
     };
-    p.cover_letter.angles.devops.evidence.push('made_up_fact');
+    p.specialisms.devops.evidence.push('made_up_fact');
     expect(() => parseProfile(p)).toThrow(/unknown evidence made_up_fact/);
+    p.specialisms.devops.evidence.pop();
+    p.specialisms.devops.detailed_projects.push('no_such_project');
+    expect(() => parseProfile(p)).toThrow(/unknown project no_such_project/);
+    p.specialisms.devops.detailed_projects.pop();
+    p.default_specialism = 'astronaut';
+    expect(() => parseProfile(p)).toThrow(/default_specialism astronaut/);
   });
 
   it('never puts contact details into the scoring prompt', () => {

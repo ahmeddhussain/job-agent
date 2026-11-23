@@ -7,57 +7,60 @@ paths:
   db: data/agent.db
   profile: profile/master_profile.yaml
   titles: config/titles.yaml
-  env: .env                        # secrets file, read privately (never exported)
+  env: .env # secrets file, read privately (never exported)
 
 run:
-  first_run_lookback_hours: 24     # R1: the first run covers the last 24 h
-  overlap_minutes: 15              # re-read a little before the watermark; dedupe makes it free
+  first_run_lookback_hours: 24 # R1: the first run covers the last 24 h
+  overlap_minutes: 15 # re-read a little before the watermark; dedupe makes it free
   lock_file: data/run.lock
 
 whatsapp:
-  session_path: data/wa-session    # equivalent to a logged-in WhatsApp — keep private
-  groups: []                       # allowlist of group names or ids; fill from `agent wa:groups` (P4)
-  fetch_limit: 500                 # per group per run
-  settle_seconds: 20               # wait after `ready` for history sync
-  ready_timeout_seconds: 120       # normal start; a linked session is ready well before this
-  auth_timeout_seconds: 60         # library wait for WhatsApp Web's socket (default 30 s is tight on this VM)
-  login_timeout_seconds: 300       # wa:login: time to scan the QR
-  web_cache_path: data/wa-web-cache   # pins the WhatsApp Web version that worked (webVersionCache: local)
-  author_salt_file: data/wa-author-salt   # members' ids are stored only as salted hashes
-  min_text_chars: 40               # shorter messages need an email or link to be kept
-  export_date_order: dmy           # exported chats from an Egyptian phone: day/month/year
-  channels:                        # D37: WhatsApp Channels you follow (read-only)
+  session_path: data/wa-session # equivalent to a logged-in WhatsApp — keep private
+  groups: [] # allowlist of group names or ids; fill from `agent wa:groups` (P4)
+  fetch_limit: 500 # per group per run
+  settle_seconds: 20 # wait after `ready` for history sync
+  ready_timeout_seconds: 120 # normal start; a linked session is ready well before this
+  auth_timeout_seconds: 60 # library wait for WhatsApp Web's socket (default 30 s is tight on this VM)
+  login_timeout_seconds: 300 # wa:login: time to scan the QR
+  web_cache_path: data/wa-web-cache # pins the WhatsApp Web version that worked (webVersionCache: local)
+  author_salt_file: data/wa-author-salt # members' ids are stored only as salted hashes
+  min_text_chars: 40 # shorter messages need an email or link to be kept
+  export_date_order: dmy # exported chats from an Egyptian phone: day/month/year
+  channels:
+    # D37: WhatsApp Channels you follow (read-only)
     follow_all: true
-    exclude: []                      # channel names or ids to leave out
+    exclude: [] # channel names or ids to leave out
     fetch_limit: 100
 
 gmail:
-  client_file: secrets/gmail_client.json   # Desktop OAuth client (docs/gmail-setup.md)
-  token_file: secrets/gmail_token.json     # written by `agent gmail:auth`, owner-only
-  max_alert_chars: 60000           # cap per alert; Indeed links are ~650-char click trackers (#18)
+  client_file: secrets/gmail_client.json # Desktop OAuth client (docs/gmail-setup.md)
+  token_file: secrets/gmail_token.json # written by `agent gmail:auth`, owner-only
+  max_alert_chars: 60000 # cap per alert; Indeed links are ~650-char click trackers (#18)
 
 alerts:
   enabled: true
-  skip_from: [jobalerts-noreply@linkedin.com, jobs-noreply@linkedin.com]   # D38: LinkedIn search replaces its alerts
-  gmail_label: job-alerts          # Gmail filter puts LinkedIn/Wuzzuf/Bayt/Indeed alerts here
-  skip_subjects:                   # labelled emails that are about YOUR applications, not new jobs
+  skip_from: [ jobalerts-noreply@linkedin.com, jobs-noreply@linkedin.com ] # D38: LinkedIn search replaces its alerts
+  gmail_label: job-alerts # Gmail filter puts LinkedIn/Wuzzuf/Bayt/Indeed alerts here
+  skip_subjects:
+    # labelled emails that are about YOUR applications, not new jobs
     - 'your application (was|has been) (sent|viewed|submitted|received)'
     - 'application (submitted|received|viewed|update|status)'
     - 'thank(s| you) for (applying|your application)'
     - 'we (have )?received your application'
     - 'تم (إرسال|استلام) طلبك'
-    - 'job alert (for .+ )?is now active'   # Indeed's activation notice: no jobs in it
+    - 'job alert (for .+ )?is now active' # Indeed's activation notice: no jobs in it
   fetch_linkedin_public_page: true # logged-out, no cookies, ≤ 1 req / 5 s
   linkedin_min_interval_seconds: 5
 
 search:
-  linkedin:                        # D38: public job search, logged out (edit titles in the dashboard: Settings)
+  linkedin:
+    # D38: public job search, logged out (edit titles in the dashboard: Settings)
     enabled: true
-    titles: [DevOps Engineer, Cloud Engineer, IT Engineer, Infrastructure Engineer, Technical Support, Application Support, Platform Engineer, Monitoring Engineer]
-    locations: [Egypt]
-    max_pages: 5                   # 10 jobs per page
+    titles: [ DevOps Engineer, Cloud Engineer, IT Engineer, Infrastructure Engineer, Technical Support, Application Support, Platform Engineer, Monitoring Engineer ]
+    locations: [ Egypt ]
+    max_pages: 5 # 10 jobs per page
     min_interval_seconds: 6
-    retries: 2                     # a refused page (HTTP 429) is retried after a pause
+    retries: 2 # a refused page (HTTP 429) is retried after a pause
     retry_wait_seconds: 45
 
 ats:
@@ -65,63 +68,69 @@ ats:
   companies_file: config/companies.yaml
   min_interval_seconds: 1
   user_agent: "job-agent/1.0 (personal job search)"
-  keep_locations: [Egypt, Cairo, Giza, Alexandria, "6th of October", "New Cairo", Remote, EMEA, MENA, "Middle East"]
-  max_age_days: 45                 # skip postings older than this (when the feed dates them)
-  posting_max_chars: 20000         # one posting's text sent to extraction
-  html_max_chars: 30000            # a careers page without an ATS feed
+  keep_locations: [ Egypt, Cairo, Giza, Alexandria, "6th of October", "New Cairo", Remote, EMEA, MENA, "Middle East" ]
+  max_age_days: 45 # skip postings older than this (when the feed dates them)
+  posting_max_chars: 20000 # one posting's text sent to extraction
+  html_max_chars: 30000 # a careers page without an ATS feed
 
-enrich:                      # D30: follow job links to the full description and the company's board
+enrich:
+  # D30: follow job links to the full description and the company's board
   enabled: true
   min_interval_seconds: 2
-  skip_hosts: [indeed.com, bayt.com, glassdoor.com]        # refuse automated access (401/403)
-  form_hosts: [docs.google.com, forms.gle, forms.office.com, typeform.com, jotform.com, tally.so, airtable.com]
-  board_hosts: [wuzzuf.net, forasna.com, tanqeeb.com, naukrigulf.com, drjobpro.com, jooble.org, akhtaboot.com]
-  probe_ats_by_name: true    # guess the company's ATS board; kept only if it lists the same title
+  skip_hosts: [ indeed.com, bayt.com, glassdoor.com ] # refuse automated access (401/403)
+  form_hosts: [ docs.google.com, forms.gle, forms.office.com, typeform.com, jotform.com, tally.so, airtable.com ]
+  board_hosts: [ wuzzuf.net, forasna.com, tanqeeb.com, naukrigulf.com, drjobpro.com, jooble.org, akhtaboot.com ]
+  probe_ats_by_name: true # guess the company's ATS board; kept only if it lists the same title
   probe_cache_days: 14
   min_title_similarity: 0.8
   thin_requirements: 3
 
 llm:
-  provider: claude_cli             # headless Claude Code on the Pro subscription (D17)
+  provider: claude_cli # headless Claude Code on the Pro subscription (D17)
   cli:
-    binary: claude                 # use an absolute path in config.yaml (no PATH lookup)
-    pinned_version: "2.1.317"      # tested version (D17); a different version logs a warning
-    home: data/claude-home         # isolated HOME when a token is used: no user settings, hooks or plugins
-    workdir: data/claude-work      # empty cwd: no CLAUDE.md or project settings
+    binary: claude # use an absolute path in config.yaml (no PATH lookup)
+    pinned_version: "2.1.317" # tested version (D17); a different version logs a warning
+    home: data/claude-home # isolated HOME when a token is used: no user settings, hooks or plugins
+    workdir: data/claude-work # empty cwd: no CLAUDE.md or project settings
   extract_model: claude-haiku-5-5
   score_model: claude-haiku-5-5
-  tailor_model: claude-sonnet-5-5  # all writing: CV, cover letter, email
-  max_jobs_per_run: null           # null = no cap: run until the subscription usage limit (R18)
-  max_tailor_per_run: null         # null = no cap; best matches are tailored first
+  tailor_model: claude-sonnet-5-5 # all writing: CV, cover letter, email
+  max_jobs_per_run: null # null = no cap: run until the subscription usage limit (R18)
+  max_tailor_per_run: null # null = no cap; best matches are tailored first
   timeout_seconds: 90
-  tailor_timeout_seconds: 300      # Sonnet writes a full CV + cover letter per call
+  tailor_timeout_seconds: 300 # Sonnet writes a full CV + cover letter per call
   max_retries: 3
 
 filters:
-  countries: [Egypt]               # anywhere in these countries is fine (Ahmed, 2026-11-20)
+  countries: [ Egypt ] # anywhere in these countries is fine (Ahmed, 2026-11-20)
   allow_remote: true
-  max_years_required: 3            # more than this is skipped; no seniority-word rules (D21)
-  max_job_age_days: 30          # D34: alerts also recommend old jobs; skip those older than this
-  skip_senior_titles: false       # D42: suggested by the agent from your choices; you switch it on
+  max_years_required: 3 # more than this is skipped; no seniority-word rules (D21)
+  max_job_age_days: 30 # D34: alerts also recommend old jobs; skip those older than this
+  skip_senior_titles: false # D42: suggested by the agent from your choices; you switch it on
 
-preferences:                 # D39: edited in the dashboard (Settings, or a job's company buttons)
-  blocked_companies: []      # never apply
-  favorite_companies: []     # always prepared, even below the fit threshold
+preferences:
+  # D39: edited in the dashboard (Settings, or a job's company buttons)
+  blocked_companies: [] # never apply
+  favorite_companies: [] # always prepared, even below the fit threshold
 
-followup:                    # D40
-  after_days: 7              # email applications with no reply after this get a follow-up draft (on request)
+followup:
+  # D40
+  after_days: 7 # email applications with no reply after this get a follow-up draft (on request)
 
 scoring:
-  weights:                         # final score = skills * w.skills + experience * w.experience (D21)
-    skills: 0.7                    # model: requirements, tools and domain vs the profile
-    experience: 0.3                # code: from the years the post asks for
-  experience_scores:               # 0-100 by years_min; fresh/junior/intern posts count as 0
+  weights:
+    # final score = skills * w.skills + experience * w.experience (D21)
+    skills: 0.7 # model: requirements, tools and domain vs the profile
+    experience: 0.3 # code: from the years the post asks for
+  experience_scores:
+    # 0-100 by years_min; fresh/junior/intern posts count as 0
     "0": 100
     "1": 90
     "2": 80
     "3": 60
-    unknown: 70                    # the post doesn't say
-  thresholds:                      # minimum final score to tailor, by priority tier
+    unknown: 70 # the post doesn't say
+  thresholds:
+    # minimum final score to tailor, by priority tier
     p1: 45
     p2: 60
     p3: 75
@@ -129,51 +138,51 @@ scoring:
 dedupe:
   content_window_days: 60
   near_dup_window_days: 30
-  simhash_max_distance: 10          # candidate filter only; token-set similarity confirms (D16)
+  simhash_max_distance: 10 # candidate filter only; token-set similarity confirms (D16)
   near_dup_similarity: 0.90
   title_similarity: 0.85
-  cooldown_days: 60                # never re-apply to the same email + role within this window
+  cooldown_days: 60 # never re-apply to the same email + role within this window
   same_recruiter_days: 14
   check_gmail_sent: true
 
 apply:
-  mode: draft                      # draft | send   (stay on draft for the first 2 weeks)
-  auto_send_min_score: 80          # send mode only
-  auto_send_max_priority: 1        # send mode only: P1 jobs only
+  mode: draft # draft | send   (stay on draft for the first 2 weeks)
+  auto_send_min_score: 80 # send mode only
+  auto_send_max_priority: 1 # send mode only: P1 jobs only
   daily_send_cap: 15
   min_seconds_between_sends: 60
   output_dir: output
-  send_all_interval_seconds: 20  # agent.sh send: pause between reviewed drafts
+  send_all_interval_seconds: 20 # agent.sh send: pause between reviewed drafts
   cv_language: en
 
-forms:                       # D33: web-form applications
-  auto_submit: true          # submit when every required answer is known; failures go to "Apply yourself"
-  never_hosts: [linkedin.com, wuzzuf.net, indeed.com, bayt.com, glassdoor.com, facebook.com, t.me, wa.me]
+forms:
+  # D33: web-form applications
+  auto_submit: true # submit when every required answer is known; failures go to "Apply yourself"
+  never_hosts: [ linkedin.com, wuzzuf.net, indeed.com, bayt.com, glassdoor.com, facebook.com, t.me, wa.me ]
   timeout_seconds: 45
   max_pages: 6
-  browser_profile: data/browser-profile   # ./agent.sh apply: sign in to LinkedIn here once
+  browser_profile: data/browser-profile # ./agent.sh apply: sign in to LinkedIn here once
 
 cv:
-  max_pages: 1                     # R14: every applied CV is exactly one page
-  min_fill: 0.93                   # grow back (more bullets) if the page is less full than this
-  min_projects: 4                  # Ahmed: at least 4 projects on every CV
-  max_projects: 6                  # extra stack-only projects fill free space up to this
-  featured_projects: [nexora, sysadmin_lab]   # shown with bullets; other projects: title + stack only (D25)
-  networking_projects: [packet_tracer]        # also shown with bullets on networking jobs
-  max_skills_dropped: 6            # least relevant skills that may go before a top project's 2nd bullet (0 = keep all)
-  font_pt: { max: 10, min: 9, step: 0.5 }   # his CV is 10 pt Carlito; shrink before cutting content
-  max_trim_rounds: 20             # each round re-renders locally (~1 s), no model call
+  max_pages: 1 # R14: every applied CV is exactly one page
+  min_fill: 0.93 # grow back (more bullets) if the page is less full than this
+  min_projects: 4 # Ahmed: at least 4 projects on every CV
+  max_projects: 6 # extra stack-only projects fill free space up to this
+  max_skills_dropped: 6 # least relevant skills that may go before a top project's 2nd bullet (0 = keep all)
+  font_pt: { max: 10, min: 9, step: 0.5 } # his CV is 10 pt Carlito; shrink before cutting content
+  max_trim_rounds: 20 # each round re-renders locally (~1 s), no model call
 
-ats_check:                         # R15 / PLAN 8.6: always runs before every application; blocks on failure
-  required_headings: [Profile, Education, Certifications, Experience, Projects, Skills, Languages]   # his CV's order
-  min_keyword_coverage: 0.70       # share of profile-backed job requirements that must appear in the CV
+ats_check:
+  # R15 / PLAN 8.6: always runs before every application; blocks on failure
+  required_headings: [ Profile, Education, Certifications, Experience, Projects, Skills, Languages ] # his CV's order
+  min_keyword_coverage: 0.70 # share of profile-backed job requirements that must appear in the CV
 
 digest:
   enabled: true
   to: TODO@gmail.com
 
 dashboard:
-  weekly_goal: 15                 # applications per week (goal ring on Today; editable in Settings)
+  weekly_goal: 15 # applications per week (goal ring on Today; editable in Settings)
   host: 127.0.0.1
   port: 8080
-  stale_run_hours: 36              # last-run tile turns red after this
+  stale_run_hours: 36 # last-run tile turns red after this

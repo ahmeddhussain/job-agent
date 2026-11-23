@@ -688,8 +688,8 @@
       <div class="panel answers"><h3>Ready answers</h3><div class="sub">Used to fill application forms. Saved straight into your profile file (the previous version is kept as .bak).</div>
         ${answers.map(([k, v]) => `<div class="a"><span class="mono faint">${esc(k)}</span><input type="text" data-akey="${esc(k)}" value="${esc(v)}" aria-label="${esc(k)}"><span class="row-actions"><button class="btn small primary" data-asave="${esc(k)}">Save</button><button class="btn small" data-adel="${esc(k)}">Remove</button></span></div>`).join("")}
         <div class="a"><input type="text" id="newkey" placeholder="new_key, e.g. graduation_year"><input type="text" id="newval" placeholder="answer"><button class="btn small" id="addanswer">Add</button></div></div>
-      <div class="panel"><h3>CV headlines</h3><div class="sub">One per angle; the agent picks the angle from the job title.</div>
-        ${Object.keys(p.headlines || {}).map((a) => `<details style="margin:8px 0"><summary><b>${esc(a)}</b> · <span class="muted">${esc(p.headlines[a])}</span></summary><p class="muted">${esc(p.summaries[a])}</p></details>`).join("")}
+      <div class="panel"><h3>Specialisms</h3><div class="sub">How you present yourself for different kinds of jobs. The first whose title words match a job is used (default: <b>${esc(p.default_specialism)}</b>).</div>
+        ${Object.entries(p.specialisms || {}).map(([a, sp]) => `<details style="margin:8px 0"><summary><b>${esc(a)}</b> · <span class="muted">${esc(sp.headline)}</span></summary><p class="muted">${esc(sp.summary)}</p><div>${(sp.match || []).map((m) => `<span class="chip mono">${esc(m)}</span>`).join("")}</div></details>`).join("")}
         <div style="margin-top:10px">${(p.certifications || []).map((c) => `<span class="chip accent">${esc(c)}</span>`).join("")}</div></div>`;
   }
 

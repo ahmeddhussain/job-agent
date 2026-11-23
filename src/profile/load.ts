@@ -3,7 +3,6 @@
 import { readFileSync } from 'node:fs';
 import { parse } from 'yaml';
 import { z } from 'zod';
-import { ANGLES } from '../pipeline/titles.js';
 
 const id = z.string().regex(/^[a-z0-9_]+$/, 'ids are lowercase snake_case');
 const status = z.enum(['done', 'in_progress']);
@@ -40,8 +39,24 @@ const Skill = z.strictObject({
   evidence: z.array(id),
 });
 
-const angleRecord = <T extends z.ZodType>(v: T) =>
-  z.strictObject(Object.fromEntries(ANGLES.map((a) => [a, v])) as Record<(typeof ANGLES)[number], T>);
+/**
+ * A specialism (D44): one way the candidate presents themself (e.g. DevOps, Support,
+ * Frontend). Defined in the profile, never in code: which job titles pick it, the CV
+ * headline and summary, the cover-letter pitch, and which projects get detailed bullets.
+ */
+const Specialism = z.strictObject({
+  /** Job-title patterns (case-insensitive regexes); the first specialism that matches wins. */
+  match: z.array(z.string().min(1)).default([]),
+  headline: z.string().min(3),
+  summary: z.string().min(20),
+  pitch: z.string().min(10),
+  /** Fact ids the cover letter should prefer. */
+  evidence: z.array(id),
+  motivation: z.string().min(10),
+  /** Projects that get bullets on the CV for this specialism, besides featured_projects. */
+  detailed_projects: z.array(id).default([]),
+});
+export type SpecialismDef = z.infer<typeof Specialism>;
 
 export const ProfileSchema = z.strictObject({
   candidate: z.strictObject({
@@ -55,13 +70,14 @@ export const ProfileSchema = z.strictObject({
     links: z.record(z.string(), z.url()),
   }),
   max_years_required: z.number().int().min(0),
-  headlines: angleRecord(z.string()),
-  summaries: angleRecord(z.string()),
+  /** In order of priority: a job title is matched against each specialism's patterns. */
+  specialisms: z.record(id, Specialism).refine((r) => Object.keys(r).length > 0, 'define at least one specialism'),
+  /** Used when no specialism matches the job title. */
+  default_specialism: id,
+  /** Projects that always get bullets on the CV (the rest show their stack only). */
+  featured_projects: z.array(id).default([]),
   cover_letter: z.strictObject({
     style: z.array(z.string()),
-    angles: angleRecord(
-      z.strictObject({ pitch: z.string(), evidence: z.array(id), motivation: z.string() }),
-    ),
   }),
   education: z.array(
     z.strictObject({
@@ -122,8 +138,22 @@ export function parseProfile(raw: unknown, source = 'profile'): Profile {
   for (const s of Object.values(p.skills).flat()) {
     for (const e of s.evidence) if (!entryIds.has(e)) problems.push(`skill ${s.id}: unknown evidence ${e}`);
   }
-  for (const [angle, cl] of Object.entries(p.cover_letter.angles)) {
-    for (const e of cl.evidence) if (!factIds.has(e)) problems.push(`cover_letter.${angle}: unknown evidence ${e}`);
+  const projectIds = new Set(p.projects.map((e) => e.id));
+  if (!(p.default_specialism in p.specialisms))
+    problems.push(`default_specialism ${p.default_specialism} is not one of the specialisms`);
+  for (const pid of p.featured_projects)
+    if (!projectIds.has(pid)) problems.push(`featured_projects: unknown project ${pid}`);
+  for (const [name, sp] of Object.entries(p.specialisms)) {
+    for (const e of sp.evidence) if (!factIds.has(e)) problems.push(`specialisms.${name}: unknown evidence ${e}`);
+    for (const pid of sp.detailed_projects)
+      if (!projectIds.has(pid)) problems.push(`specialisms.${name}: unknown project ${pid}`);
+    for (const m of sp.match) {
+      try {
+        new RegExp(m, 'i');
+      } catch {
+        problems.push(`specialisms.${name}: invalid title pattern ${JSON.stringify(m)}`);
+      }
+    }
   }
   const all = [...entryIds, ...factIds, ...Object.values(p.skills).flat().map((s) => s.id)];
   const dup = all.filter((x, i) => all.indexOf(x) !== i);

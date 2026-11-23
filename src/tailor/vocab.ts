@@ -291,8 +291,7 @@ export function numbersIn(text: string): Set<string> {
 /** All profile text the model may draw free-text claims from. */
 export function profileText(p: Profile): string {
   return [
-    ...Object.values(p.summaries),
-    ...Object.values(p.headlines),
+    ...Object.values(p.specialisms).flatMap((s) => [s.headline, s.summary, s.pitch, s.motivation]),
     ...[...p.experience, ...p.projects].flatMap((e) => [
       e.name ?? '',
       e.title ?? '',
@@ -309,7 +308,6 @@ export function profileText(p: Profile): string {
     ...p.certifications.map((c) => c.name),
     ...p.courses.map((c) => `${c.name} ${c.dates ?? ''}`),
     ...p.badges.map((b) => b.name),
-    ...Object.values(p.cover_letter.angles).flatMap((a) => [a.pitch, a.motivation]),
     p.candidate.location,
   ].join('\n');
 }

@@ -360,19 +360,22 @@ export async function renderOnePageCv(
 }
 
 /**
- * The render context for one job: which projects show bullets (the featured ones, plus
- * Packet Tracer for networking jobs) and which extra skills the job's text asks for.
+ * The render context for one job: which projects show bullets (the profile's featured
+ * ones, plus the specialism's detailed projects, D44) and which extra skills the job's
+ * text asks for.
  */
 export function renderContextFor(
-  cfg: Config,
+  profile: Profile,
   angle: string,
   jobText: string,
   findTerms: (text: string) => Set<string>,
   /** Skill ids the fit score cited as evidence for this job's requirements. */
   evidenceIds: Set<string> = new Set(),
 ): RenderContext {
-  const bulletProjects = new Set(cfg.cv.featured_projects);
-  if (angle === 'networking') for (const id of cfg.cv.networking_projects) bulletProjects.add(id);
+  const bulletProjects = new Set([
+    ...profile.featured_projects,
+    ...(profile.specialisms[angle]?.detailed_projects ?? []),
+  ]);
   const jobTerms = findTerms(jobText);
   const lower = jobText.toLowerCase();
   return {

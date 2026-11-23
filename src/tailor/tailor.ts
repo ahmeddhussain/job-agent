@@ -5,7 +5,7 @@
 import type { Config } from '../config.js';
 import type { Llm } from '../llm/types.js';
 import { loadPrompt, fence } from '../pipeline/extract.js';
-import type { Angle } from '../pipeline/titles.js';
+import { specialism, type Angle } from '../profile/specialisms.js';
 import { profileForPrompt, type Profile } from '../profile/load.js';
 import { TailorOutputSchema, type TailorOutput } from './schema.js';
 import { describe, validateTailor, type JobContext } from './validate.js';
@@ -29,15 +29,26 @@ export interface TailorResult {
   needsReview: string[];
 }
 
-function tailorSystem(profile: Profile, angle: Angle): string {
-  const cl = profile.cover_letter.angles[angle];
+function tailorSystem(profile: Profile, angle: Angle, cfg: Config): string {
+  const sp = specialism(profile, angle);
+  const detailedIds = [...new Set([...profile.featured_projects, ...sp.detailed_projects])];
+  const detailed =
+    detailedIds
+      .map((id) => {
+        const e = profile.projects.find((x) => x.id === id);
+        return e ? `${id} (${e.name ?? e.title ?? id})` : id;
+      })
+      .join(', ') || 'none';
   return loadPrompt('tailor', {
     angle,
-    headline: profile.headlines[angle],
-    summary: profile.summaries[angle].trim(),
-    pitch: cl.pitch,
-    evidence: cl.evidence.join(', '),
-    motivation: cl.motivation.trim(),
+    detailed,
+    min_projects: String(cfg.cv.min_projects),
+    max_projects: String(cfg.cv.max_projects),
+    headline: sp.headline,
+    summary: sp.summary.trim(),
+    pitch: sp.pitch,
+    evidence: sp.evidence.join(', '),
+    motivation: sp.motivation.trim(),
     profile: profileForPrompt(profile),
     courses: profile.courses.map((c) => `- ${c.id}: ${c.name}`).join('\n'),
   });
@@ -83,11 +94,11 @@ function applyFallbacks(
     projects: fix(out.projects),
   };
   if (failedFields.has('headline')) {
-    output.headline = profile.headlines[angle];
+    output.headline = specialism(profile, angle).headline;
     fallbacks.push('headline');
   }
   if (failedFields.has('summary')) {
-    output.summary = profile.summaries[angle].trim();
+    output.summary = specialism(profile, angle).summary.trim();
     fallbacks.push('summary');
   }
   return { output, fallbacks };
@@ -102,7 +113,7 @@ export async function tailorJob(
   job: TailorJob,
   key?: string,
 ): Promise<TailorResult> {
-  const system = tailorSystem(profile, angle);
+  const system = tailorSystem(profile, angle, cfg);
   const ask = (prompt: string, k?: string) =>
     llm.call({
       purpose: 'tailor',

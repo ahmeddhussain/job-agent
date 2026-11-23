@@ -650,8 +650,10 @@ export function buildDashboard(cfg: Config, db: Db, opts: DashboardOptions = {})
         phone: p.candidate.phone,
         links: p.candidate.links,
       },
-      headlines: p.headlines,
-      summaries: p.summaries,
+      specialisms: Object.fromEntries(
+        Object.entries(p.specialisms).map(([k, s]) => [k, { headline: s.headline, summary: s.summary, match: s.match }]),
+      ),
+      default_specialism: p.default_specialism,
       answers: p.application_answers,
       questions: pendingQuestions(db),
       counts: {
