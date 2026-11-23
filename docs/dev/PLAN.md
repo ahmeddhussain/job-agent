@@ -48,13 +48,13 @@ From Ahmed's brief (explicit + implied). Re-check every item before calling the 
 | R10 | Runs **once a day, started manually** by Ahmed (`agent run`); the systemd timer is optional | 11 |
 | R11 | **Simple tracker dashboard** for all jobs and their status | 10 |
 | R12 | WhatsApp is **read-only** — the agent never sends, reacts, marks read, or joins anything | 5.1, 12 |
-| R13 | README in the ivolve-GitOps style (no screenshots index), `docs/decisions.md`, troubleshooting log | 14 (P10) |
+| R13 | README in the ivolve-GitOps style (no screenshots index), `docs/dev/decisions.md`, troubleshooting log | 14 (P10) |
 | R14 | Every applied CV is **exactly one page** | 8.3 |
 | R15 | **ATS check** passes before any application is drafted, sent or packaged (always for form jobs and for email that lands in an ATS; the agent runs it on every application) | 8.6 |
 | R16 | A **new cover letter is drafted for every application**, never reused | 8.2, 8.4 |
 | R17 | CV content is **only facts** from the master profile; commits carry **no AI attribution** | 8.1, CLAUDE.md |
 | R18 | **No per-run caps**: a run processes every available job until the Claude subscription's usage limit is reached; what's left continues on the next run | D6, 5.5 |
-| R19 | **Security:** the VM, the Claude subscription token, Gmail and WhatsApp sessions can't be taken over through the agent; no secret or private data ever reaches Git | 12, `docs/security.md` |
+| R19 | **Security:** the VM, the Claude subscription token, Gmail and WhatsApp sessions can't be taken over through the agent; no secret or private data ever reaches Git | 12, `docs/dev/security.md` |
 
 **Out of scope (on purpose):** logging into LinkedIn or any job board with Ahmed's account, automating LinkedIn Easy Apply, solving or bypassing captchas, sending any WhatsApp message. *Changed 2026-11-22 (D33):* company web forms **are** filled and submitted when every answer is known and the site confirms; the rest go to an "Apply yourself" queue, pre-filled.
 
@@ -139,7 +139,7 @@ From Ahmed's brief (explicit + implied). Re-check every item before calling the 
 - **Dynamic companies (D30, Ahmed 2026-11-22):** boards are also discovered automatically from job links in alerts and posts (ATS links, careers pages, or the company name when the board lists the same title) and polled on later runs; `companies.yaml` is optional.
 
 ### D6 — Headless Claude Code (`claude -p`) on Ahmed's subscription, two model tiers
-*Revised 2026-11-20 (decision D17 in `docs/decisions.md`): Ahmed is on the Pro plan with no API credits.*
+*Revised 2026-11-20 (decision D17 in `docs/dev/decisions.md`): Ahmed is on the Pro plan with no API credits.*
 - **Alternatives:** the Anthropic API with an API key (the original choice; needs paid API credits); the Agent SDK (same subscription auth, but a second runtime dependency); a local model (weak on structured extraction and CV writing).
 - **Why:** `claude -p` draws from the Pro subscription. Each call is `claude -p --model <id> --output-format json --json-schema <schema> --tools ""` with the job post in a delimited block; the CLI returns the result in `structured_output`, and the code validates it again with zod. `--tools ""` means an injected instruction in a job post has nothing to run. Extraction and scoring → `claude-haiku-5-5`; CV and cover letters → `claude-sonnet-5-5`.
 - **Auth guard:** never set `ANTHROPIC_API_KEY` on the machine (in `-p` mode an API key always wins over the subscription). Never use `--bare` (it never reads OAuth). Every run starts with a preflight call; if its `init` event's `apiKeySource` is anything but `none`, or the call fails, the run stops with a failure digest. The CLI version is pinned in the image.
@@ -516,7 +516,7 @@ The result (score, missing keywords, failures) is stored in `applications.ats_re
 
 ## 12. Security, Privacy & Safety
 
-> The full threat model, every control with its status, and the host checklist are in **`docs/security.md`** (R19). The points below are the original summary.
+> The full threat model, every control with its status, and the host checklist are in **`docs/dev/security.md`** (R19). The points below are the original summary.
 
 - **Secrets:** `.env` (Anthropic key) and `secrets/` (Gmail OAuth client + token) are gitignored and mounted read-only. **`data/wa-session/` is equivalent to a logged-in WhatsApp** — gitignored, `chmod 700`, never copied into images.
 - **The repo can be public; the data can't:** `profile/master_profile.yaml` (phone, email), `data/`, `output/` and `config/config.yaml` are gitignored. Commit `*.example.yaml` versions with fake data.
@@ -563,7 +563,7 @@ Logic first, accounts last: phases 1–3 run entirely on fixtures, so WhatsApp a
 | **P7 — Orchestrator** | `agent run` end to end, per-source watermarks, the lock file, run records, caps, error isolation per source (one source failing → run `partial`, others continue) | **The first real run**: 24 h lookback, `draft` mode. Ahmed reviews every draft; the issues found are fixed before the next run. The second run picks up only new items |
 | **P8 — Dashboard & API** | Fastify routes (section 10), static serving, status history, file streaming | The dashboard shows real jobs; a status change persists after reload; CV/cover links open; path traversal on `/files` is rejected (test) |
 | **P9 — Container & (optional) timer** | Dockerfile (non-root, pinned, read-only rootfs, no capabilities, healthcheck), compose, `scripts/backup.sh`; systemd units and the Windows task documented as optional | `hadolint Dockerfile` clean; `trivy image` has no HIGH/CRITICAL findings that can be fixed; one manual `docker compose run --rm agent run` succeeds; container security settings verified with `docker inspect` |
-| **P10 — Hardening & docs** | README (ivolve-GitOps structure, no screenshots index), `docs/decisions.md` (D1–D10 + any new ones), `docs/troubleshooting.md` (Symptom / Diagnosis / Fix for every real issue hit), GitHub Actions CI (lint → typecheck → test → build → trivy) with `actionlint` | The section 1 checklist re-checked item by item with pass/fail; CI green |
+| **P10 — Hardening & docs** | README (ivolve-GitOps structure, no screenshots index), `docs/dev/decisions.md` (D1–D10 + any new ones), `docs/dev/troubleshooting.md` (Symptom / Diagnosis / Fix for every real issue hit), GitHub Actions CI (lint → typecheck → test → build → trivy) with `actionlint` | The section 1 checklist re-checked item by item with pass/fail; CI green |
 
 ---
 

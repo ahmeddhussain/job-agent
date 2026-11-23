@@ -153,13 +153,13 @@ Then the real one:
 ./agent.sh run
 ```
 
-and the daily routine in `docs/runbooks/daily-use.md`.
+and the daily routine in `docs/daily-use.md`.
 
 ---
 
 ## 8. Security checklist for the machine
 
-`docs/security.md` section 5 (H1–H12): updates, no exposed ports, key-only SSH, disk encryption on
+`docs/dev/security.md` section 5 (H1–H12): updates, no exposed ports, key-only SSH, disk encryption on
 the host, 2FA on Gmail and GitHub. The sessions in `data/` (WhatsApp, the assisted browser's
 LinkedIn sign-in) and the tokens in `.env` and `secrets/` are equivalent to being logged in: they never
 leave the machine and are never committed.

@@ -1,8 +1,9 @@
-# Runbook: daily use
+# Daily use
 
 What to do each day, what each command does, and what to do when something looks wrong.
-Everything runs from the project folder on the VM, in a terminal **on the VM's desktop**
-(the apply window and the dashboard open there).
+Everything runs from the project folder, in a terminal **on your desktop** (the apply
+window and the dashboard open there). Commands use your active profile; another one with
+`./agent.sh --profile <name> <command>`.
 
 ```bash
 cd ~/job-agent
@@ -14,10 +15,10 @@ cd ~/job-agent
 
 | Step | Command | What happens |
 |---|---|---|
-| 1 | `./agent.sh run` | Reads new posts from the WhatsApp groups, the job-alert emails and the company boards; drops duplicates; scores every job; prepares a one-page CV and a cover letter for each good match; **drafts** email applications in Gmail; **submits** web forms it can finish; emails you a digest |
+| 1 | `./agent.sh run` | Reads new jobs from your sources (LinkedIn search, company boards; WhatsApp and job-alert emails if connected); drops duplicates; scores every job; prepares a one-page CV and a cover letter for each good match; **drafts** email applications in Gmail (or writes them out for you without Gmail); **submits** web forms it can finish |
 | 2 | `./agent.sh dashboard` | Opens the tracker at http://127.0.0.1:8080. Two sections at the top: **Apply yourself** and **Email drafts waiting** |
-| 3 | Gmail → Drafts | Read each application draft; edit or delete any you don't want |
-| 4 | `./agent.sh send` | Lists the drafts still in Gmail, asks once, sends them all (your edits are kept) |
+| 3 | Gmail → Drafts | Read each application draft; edit or delete any you don't want (without Gmail: **Write the email** on each one in the dashboard) |
+| 4 | `./agent.sh send` | Lists the drafts still in Gmail, asks once, sends them all (your edits are kept). Needs Gmail |
 | 5 | `./agent.sh apply` | Opens each "apply yourself" job in a Chrome window, pre-filled. Check it, solve the captcha if one appears, click Submit, press Enter in the terminal |
 | 6 (weekly) | `./agent.sh skipped 7` | What the agent skipped and why, with links. Rescue anything it missed (section 4) |
 
@@ -40,10 +41,10 @@ Next: ./agent.sh dashboard (review), ./agent.sh apply (finish the rest), ./agent
 
 | How the job says to apply | What the agent does | What is left for you |
 |---|---|---|
-| Email ("send your CV to hr@…") | A Gmail **draft**: the cover letter is the body, the CV is attached, the required subject is used | Review in Gmail, then `./agent.sh send` |
+| Email ("send your CV to hr@…") | With Gmail: a **draft** (the cover letter is the body, the CV attached, the required subject used). Without Gmail: **Apply yourself** with the email written out | With Gmail: review in Gmail, then `./agent.sh send`. Without: **Write the email** in the dashboard opens your mail app with it filled in; attach the CV |
 | Company form without a captcha (Google Forms, many careers pages) | Fills it, uploads the CV, **submits**, checks the confirmation, keeps screenshots | Nothing: the job shows as Applied |
 | Company form with a captcha (Greenhouse, Lever, Ashby) | Tries; if the site doesn't confirm, the job goes to **Apply yourself** | `./agent.sh apply`: the form opens pre-filled; you submit |
-| A required question your profile can't answer (e.g. current salary) | Does not guess; **Apply yourself** with the question named | Answer it in the window, or add the answer to `profile/master_profile.yaml` → `application_answers` so it's used next time |
+| A required question your profile can't answer (e.g. current salary) | Does not guess; **Apply yourself** with the question named | Answer it in the window, or answer it in the dashboard (Needs action → Questions) so it's saved to your profile and used next time |
 | LinkedIn Easy Apply, Wuzzuf, Bayt, Indeed | Prepares the CV and letter; **Apply yourself** | `./agent.sh apply` opens the job (signed in as you), the letter is on the clipboard: click Easy Apply, attach the CV |
 | WhatsApp ("send your CV on WhatsApp") | Prepares the CV and the letter; a wa.me link | Send it from your phone (the agent never sends WhatsApp messages) |
 
@@ -55,7 +56,7 @@ facts from your profile.
 ## 3. The dashboard
 
 `./agent.sh dashboard` (Ctrl-C stops it); `./agent.sh dashboard settings` opens a section directly.
-Only reachable from this VM (127.0.0.1). Click any job for its detail panel.
+Only reachable from this machine (127.0.0.1). Click any job for its detail panel.
 
 - **Top bar:**
   - **▶ Run** menu: run, process the queue only, dry run, retry waiting forms, recheck dates. It shows live output and a desktop notification at the end.
@@ -98,7 +99,7 @@ Lists every skipped job of the last 7 days, grouped by reason, with its id, fit 
 | Reason | Meaning |
 |---|---|
 | `low_fit` | Scored below the threshold for its title tier |
-| `excluded_title` | Sales, HR, accounting… (`config/titles.yaml`) |
+| `excluded_title` | Sales, HR, accounting… (your profile's `titles.yaml`) |
 | `over_experience` | Asks for more than 3 years |
 | `location` | Outside Egypt and not remote |
 | `deadline_passed` | Past its deadline |
@@ -121,7 +122,7 @@ the next run prepares it.
 |---|---|---|
 | Every 6 days (Gmail app in Testing mode) | `./agent.sh gmail-auth` | Google expires Testing tokens after 7 days. `./agent.sh run` warns a day before |
 | If WhatsApp shows "logged out" | `./agent.sh whatsapp-login` | Scan the QR again (WhatsApp → Linked devices) |
-| First `./agent.sh apply` | Sign in to LinkedIn in the window that opens | It remembers you in `data/browser-profile` |
+| First `./agent.sh apply` | Sign in to LinkedIn in the window that opens | It remembers you in `data/browser-profile` (inside your profile folder) |
 | A form question you just answered in the dashboard | `./agent.sh retry` | Submits the forms that waited only for it (the next run does it anyway) |
 | Jobs prepared before the age check existed | `./agent.sh recheck` | Reads their real posting dates; moves those older than 30 days to Skipped |
 | A job the agent shouldn't have brought | Dashboard → job → **Not a fit** + reason | After a couple of the same kind, Settings suggests a rule (exclude a title word, block a company) |
@@ -145,4 +146,4 @@ the next run prepares it.
 | Old jobs in the list | Dashboard → job → "Posted" | They're skipped as `stale` once the real date is known (limit: `filters.max_job_age_days`) |
 | A good job was skipped | `./agent.sh skipped` | `./agent.sh redo <id>`; if it keeps happening, tell the scoring (config `scoring.thresholds`) |
 
-Every real problem and its fix: `docs/troubleshooting.md`.
+Every real problem and its fix: `docs/dev/troubleshooting.md`.

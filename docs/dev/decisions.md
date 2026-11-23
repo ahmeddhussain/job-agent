@@ -29,7 +29,7 @@ D1 to D10 come from `PLAN.md` section 3 (full reasoning there); new decisions ar
 
 ## D12: Fix the host Node.js instead of developing inside a container
 
-- **Choice:** update `c-ares` on the RHEL 10 workstation so the packaged Node 22 runs (see `docs/troubleshooting.md` #1).
+- **Choice:** update `c-ares` on the RHEL 10 workstation so the packaged Node 22 runs (see `docs/dev/troubleshooting.md` #1).
 - **Alternatives:** a Node tarball under `~/.local` (no root needed, but outside package management and patching); run every `npm` command in a `node:22` container (works without root, but slow edit-test loops and root-owned files unless `--user` is passed every time).
 - **Why:** it fixes the root cause (a partial update) with one package from the configured repos, keeps Node patched by `dnf`, and the container is still built in P9 for the runtime.
 - **Production would add:** CI runs in the pinned container image, so the host toolchain never matters for releases.
@@ -287,7 +287,7 @@ repo, commit 1769845).
 ## D32: Tracker dashboard (P8)
 
 - **Choice:** Fastify 5.12.8 serving `dashboard/index.html` and the API of PLAN 10 on `127.0.0.1:8080` (`agent dashboard`). The page shows real jobs, status edits (written to `status_history` as `ahmed`), notes, and links to the CV, the cover letter (plain text), the package and the company site. It also lists the polled boards (config and discovered) and applications per day (from status changes to `applied`).
-- **Security:** see `docs/security.md` A11. Loopback only, Host allowlist against DNS rebinding, JSON-only writes with an Origin check against CSRF, a strict CSP, and files by job id and kind only, inside `output/` with symlinks resolved.
+- **Security:** see `docs/dev/security.md` A11. Loopback only, Host allowlist against DNS rebinding, JSON-only writes with an Origin check against CSRF, a strict CSP, and files by job id and kind only, inside `output/` with symlinks resolved.
 - **Alternatives:** Node's `http` module (fewer dependencies but hand-written validation and routing; Fastify's `inject` also makes the API testable without a port); a React app (a build step for a one-person tracker).
 
 ## D33: Applying on web forms, and the parts Ahmed finishes (Ahmed, 2026-11-22)
@@ -441,7 +441,7 @@ repo, commit 1769845).
 
 ## D42: Title tiers from evidence, and learning from Ahmed's choices (audit 2026-11-23)
 
-- **Source:** `docs/audits/2026-11-23-final-test.md`, an independent re-collection compared with the database. Collection was complete; the errors were in title tiers and in what the agent learned from.
+- **Source:** `docs/dev/audits/2026-11-23-final-test.md`, an independent re-collection compared with the database. Collection was complete; the errors were in title tiers and in what the agent learned from.
 - **Title tiers** (`config/titles.yaml`):
   - **P1:** Kubernetes, DevSecOps, and cloud solutions/platform/administrator. IT support/specialist/administrator and help/service desk also move up (from P2/P3), because those are the jobs Ahmed applies to.
   - **P2:** data center, SOC, back-office engineer, and M365.
@@ -474,3 +474,33 @@ repo, commit 1769845).
   - The applied count is the true 6, and the applications-per-day chart counts only jobs still applied to.
   - Learning counts every "Not a fit" job as turned down. The senior-title suggestion now rests on 15 such jobs, still Ahmed's switch.
   - Company-block suggestions ignore job-specific reasons (too senior, already applied, location).
+
+## D44: CV specialisms are profile data, not code (Ahmed, 2026-11-23)
+
+- **Before:** five angles (DevOps, Support, Monitoring, Networking, Systems) were a code enum, with their title patterns in `titles.yaml` and their headlines, summaries and pitches in the profile under three separate keys.
+- **Now:** `profile.specialisms` is a map defined by each user. Each specialism has `match` (job-title regexes), `headline`, `summary`, `pitch`, `evidence`, `motivation` and `detailed_projects`, plus top-level `default_specialism` and `featured_projects`. The first specialism whose patterns match a title wins, else the default (`specialismFor`).
+- **Alternatives:**
+  - keep the enum and let users rename the labels: still forces five kinds of job on everyone;
+  - let the model pick the angle per job: an extra call per job, and a choice the user can't predict or check.
+- **Why:** a frontend developer or a data analyst defines their own specialisms with nothing in code. The loader checks every reference (default, evidence ids, project ids, regexes).
+- **Check:** the tailor gate (3 fixtures, replay) gave identical CVs before and after: one page, 100% keyword coverage.
+
+## D45: Profiles: one folder per person, layered config, Claude as the only requirement (Ahmed, 2026-11-23)
+
+- **Layout:** each user's setup is `profiles/<name>/`:
+  - `config.yaml` (only the settings they change), `profile.yaml`, `titles.yaml`, `companies.yaml`;
+  - `.env`, `secrets/`, `data/` (database, WhatsApp session, browser profile), `output/`.
+  - `config/defaults.yaml` (shipped) has every setting; the profile's `config.yaml` is merged over it (maps key by key; lists and scalars replace).
+  - The shipped `profiles/example/` is fictional (Mona Adel). Tests use `test/fixtures/profile.yaml` and `test/fixtures/titles.yaml`, so recorded model outputs don't depend on the example.
+- **Which profile:** `--profile <name>`, else `JOB_AGENT_PROFILE`, else `profiles/.active` (`./agent.sh use`), else the only one there is. The CLI `chdir`s into the profile folder, so every relative path (and every path already stored in the database, like `output/…`) means "in this profile". Code assets are found from the code's own location (`REPO_ROOT`).
+  - **Alternative:** absolute paths everywhere, no `chdir`. Rejected: every stored relative path in an existing database would need rewriting, and a profile folder could no longer be moved.
+  - **Alternative:** a profile name inside one shared database. Rejected: the WhatsApp session, Gmail token and browser sign-ins are per person anyway, and one folder is easy to back up, move or delete.
+- **Optional sources:**
+  - `whatsapp.enabled` and `gmail.enabled` default to `false`. With only Claude (and no Gmail), email jobs become "send it yourself" packages: `apply.md` with a `mailto:` link holding the prepared subject and text, plus a **Write the email** button in the dashboard.
+  - Alerts and the digest need Gmail. LinkedIn search and company boards need no account.
+- **Setup:**
+  - `install.sh` checks Node, poppler and Claude Code and runs `npm ci`. It installs nothing system-wide.
+  - `agent init` asks for a name, country, city and time zone, then turns the user's CV (PDF, DOCX, text) into `profile.yaml`, `titles.yaml` and search titles with one Sonnet call. The output is validated with the same loader a run uses, with up to two repair rounds.
+  - The profile is marked `.review-pending`, and runs refuse it until `./agent.sh reviewed` validates it. Every CV the agent sends is built from these facts, so a human checks them first.
+- **Dashboard:** Profile → "Edit profile files" edits `profile.yaml` and `titles.yaml` in place. The server validates exactly like a run, keeps a `.bak` and writes atomically. Settings now write the profile's `config.yaml` (only changed keys, validated merged over the defaults).
+- **Migration:** `scripts/migrate-to-profile.sh <name>` moves the old single-user layout into a profile. It copies the database first, keeps leftovers in `archive/` and reduces the old full config to the keys that differ from the defaults. It refuses to write if the reduced config doesn't reproduce the old one exactly. It was rehearsed on a copy of Ahmed's setup: 37 applications, all CV and package paths resolve.

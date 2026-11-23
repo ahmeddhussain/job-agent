@@ -18,9 +18,10 @@ if one differs, look for the closest match.
 1. **Google Auth Platform → Branding** (or "OAuth consent screen"). Google requires all of these before it lets you publish:
    - App name: `job-agent`
    - User support email and developer contact: your Gmail
-   - App home page: `https://ahmeddhussain.github.io`
-   - Privacy policy: `https://ahmeddhussain.github.io/privacy.html` (the page is `docs/consent/privacy.html`; publish it on the portfolio site first)
-   - Authorized domains: `ahmeddhussain.github.io`
+   - App home page: a page you control, e.g. your GitHub Pages site `https://<you>.github.io`
+   - Privacy policy: a page on the same site. `docs/consent/privacy.html` is a template: put your name in it and publish it there first
+   - Authorized domains: that site's domain, e.g. `<you>.github.io`
+   - (Only publishing needs these. In **Testing** mode, step 2 option 2, you can skip them.)
    - Save.
 2. **Audience**: user type **External**. Click **Publish app** so the status is **In production**.
    - Why: apps left in "Testing" get refresh tokens that **expire after 7 days**, which would silently break the daily run.
@@ -32,17 +33,17 @@ if one differs, look for the closest match.
 ## 3. Desktop OAuth client
 
 1. **Google Auth Platform → Clients → Create client** → Application type **Desktop app** → name `job-agent-desktop` → Create.
-2. **Download JSON**, then on the VM:
+2. **Download JSON**, then on the machine that runs the agent:
 
 ```bash
 mkdir -p ~/job-agent/secrets && chmod 700 ~/job-agent/secrets
 ```
 
 ```bash
-mv ~/Downloads/client_secret_*.json ~/job-agent/secrets/gmail_client.json && chmod 600 ~/job-agent/secrets/gmail_client.json
+mv ~/Downloads/client_secret_*.json ~/job-agent/profiles/<name>/secrets/gmail_client.json && chmod 600 ~/job-agent/profiles/<name>/secrets/gmail_client.json
 ```
 
-`secrets/` is gitignored and blocked by the pre-commit secret scan.
+Replace `<name>` with your profile's name. Profile folders are gitignored and blocked by the pre-commit secret scan.
 
 ## 4. Job-alert label (Gmail filter)
 
@@ -99,23 +100,31 @@ without verification:
 ## 5. Authorize the agent
 
 ```bash
-cd ~/job-agent && npm run agent -- gmail:auth
+cd ~/job-agent && ./agent.sh gmail-auth
 ```
 
-It prints a Google link. Open it in a browser **on the VM**, choose your account, accept the
+It prints a Google link. Open it in a browser **on the same machine**, choose your account, accept the
 "unverified app" warning (Advanced → Go to job-agent) and allow both permissions. The browser
 then shows "Authorized, you can close this tab". The token is saved to
-`secrets/gmail_token.json` (owner-only).
+`secrets/gmail_token.json` in your profile folder (owner-only). Then switch Gmail on in your
+profile's `config.yaml`:
+
+```yaml
+gmail:
+  enabled: true
+alerts:
+  enabled: true # optional: read job-alert emails (step 6 of docs/sources.md)
+```
 
 Check:
 
 ```bash
-cd ~/job-agent && npm run agent -- gmail:check
+cd ~/job-agent && ./agent.sh status
 ```
 
-Expected: your address, the `job-agent` scopes, and how many emails carry the `job-alerts` label.
+Expected: `gmail: on`, your address, the `job-agent` scopes, and how many emails carry the `job-alerts` label.
 
 ## Revoking access
 
 <https://myaccount.google.com/permissions> → job-agent → **Remove access**, then delete
-`secrets/gmail_token.json`.
+`secrets/gmail_token.json` in your profile folder and set `gmail.enabled: false`.

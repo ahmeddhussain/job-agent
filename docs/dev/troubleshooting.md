@@ -698,3 +698,22 @@ documents: ATS check failed: keyword coverage 50% < 70%     keywordsMissing: ["j
 - With 3 or fewer keywords one miss is allowed.
 - A job Ahmed queued himself goes ahead on a keyword-only failure, flagged `low_keyword_coverage`. Page count, images, fonts, headings and contact checks still block.
 - Re-prepared live: ready, CV one page, ATS 100%.
+
+---
+
+## 33. Private backup files were committed
+
+**Symptom.** After the D44 conversion (2026-11-23), `git log --stat` showed
+`config/config.yaml.pre-specialisms` (plus the example and titles copies) in 75dee22. Earlier
+settings backups `config/config.yaml.bak` and `config/titles.yaml.bak` were in a8f5ad6 and
+42011ee. They held the Gmail address, the WhatsApp group id and settings; no token and no
+blocklisted number.
+
+**Diagnosis.**
+- **Pattern gap:** `.gitignore` and `scripts/check-secrets.sh` matched `config/config.yaml` exactly, so a copy with any suffix passed both.
+- **Staging gap:** the commits staged everything, without a look at the file list first.
+
+**Fix.**
+- **Removed** the files from the tree (f961742, b52ad0d).
+- **Blocked** `*.bak`, `*.bak-*` and `*.pre-*` in `.gitignore` and in the secrets scan's forbidden paths, and with D45, every `profiles/<name>/` except `profiles/example/`, with tests (a4a00c1).
+- **Not yet fixed:** the files are still in git history. Purging them needs a history rewrite and a force push, which is the owner's decision.
