@@ -21,7 +21,13 @@ jobs:
           node-version: 22
           cache: npm
       - name: System packages (PDF checks)
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils
+        # Ubuntu's mirrors fail now and then (run for a8f5ad6): retry before failing the build.
+        run: |
+          for i in 1 2 3; do
+            sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils && exit 0
+            sleep 20
+          done
+          exit 1
       # Ubuntu 24.04 blocks unprivileged user namespaces (AppArmor), which Chrome's sandbox
       # needs; puppeteer's documented fix for CI runners.
       - name: Allow Chrome's sandbox
