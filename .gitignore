@@ -26,3 +26,8 @@ npm-debug.log*
 .DS_Store
 *.swp
 .secrets-blocklist
+
+# Backups written by settings edits and one-time conversions (they hold private values)
+*.bak
+*.bak-*
+*.pre-*
