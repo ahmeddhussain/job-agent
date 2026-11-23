@@ -54,22 +54,31 @@ facts from your profile.
 
 ## 3. The dashboard
 
-`./agent.sh dashboard` (Ctrl-C stops it); `./agent.sh dashboard skipped` opens a section directly.
+`./agent.sh dashboard` (Ctrl-C stops it); `./agent.sh dashboard settings` opens a section directly.
 Only reachable from this VM (127.0.0.1). Click any job for its detail panel.
+
+- **▶ Run now** (top right) does the same as `./agent.sh run`, or a dry run, from the browser. It shows the live output and a desktop notification at the end.
 
 | Section | What it's for |
 |---|---|
-| **Today** | What needs you, tiles, last-run health, the funnel from jobs seen to interviews, applications per day |
-| **Needs action** | In order: questions forms asked (answer once), email drafts to send, **Apply yourself** (link, CV, letter, the filled-form screenshot, why it stopped, Mark applied), needs review (Prepare anyway / Skip), queued |
-| **Applied** | A board: drag a card from Applied to Interview, Offer or Rejected. Replies to your emails are detected by each run (● reply) |
-| **Skipped** | Grouped by reason (too old, low fit, over 3 years, excluded title…). **Prepare anyway** queues one for the next run |
-| **All jobs** | Search (press `/`), filter, sort |
-| **Profile** | Your contact facts, **ready answers** (edit, add, remove), questions waiting for an answer, CV headlines |
-| **Companies / Runs** | Boards polled (and how each was found); every run with its numbers |
+| **Today** | What needs you, rules learned from your "Not a fit" choices, tiles, last-run health, the funnel, applications per day |
+| **Needs action** | In order: questions forms asked (answer once), email drafts to send, **Apply yourself**, **follow-ups due** (a week without a reply: one click drafts a follow-up in the same Gmail thread), needs review, queued |
+| **Applied** | A board: drag a card to Interview, Offer or Rejected |
+| **Skipped** | Grouped by reason (not a fit, too old, low fit, too many years…). **Prepare anyway** queues a job |
+| **All jobs** | Search (`/`), filter, sort; tick rows for **bulk actions** (prepare, mark applied, skip, not a fit) |
+| **Sources** | Which group, channel, search title, alert or board leads to applications and replies |
+| **Companies / Runs** | Boards polled; every run with its numbers |
+| **Profile** | Your facts, **ready answers** (edit, add, remove), questions waiting |
+| **Settings** | **LinkedIn search titles** and locations, source switches (channels, alerts, boards), job age, years, fit thresholds, excluded titles, **favorite** and **blocked** companies, and the learned rules to apply |
 
-The detail panel shows the fit breakdown, the matched and missing requirements, what the agent typed
-into the form, the "why this role" line for interviews, the cover letter (editable until you apply),
-notes, and the original post.
+The job panel shows:
+
+- the fit breakdown and the matched and missing requirements;
+- what the agent typed into the form;
+- a **CV preview**;
+- **Interview prep** (likely questions with answers from your real projects, honest gaps, questions to ask; about a minute);
+- the cover letter (editable until you apply), notes and the original post;
+- buttons: **Not a fit** (with a reason; deletes the agent's own unsent draft), **Favorite company**, **Block company**, Mark applied.
 
 ---
 
@@ -110,6 +119,9 @@ the next run prepares it.
 | First `./agent.sh apply` | Sign in to LinkedIn in the window that opens | It remembers you in `data/browser-profile` |
 | A form question you just answered in the dashboard | `./agent.sh retry` | Submits the forms that waited only for it (the next run does it anyway) |
 | Jobs prepared before the age check existed | `./agent.sh recheck` | Reads their real posting dates; moves those older than 30 days to Skipped |
+| A job the agent shouldn't have brought | Dashboard → job → **Not a fit** + reason | After a couple of the same kind, Settings suggests a rule (exclude a title word, block a company) |
+| A new job title to search | Dashboard → Settings → Job titles | Used from the next run |
+| A WhatsApp channel full of noise | Dashboard → Settings → Channels to leave out | |
 | Before trying a config change | `./agent.sh dry-run` | A full run on a copy of the database; nothing is sent, drafted or submitted |
 | An old post or a forwarded email | `./agent.sh add post.txt --name "where it came from"` then `./agent.sh run` | Adds it to the queue |
 | A job's CV or letter needs redoing (after a profile edit) | `./agent.sh redo <id>` | Delete the old Gmail draft yourself first (the agent can't delete) |

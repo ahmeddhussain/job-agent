@@ -643,3 +643,36 @@ by them could never count, and fit scores came out lower than they should.
 **Fix.** The profile shown to the scorer gives them ids (`scu_bsc: …`, the certification ids,
 `lang_english`), the evidence check accepts them, and the prompt names them. Scores from earlier runs
 are unchanged; new jobs are scored with the ids.
+
+---
+
+## 30. `Retry-After: 0` made the client wait 30 seconds
+
+**Symptom.** New LinkedIn search tests timed out at 20 s; the fake server answered `429` with
+`Retry-After: 0`.
+
+**Diagnosis.** `PoliteHttp` read the header as `Number(h) || 30`; `0` is falsy, so "retry now" became
+a 30 s wait. Real servers that send `0` were slowed down the same way.
+
+**Fix.** A finite, non-negative header value is used as is; only a missing or unreadable header means 30 s.
+
+---
+
+## 31. LinkedIn refuses about one request in four
+
+**Symptom.** Manual search test of the 8 titles (2026-11-23):
+
+```
+DevOps Engineer start=0 -> HTTP 429
+IT Engineer start=50 -> HTTP 429
+Technical Support start=10 -> HTTP 429
+TOTAL 159 jobs, 23 requests, 5 refusals          (5 s apart)
+DevOps Engineer start=20 http=429 … Technical Support start=0 http=429   (15 s apart: 3 of 9)
+```
+
+**Diagnosis.** It's rate limiting by request pattern, not a block: slower spacing didn't help, and
+the same page succeeded when asked again.
+
+**Fix.** One paced LinkedIn client per run (6 s); a refused page is retried after 45 s × attempt
+(2 retries); a search that still couldn't read every page keeps its window for the next run (D38).
+Live: 33 pages, 0 refused.

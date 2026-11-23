@@ -375,3 +375,66 @@ repo, commit 1769845).
   - **Companies** and **Runs** (history).
 - **Job detail panel:** fit breakdown, matched and missing requirements, what the form filler entered, the letter editor, notes, the original post.
 - **Security as before (A11):** every text from a post is escaped, links are rendered only for http(s), writes are JSON-only and same-origin. Still one static file, no build step (D10).
+
+## D37: Every WhatsApp channel Ahmed follows (Ahmed, 2026-11-23)
+
+- **Choice:** besides the allowlisted groups, the collector reads every channel the account follows (`whatsapp.channels.follow_all`), minus `channels.exclude` (editable in Settings). Same window, watermark per channel, text posts only; stored as source `whatsapp_channel`.
+- **Read-only:** whatsapp-web.js 1.34.8's `getChannels()` lists the followed channels and `Channel.fetchMessages()` only loads earlier messages (no `sendSeen`), both verified in the library source. The facade exposes only these two; follow, unfollow, mute and react stay unreachable, and the grep test still covers `src/`.
+- **Verified live:** 2 followed channels found ("IT Support & Jobs", "Communication Engineer") next to the group.
+
+## D38: LinkedIn's public job search replaces LinkedIn's alert emails (Ahmed, 2026-11-23)
+
+- **Measured first (2026-11-23):**
+  - **LinkedIn:** the logged-out search (`jobs-guest/jobs/api/seeMoreJobPostings/search`, `f_TPR` = posted within N seconds) returned jobs for all 8 titles. LinkedIn refused about 1 request in 4 (HTTP 429) at 5 s and at 15 s spacing; a refused page succeeded when asked again.
+  - **Wuzzuf, Indeed, Bayt:** their search answered **403** to automated requests.
+  - **Ahmed's condition** ("drop all alerts if the others' search works and won't be blocked") is therefore met only for LinkedIn. LinkedIn's alert senders are left out of the Gmail query (`alerts.skip_from`); the Wuzzuf, Indeed and Bayt alerts stay.
+- **Choice:**
+  - **Searches:** each title in `search.linkedin.titles` × each location, page by page (10 jobs a page, at most `max_pages`).
+  - **Window:** only jobs posted since that search last succeeded (plus the 15 min overlap), at most 24 h.
+  - **Refusals:** one shared, paced client for every LinkedIn request in a run (6 s). A refused page is retried after `retry_wait_seconds` × attempt; a search that still couldn't read every page keeps its old window, so the next run fetches what was missed.
+  - **What's stored:** only P1/P2 titles become raw items (source `linkedin`, keyed by the job id). Enrichment then reads the job page, with the same 429 patience, for the description and the company board (D30).
+  - **Editable:** the titles and locations, in the dashboard Settings.
+- **Verified live:** the 8 titles gave 33 pages, **0 refused** with retries; 16 jobs with priority titles from the last 24 h.
+- **Caveats (honest):**
+  - Automated use is against LinkedIn's terms. It's logged out, with no account and no cookies, so Ahmed's account isn't involved, but LinkedIn can rate-limit or block the IP. The run then goes on without it (`partial`), and the alerts switch in Settings can bring LinkedIn's alerts back.
+  - LinkedIn matches keywords loosely ("IT Engineer" lists many unrelated jobs). The title pre-filter keeps the model from seeing them.
+- **Alternatives:**
+  - Alerts only: too few, late, and they recommend months-old jobs (D34).
+  - A paid jobs API: weak Egypt coverage.
+  - Logged-in scraping: account risk.
+
+## D39: Settings, "Not a fit", learned rules and company lists in the dashboard (Ahmed, 2026-11-23)
+
+- **Settings page** writes back to `config/config.yaml` and `config/titles.yaml`. The YAML files stay the source of truth: comments are kept, the whole file is validated (config schema, title patterns compiled) before writing, the old file is kept as `.bak`, and the write is atomic. Editable:
+  - search titles and locations;
+  - source switches (LinkedIn search, channels plus exclusions, alerts, company boards);
+  - the maximum job age and years;
+  - the fit thresholds;
+  - excluded title patterns;
+  - favorite and blocked companies.
+- **"Not a fit"** on any job, with a reason (wrong field, too senior, company, location, already applied, other):
+  - the job is skipped as `discarded: <reason>`;
+  - the agent's own unsent Gmail draft for it is deleted. `GmailFacade.deleteOwnDraft` is the facade's only delete; a test allows `drafts.delete` and nothing else, and requires callers to use ids from `applications.gmail_draft_id`.
+- **Learned rules:**
+  - **A title word** found in 2+ "wrong field" discards and in no prepared job is suggested as an excluded title.
+  - **A company** discarded twice, or once "because of the company", is suggested for the block list.
+  - Ahmed applies or dismisses each with one click; dismissed ones don't return.
+- **Company lists:** blocked companies are skipped before scoring (`blocked_company`); favorites are prepared even below the fit threshold.
+- **Bulk actions** on selected jobs: prepare, mark applied, skip, not a fit.
+
+## D40: Follow-ups
+
+- **Due:** an email application sent `followup.after_days` (7) ago with no reply.
+- **Draft:** one click drafts a short, true follow-up in the same Gmail thread ("I applied for X on <date> and wanted to follow up…" plus the signature). Ahmed sends it from Gmail; it's drafted once per application.
+- **Forms:** follow-ups for form applications aren't possible by email; those stay a manual reminder.
+
+## D41: Run now, interview prep, sources, CV preview, notifications
+
+- **Run now** in the dashboard starts the same `agent run` (or a dry run) as a child process with a fixed command. Only the dry-run flag comes from the request. The run lock still prevents overlaps. The page shows the live output and, when the run ends, a toast and a desktop notification (browser permission). `./agent.sh run` sends a desktop notification too (`notify-send`).
+- **Interview prep** (on demand, Sonnet), saved per job:
+  - 8 likely questions, each with answer points from the profile and the profile ids behind them; ids not in the profile are dropped, the same truth check as scoring;
+  - honest ways to address gaps;
+  - 3 questions to ask.
+- **Sources scoreboard:** jobs, matched, prepared, applied and replies per group, channel, search title, alert sender and board.
+- **CV preview** inside the job panel. Only `/files/*` may be framed, and only by the dashboard itself (`X-Frame-Options: SAMEORIGIN`, `frame-ancestors 'self'`).
+- **Look:** the portfolio's design (monochrome, one blue gradient, glass panels, Space Grotesk / Inter / JetBrains Mono). The fonts (OFL) are served locally from `dashboard/fonts`, so the page loads nothing from outside the VM.

@@ -38,7 +38,7 @@ From Ahmed's brief (explicit + implied). Re-check every item before calling the 
 |---|---|---|
 | R1 | **First run** processes every job posted in the **last 24 hours** | 5.1 |
 | R2 | Every later run processes everything **since the last successful run** (per source) | 5.1 |
-| R3 | Sources: **WhatsApp job groups** (primary), **LinkedIn**, **company websites** (+ Egyptian job boards via alerts). **Text posts only**: image flyers are out of scope (decided 2026-11-20) | 5.1 |
+| R3 | Sources: **WhatsApp job groups and followed channels** (primary), **LinkedIn** (public job search per title, D38), **company websites** (+ Wuzzuf/Indeed/Bayt via alerts). **Text posts only**: image flyers are out of scope (decided 2026-11-20) | 5.1 |
 | R4 | Priority titles: DevOps Engineer, Cloud Engineer, IT Engineer, Infrastructure Engineer, Technical Support, Application Support, Platform Engineer, Monitoring Engineer | 6 |
 | R5 | Also apply to **any other job he is qualified for** (lower priority) | 6 |
 | R6 | **Tailor the CV** per job from his real skills and projects — never invent anything | 8 |

@@ -119,10 +119,21 @@ copy the job groups' ids into `config.yaml` → `whatsapp.groups`:
 npm run agent -- wa:groups
 ```
 
-The agent only reads those groups. It never sends, reacts, marks as read or joins anything
+It also reads **every WhatsApp channel the account follows** (follow job channels from the phone; leave any out in the dashboard Settings). The agent only reads those groups and channels. It never sends, reacts, marks as read or joins anything
 (a test enforces it). The session lives in `data/wa-session`: treat it like a logged-in phone.
 
 **Check:** `npm run agent -- collect whatsapp --dry-run` counts recent posts per group.
+
+---
+
+## 6b. Job titles to search on LinkedIn
+
+No account is needed: the agent uses LinkedIn's public job search. Set your titles in the dashboard
+(Settings → Job titles), or in `config/config.yaml` → `search.linkedin.titles`. Check them with:
+
+```bash
+npm run agent -- collect linkedin --dry-run
+```
 
 ---
 

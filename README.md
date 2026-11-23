@@ -39,7 +39,7 @@ A daily job-application agent for one person, run from the command line. It read
 | Dashboard            | Tracker on 127.0.0.1: what to finish, drafts waiting, every job and its status                                                                                              | `src/dashboard/`, `dashboard/index.html`                |
 | `agent.sh`           | The daily commands: `run`, `dashboard`, `apply`, `send`, `skipped` (and `retry`, `recheck`, `redo`, `dry-run`)                                                              | `agent.sh`                                              |
 
-The decisions behind each part, with alternatives, are in [`docs/decisions.md`](docs/decisions.md) (D1–D36). The original spec is [`PLAN.md`](PLAN.md).
+The decisions behind each part, with alternatives, are in [`docs/decisions.md`](docs/decisions.md) (D1–D41). The original spec is [`PLAN.md`](PLAN.md).
 
 ---
 
@@ -138,20 +138,29 @@ Exact npm versions are pinned in `package.json` and `package-lock.json`.
 
 ---
 
-## 5. Collection: WhatsApp, alerts, company boards
+## 5. Collection: WhatsApp, LinkedIn search, alerts, company boards
 
-**What and why.** Most of the jobs in this market are posted in WhatsApp groups and arrive as alert emails; company boards add roles that are never posted elsewhere. LinkedIn is read through its alert emails, not by scraping with a logged-in account (D4).
+**What and why.** Most jobs in this market are posted in WhatsApp groups and channels and on LinkedIn; company boards add roles posted nowhere else; Wuzzuf, Indeed and Bayt arrive only as alert emails (their search refuses automated requests).
 
 **How it's wired.**
 
-- **WhatsApp** (D26): `whatsapp-web.js` behind a read-only facade (`getChats`, `fetchMessages`, `destroy` only; a test fails on any write call). Only allowlisted groups; text posts only; members are stored as salted hashes.
-- **Alerts** (D27): Gmail label `job-alerts`; each email becomes one raw item with its links canonicalized. Click-trackers are decoded offline and personal tokens (Bayt `userToken`) stripped (troubleshooting #20).
-- **Company boards** (D29, D30): public ATS feeds, pre-filtered by title, location and age before anything reaches the model. Boards come from `config/companies.yaml` **and from discovery**: a job link that leads to a company's ATS adds that board automatically.
+- **WhatsApp** (D26, D37): `whatsapp-web.js` behind a read-only facade (a test fails on any write call). It reads the allowlisted groups and **every channel you follow** (minus exclusions); text posts only; group members are stored as salted hashes.
+- **LinkedIn search** (D38):
+  - **What it searches:** LinkedIn's public job search, logged out, for each title in Settings and only for jobs posted since that title's last search (at most 24 h).
+  - **Refusals:** refused pages (HTTP 429) are retried, and missed pages are picked up next run.
+  - **What it keeps:** only priority titles are stored.
+  - It replaces LinkedIn's alert emails.
+- **Alerts** (D27): the Gmail label `job-alerts` for Wuzzuf, Indeed and Bayt. Click-trackers are decoded offline and personal tokens stripped (troubleshooting #20).
+- **Company boards** (D29, D30): public ATS feeds, pre-filtered by title, location and age. Boards come from `config/companies.yaml` **and from discovery**: a job link that leads to a company's ATS adds that board automatically.
 
 **Commands.**
 
 ```bash
 npm run agent -- collect whatsapp --dry-run
+```
+
+```bash
+npm run agent -- collect linkedin --dry-run
 ```
 
 ```bash
@@ -253,7 +262,9 @@ The agent never solves or bypasses a captcha, never logs in to your accounts, ne
 
 **How it's wired** (D32, D36): Fastify on `127.0.0.1:8080` serves `dashboard/index.html` and a small JSON API.
 
-- **Sections:** Today, Needs action, Applied (a drag-and-drop board), Skipped (by reason, with "Prepare anyway"), All jobs, Profile, Companies and Runs, plus a detail panel per job.
+- **Sections:** Today, Needs action, Applied (a drag-and-drop board), Skipped (by reason, with "Prepare anyway"), All jobs (bulk actions), Sources (scoreboard), Companies, Runs, Profile and Settings, plus a detail panel per job.
+- **In the browser:** ▶ Run now (live output, desktop notification at the end); "Not a fit" with reasons and the rules learned from it; favorite and blocked companies; follow-up drafts; on-demand interview prep; a CV preview (D39–D41).
+- **Look:** the same design as the portfolio. Fonts are served locally, so the page loads nothing from outside the VM.
 - **Profile edits:** the Profile section edits your ready answers, written to `profile/master_profile.yaml` with comments kept and a `.bak`. Form questions your profile can't answer are listed there to answer once (D35).
 - **Status edits** are written to `status_history`.
 - **Files** are served by job id only, from inside `output/`.
@@ -320,7 +331,7 @@ npm run lint && npm run typecheck && npm test
 
 ## 14. Real-World Troubleshooting & Solutions
 
-Every issue met while building this, with the exact error, is in [`docs/troubleshooting.md`](docs/troubleshooting.md) (#1–#29). A selection:
+Every issue met while building this, with the exact error, is in [`docs/troubleshooting.md`](docs/troubleshooting.md) (#1–#31). A selection:
 
 **WhatsApp hung after scanning the QR, and a second command was refused (#14).**
 
