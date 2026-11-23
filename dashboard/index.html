@@ -209,6 +209,30 @@
     .answers .a, .q, .setrow { grid-template-columns: 1fr; }
     input[type=search] { min-width: 0; width: 100%; }
   }
+  /* v4 additions: tabs, modal, goal ring, toolbar, keyboard focus, skeleton */
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin: 14px 0 12px; }
+  .tabs button { background: none; border: 0; padding: 8px 12px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; font: 500 13px var(--display); }
+  .tabs button.on { color: var(--text); border-bottom-color: var(--c1); }
+  .modal { position: fixed; inset: 0; z-index: 25; display: none; place-items: center; background: rgb(0 0 0 / .5); backdrop-filter: blur(4px); }
+  .modal.open { display: grid; }
+  .modal .box { width: min(640px, calc(100vw - 32px)); max-height: 86vh; overflow: auto; background: var(--surface-solid); border: 1px solid var(--border-2); border-radius: var(--radius); padding: 20px 22px; box-shadow: var(--shadow); animation: fade .2s ease; }
+  .modal h3 { margin: 0 0 6px; font: 700 19px var(--display); }
+  .ring { width: 74px; height: 74px; flex: none; }
+  .goal { display: flex; gap: 14px; align-items: center; }
+  .timeline { border-left: 2px solid var(--border); margin: 6px 0 0 6px; padding-left: 14px; }
+  .timeline div { position: relative; margin-bottom: 8px; font-size: 12.5px; }
+  .timeline div::before { content: ""; position: absolute; left: -20px; top: 5px; width: 8px; height: 8px; border-radius: 50%; background: var(--c1); }
+  tr.r.kfocus td { background: rgb(var(--a1) / .1); }
+  .skeleton { height: 110px; border-radius: var(--radius); background: linear-gradient(90deg, var(--surface) 25%, rgb(var(--a1) / .06) 50%, var(--surface) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+  .toast .undo { margin-left: 10px; color: var(--c1); cursor: pointer; font-weight: 600; pointer-events: auto; }
+  .toast.show { pointer-events: auto; }
+  .kbd { font: 500 11px var(--mono); border: 1px solid var(--border-2); border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; }
+  .pill-filter { display: inline-flex; border: 1px solid var(--border-2); border-radius: 10px; overflow: hidden; }
+  .pill-filter button { background: none; border: 0; padding: 6px 10px; cursor: pointer; font-size: 12.5px; color: var(--muted); }
+  .pill-filter button.on { background: rgb(var(--a1) / .15); color: var(--text); }
+  input[type=range] { accent-color: rgb(var(--a1)); }
 </style>
 </head>
 <body>
@@ -233,25 +257,38 @@
     <div class="side-foot">
       <button class="btn small" id="refresh" type="button">Refresh</button>
       <button class="btn small" id="theme" type="button">Theme</button>
+      <button class="btn small" id="keys" type="button" title="Keyboard shortcuts">?</button>
     </div>
   </nav>
   <main>
     <div class="topbar">
       <div class="grow faint mono" id="clock"></div>
       <span class="faint" id="runstate"></span>
-      <div class="menu" id="runmenu">
-        <button class="btn primary" id="runbtn" type="button">▶ Run now</button>
-        <div class="items"><button type="button" data-run="live">Run now (live)</button><button type="button" data-run="dry">Dry run (nothing sent or submitted)</button></div>
+      <div class="toolbar">
+        <button class="btn" id="addjob" type="button">＋ Add a job</button>
+        <button class="btn" id="applynext" type="button" title="Open the next 'apply yourself' job pre-filled">Apply next</button>
+        <button class="btn" id="sendall" type="button" title="Send every reviewed draft still in Gmail">Send all drafts</button>
+        <div class="menu" id="runmenu">
+          <button class="btn primary" id="runbtn" type="button">▶ Run ▾</button>
+          <div class="items">
+            <button type="button" data-run="run">Run now: collect, prepare, apply</button>
+            <button type="button" data-run="queue">Process the queue only (no collecting)</button>
+            <button type="button" data-run="dry_run">Dry run (nothing sent or submitted)</button>
+            <button type="button" data-run="retry">Retry forms waiting for answers</button>
+            <button type="button" data-run="recheck">Recheck posting dates</button>
+          </div>
+        </div>
       </div>
     </div>
     <div class="banner" id="banner"></div>
     <div id="runpanel"></div>
-    <section id="view" class="fade"></section>
+    <section id="view" class="fade"><div class="grid tiles"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div></section>
   </main>
 </div>
 <div class="bulkbar" id="bulkbar"></div>
 <div class="scrim" id="scrim"></div>
 <aside class="drawer" id="drawer" aria-label="Job details"></aside>
+<div class="modal" id="modal" role="dialog" aria-modal="true"><div class="box" id="modalbox"></div></div>
 <div class="toast" id="toast" role="status"></div>
 
 <script>
@@ -270,26 +307,31 @@
     applied: { label: "Applied", color: "var(--c2)" },
     interview: { label: "Interview", color: "var(--good)" },
     offer: { label: "Offer", color: "var(--good)" },
-    rejected: { label: "Rejected", color: "var(--bad)" },
+    rejected: { label: "Rejected by the company", color: "var(--bad)" },
     skipped: { label: "Skipped", color: "var(--muted-2)" },
   };
   const SKIP = {
-    "discarded": ["Not a fit (you)", "Jobs you marked as not a fit."],
+    discarded: ["Not a fit (you)", "Jobs you marked as not a fit."],
     stale: ["Too old", "Posted longer ago than your age limit."],
     low_fit: ["Low fit", "Your skills score was below the threshold for this kind of title."],
     over_experience: ["Too many years", "The post asks for more years than your limit."],
+    senior_title: ["Senior title", "Senior/Lead titles asking for more than 2 years (your rule)."],
     excluded_title: ["Excluded title", "Titles you excluded (Settings)."],
     blocked_company: ["Blocked company", "Companies you never apply to (Settings)."],
     location: ["Location", "Outside the countries you accept and not remote."],
     deadline_passed: ["Deadline passed", "The application deadline is over."],
+    eligibility: ["Eligibility", "A condition in the post you may not meet."],
+    suspicious: ["Looks like a scam", "Fees, Telegram-only contact, or similar signs."],
     duplicate: ["Duplicate", "The same job seen in another group, alert or search."],
     other: ["Other", ""],
   };
   const REASONS = { wrong_field: "Wrong field", too_senior: "Too senior", company: "The company", location: "Location", already_applied: "Already applied myself", other: "Other" };
   const SOURCE = { whatsapp: "WhatsApp group", whatsapp_channel: "WhatsApp channel", whatsapp_export: "WhatsApp", alert_email: "Job alert", linkedin: "LinkedIn search", ats: "Company board", html: "Careers page", manual: "Added by hand" };
+  const CHANNEL = { email: "Email", form: "Web form", whatsapp_dm: "WhatsApp", unknown: "Unknown" };
+  const RUNS = { run: "Run", queue: "Process the queue", dry_run: "Dry run", send: "Send reviewed drafts", retry: "Retry waiting forms", recheck: "Recheck posting dates" };
 
   const state = { jobs: [], dup: [], stats: null, profile: null, runs: [], settings: null, editable: false, sugg: [], sources: [], follow: [], run: null,
-    tab: "today", q: "", status: "", source: "", sort: { k: "posted", d: -1 }, showDup: false, open: null, sel: new Set(), cv: false };
+    tab: "today", q: "", status: "", source: "", mode: "", channel: "", within: "", minfit: 0, sort: { k: "posted", d: -1 }, showDup: false, open: null, dtab: "overview", sel: new Set(), cv: false, kf: -1, applyQueue: false, assistOpen: null };
 
   // ---------------------------------------------------------------- helpers
   const rel = (iso) => {
@@ -305,11 +347,19 @@
   const fit = (j) => j.fit_score == null ? `<span class="faint">no score</span>` : `<span class="fit"><span class="fitbar"><i style="width:${Math.max(0, Math.min(100, j.fit_score))}%"></i></span>${j.fit_score}</span>`;
   const prio = (j) => j.priority ? `<span class="prio ${j.priority === 1 ? "p1" : ""}">P${j.priority}</span>` : "";
   const company = (j) => esc(j.company || "Company not named");
-  const toast = (msg) => { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 3200); };
+  let undoFn = null;
+  const toast = (msg, undo) => {
+    const t = $("toast"); undoFn = undo || null;
+    t.innerHTML = `${esc(msg)}${undo ? `<span class="undo" id="undo">Undo</span>` : ""}`;
+    t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => { t.classList.remove("show"); undoFn = null; }, undo ? 6000 : 3200);
+  };
   const by = (s) => state.jobs.filter((j) => j.status === s);
   const isManual = (j) => j.status === "ready" && (j.app_mode === "manual" || j.app_mode === "package");
   const isDraft = (j) => j.status === "ready" && j.apply_channel === "email";
-  const appliedSet = () => state.jobs.filter((j) => ["applied", "interview", "offer", "rejected"].includes(j.status));
+  // "Applied" means really applied: a Rejected job counts only if it was marked applied first.
+  const everApplied = (j) => ["applied", "interview", "offer"].includes(j.status) || (j.status === "rejected" && (j.history || []).some((h) => h.to === "applied"));
+  const appliedSet = () => state.jobs.filter(everApplied);
+  const appliedAt = (j) => j.applied_at || ((j.history || []).find((h) => h.to === "applied") || {}).at || null;
   const norm = (c) => String(c || "").toLowerCase().replace(/\b(inc|llc|ltd|co|corp|company|group|s\.?a\.?e|plc|gmbh)\b\.?/g, " ").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
   const inList = (c, list) => !!c && (list || []).some((x) => norm(x) === norm(c));
   const skipKey = (j) => (j.skip_reason || "other").startsWith("discarded") ? "discarded" : (j.skip_reason || "other");
@@ -319,6 +369,10 @@
     const body = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(body.error || `HTTP ${r.status}`);
     return body;
+  }
+  async function post(path, body, msg, method) {
+    try { const r = await api(path, { method: method || (path.includes("/settings") ? "PUT" : "POST"), body: JSON.stringify(body || {}) }); if (msg) toast(typeof msg === "function" ? msg(r) : msg); return r; }
+    catch (e) { toast(`Failed: ${e.message}`); return null; }
   }
 
   async function load() {
@@ -333,21 +387,27 @@
       $("banner").textContent = `The agent's API isn't reachable (${e.message}). Start it with ./agent.sh dashboard.`;
       $("banner").classList.add("show");
     }
-    render();
+    render(false);
   }
 
+  async function setStatus(id, status, msg) {
+    const j = state.jobs.find((x) => x.id === id) || state.dup.find((x) => x.id === id);
+    const prev = j?.status;
+    try {
+      await api(`/api/jobs/${id}`, { method: "PATCH", body: JSON.stringify({ status }) });
+      if (j) { j.status = status; (j.history ||= []).push({ to: status, by: "ahmed", at: new Date().toISOString() }); }
+      toast(msg || `Moved to ${STATUS[status].label}`, prev && prev !== status ? () => setStatus(id, prev, "Undone") : null);
+      render(); if (state.open === id) openDrawer(id);
+      if (state.applyQueue && state.assistOpen === id && ["applied", "skipped"].includes(status)) applyNext();
+    } catch (e) { toast(`Not saved: ${e.message}`); }
+  }
   async function patch(id, body, msg) {
     try {
       const r = await api(`/api/jobs/${id}`, { method: "PATCH", body: JSON.stringify(body) });
       const j = state.jobs.find((x) => x.id === id) || state.dup.find((x) => x.id === id);
       if (j) Object.assign(j, body);
-      toast(r.note || msg || "Saved");
-      render(); if (state.open === id) openDrawer(id);
+      toast(r.note || msg || "Saved"); render(); if (state.open === id) openDrawer(id);
     } catch (e) { toast(`Not saved: ${e.message}`); }
-  }
-  async function post(path, body, msg) {
-    try { const r = await api(path, { method: path.includes("/settings") ? "PUT" : "POST", body: JSON.stringify(body || {}) }); if (msg) toast(typeof msg === "function" ? msg(r) : msg); return r; }
-    catch (e) { toast(`Failed: ${e.message}`); return null; }
   }
 
   // ---------------------------------------------------------------- nav + counts
@@ -355,39 +415,36 @@
     const qs = state.profile?.questions?.length || 0;
     const action = state.jobs.filter((j) => isManual(j) || isDraft(j) || j.status === "needs_review").length + qs + state.follow.length;
     const set = (id, n, hot) => { const el = $(id); el.textContent = n ? n : ""; el.classList.toggle("hot", !!hot && n > 0); };
-    set("c-action", action, true);
-    set("c-applied", appliedSet().length);
-    set("c-skipped", by("skipped").length);
-    set("c-all", state.jobs.length);
-    set("c-profile", qs, true);
-    set("c-settings", state.sugg.length, true);
-    set("c-companies", state.stats?.companies?.length || 0);
-    set("c-runs", state.runs.length);
-    set("c-sources", state.sources.length);
+    set("c-action", action, true); set("c-applied", appliedSet().length); set("c-skipped", by("skipped").length);
+    set("c-all", state.jobs.length); set("c-profile", qs, true); set("c-settings", state.sugg.length, true);
+    set("c-companies", state.stats?.companies?.length || 0); set("c-runs", state.runs.length); set("c-sources", state.sources.length);
     const r = state.stats?.last_run;
     const col = r ? (r.status === "success" ? "var(--good)" : r.status === "partial" ? "var(--c3)" : "var(--bad)") : "var(--muted-2)";
     $("nav-sub").innerHTML = `<span class="dot" style="background:${col}"></span>${r ? `last run ${esc(rel(r.finished_at || r.started_at))}` : "no runs yet"}`;
     document.querySelectorAll("a.tab").forEach((a) => a.classList.toggle("active", a.dataset.tab === state.tab));
+    $("sendall").textContent = `Send all drafts${state.jobs.filter(isDraft).length ? ` (${state.jobs.filter(isDraft).length})` : ""}`;
+    $("applynext").textContent = `Apply next${state.jobs.filter(isManual).length ? ` (${state.jobs.filter(isManual).length})` : ""}`;
   }
 
-  function render() {
+  function render(animate = true) {
     counts(); renderRun();
     const v = { today, action, applied, skipped, all, sources, profile, settings, companies, runs }[state.tab] || today;
+    const y = window.scrollY;
     $("view").innerHTML = v();
-    $("view").classList.remove("fade"); void $("view").offsetWidth; $("view").classList.add("fade");
+    if (animate) { $("view").classList.remove("fade"); void $("view").offsetWidth; $("view").classList.add("fade"); } else window.scrollTo(0, y);
     if (state.tab === "today") drawChart();
     renderBulk();
   }
 
-  // ---------------------------------------------------------------- run now
+  // ---------------------------------------------------------------- jobs started from the dashboard
   let runPoll = null, notified = true;
   function renderRun() {
     const r = state.run;
-    $("runstate").innerHTML = r?.running ? `<span class="dot pulse" style="background:var(--c1)"></span>${r.dry_run ? "dry run" : "run"} in progress · ${esc(rel(r.started_at))}` : "";
+    $("runstate").innerHTML = r?.running ? `<span class="dot pulse" style="background:var(--c1)"></span>${esc(r.label || "run")} · ${esc(rel(r.started_at))}` : "";
     $("runbtn").disabled = !!r?.running;
     if (!r || (!r.running && !r.lines?.length) || r.unavailable) { $("runpanel").innerHTML = ""; return; }
     const ok = r.exit_code === 0;
-    $("runpanel").innerHTML = `<div class="panel runpanel"><div class="row-actions" style="justify-content:space-between"><h3>${r.running ? `<span class="dot pulse" style="background:var(--c1)"></span>Running${r.dry_run ? " (dry run)" : ""}` : ok ? "Run finished" : `Run ended with code ${esc(r.exit_code)}`}</h3>${r.running ? "" : `<button class="btn small" id="closerun">Hide</button>`}</div>
+    $("runpanel").innerHTML = `<div class="panel runpanel"><div class="row-actions" style="justify-content:space-between"><h3>${r.running ? `<span class="dot pulse" style="background:var(--c1)"></span>${esc(r.label || "Running")}…` : ok ? `${esc(r.label || "Run")}: done` : `${esc(r.label || "Run")} ended with code ${esc(r.exit_code)}`}</h3>${r.running ? "" : `<button class="btn small" id="closerun">Hide</button>`}</div>
       <pre class="log" id="runlog">${esc((r.lines || []).slice(-200).join("\n"))}</pre></div>`;
     const lg = $("runlog"); if (lg) lg.scrollTop = lg.scrollHeight;
   }
@@ -398,65 +455,115 @@
       clearInterval(runPoll); runPoll = null;
       if (!notified) {
         notified = true;
-        const msg = state.run.exit_code === 0 ? "The run finished. Your dashboard is up to date." : `The run ended with code ${state.run.exit_code}.`;
+        const msg = state.run.exit_code === 0 ? `${state.run.label || "Run"} finished.` : `${state.run.label || "Run"} ended with code ${state.run.exit_code}.`;
         toast(msg);
         try { if ("Notification" in window && Notification.permission === "granted") new Notification("Job Agent", { body: msg }); } catch (_) {}
         await load();
       }
     } catch (_) {}
   }
-  async function startRun(dry) {
+  async function startJob(kind) {
     try { if ("Notification" in window && Notification.permission === "default") await Notification.requestPermission(); } catch (_) {}
-    const r = await post("/api/run", { dry_run: dry }, dry ? "Dry run started" : "Run started");
+    const r = await post("/api/run", { kind }, `${RUNS[kind]} started`);
     if (!r) return;
     state.run = r; notified = false; renderRun();
     runPoll = setInterval(pollRun, 2000);
   }
 
+  // ---------------------------------------------------------------- modal
+  function modal(html) { $("modalbox").innerHTML = html; $("modal").classList.add("open"); setTimeout(() => $("modalbox").querySelector("textarea, input, button.primary")?.focus(), 50); }
+  function closeModal() { $("modal").classList.remove("open"); }
+  function sendAllModal() {
+    const drafts = state.jobs.filter(isDraft);
+    if (!drafts.length) return toast("No email drafts waiting");
+    modal(`<h3>Send ${drafts.length} reviewed draft${drafts.length > 1 ? "s" : ""}?</h3><div class="sub muted">Each is sent as it is now in Gmail (your edits are kept; drafts you deleted are skipped), about 20 seconds apart.</div>
+      <ul style="margin:12px 0 16px 18px;padding:0">${drafts.map((j) => `<li>${esc(j.title)}${j.company ? ` · ${esc(j.company)}` : ""} <span class="faint">→ ${esc(j.apply_email || "")}</span></li>`).join("")}</ul>
+      <div class="row-actions" style="justify-content:flex-end"><button class="btn" data-close>Cancel</button><button class="btn primary" id="confirmsend">Send all ${drafts.length}</button></div>`);
+  }
+  function addModal() {
+    modal(`<h3>Add a job</h3><div class="sub muted">Paste the whole post (a WhatsApp message, an email, a job page's text). It's stored for the next run; or process it now.</div>
+      <textarea id="addtext" rows="10" placeholder="Paste the job post here…" style="margin-top:10px"></textarea>
+      <input type="text" id="addname" placeholder="Where it came from (optional)" style="width:100%;margin-top:8px">
+      <div class="row-actions" style="justify-content:flex-end;margin-top:12px"><button class="btn" data-close>Cancel</button><button class="btn" id="addsave">Add</button><button class="btn primary" id="addnow">Add and process now</button></div>`);
+  }
+  function keysModal() {
+    modal(`<h3>Keyboard</h3><div class="kv" style="grid-template-columns:120px 1fr">
+      <span><span class="kbd">/</span></span><span>Search all jobs</span><span><span class="kbd">j</span> <span class="kbd">k</span></span><span>Move down / up in All jobs</span>
+      <span><span class="kbd">Enter</span></span><span>Open the highlighted job</span><span><span class="kbd">Esc</span></span><span>Close the panel or dialog</span>
+      <span><span class="kbd">1</span>–<span class="kbd">9</span></span><span>Go to a section (Today … Profile)</span><span><span class="kbd">r</span></span><span>Refresh</span></div>
+      <div class="row-actions" style="justify-content:flex-end"><button class="btn" data-close>Close</button></div>`);
+  }
+
+  // ---------------------------------------------------------------- apply from the dashboard
+  async function openAssist(id) {
+    toast("Opening it on your desktop…");
+    const r = await post(`/api/jobs/${id}/assist`, {}, (x) => x.mode === "form"
+      ? `Pre-filled ${x.filled} fields${x.unanswered.length ? `; fill in: ${x.unanswered.join("; ")}` : ""}. Submit it there, then Mark applied.`
+      : `Job page opened${x.copied ? "; cover letter on your clipboard" : ""}. Apply there, then Mark applied.`);
+    if (r) { state.assistOpen = id; render(); }
+    return r;
+  }
+  function applyNext() {
+    const next = state.jobs.filter(isManual).find((j) => j.id !== state.assistOpen) || state.jobs.filter(isManual)[0];
+    if (!next) { state.applyQueue = false; state.assistOpen = null; toast("No more jobs to apply to yourself"); post("/api/assist/close", {}); return; }
+    state.applyQueue = true; location.hash = "action"; openAssist(next.id);
+  }
+
   // ---------------------------------------------------------------- Today
+  function goalRing(done, goal) {
+    const p = Math.min(1, done / Math.max(1, goal)), r = 30, c = 2 * Math.PI * r;
+    return `<svg class="ring" viewBox="0 0 74 74" role="img" aria-label="${done} of ${goal}"><circle cx="37" cy="37" r="${r}" fill="none" stroke="var(--border-2)" stroke-width="7"/>
+      <circle cx="37" cy="37" r="${r}" fill="none" stroke="url(#rg)" stroke-width="7" stroke-linecap="round" stroke-dasharray="${c * p} ${c}" transform="rotate(-90 37 37)"/>
+      <defs><linearGradient id="rg"><stop offset="0" stop-color="rgb(0 112 243)"/><stop offset="1" stop-color="rgb(56 189 248)"/></linearGradient></defs>
+      <text x="37" y="42" text-anchor="middle" font-size="15" font-weight="700" fill="var(--text)" font-family="Space Grotesk">${Math.round(p * 100)}%</text></svg>`;
+  }
   function today() {
     const J = state.jobs, s = state.stats || {}, r = s.last_run, stats = r?.stats || {};
     const manual = J.filter(isManual), drafts = J.filter(isDraft), review = by("needs_review"), qs = state.profile?.questions || [];
     const todo = manual.length + drafts.length + review.length + qs.length + state.follow.length;
-    const week = appliedSet().filter((j) => (Date.now() - new Date(j.applied_at || j.posted_at)) / 864e5 <= 7).length;
-    const replies = appliedSet().filter((j) => j.has_reply || ["interview", "offer"].includes(j.status)).length;
+    const ap = appliedSet();
+    const monday = new Date(); monday.setHours(0, 0, 0, 0); monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+    const week = ap.filter((j) => appliedAt(j) && new Date(appliedAt(j)) >= monday).length;
+    const goal = state.settings?.weekly_goal || 15;
+    const replies = ap.filter((j) => j.has_reply || ["interview", "offer"].includes(j.status) || j.status === "rejected").length;
+    const interviews = J.filter((j) => ["interview", "offer"].includes(j.status)).length;
     const fresh = J.filter((j) => j.status !== "skipped" && (Date.now() - new Date(postedOf(j))) / 36e5 <= 24).length;
     const tiles = [
       ["Need you", todo, "drafts · forms · questions", "action"],
       ["Drafts to send", drafts.length, "review in Gmail", "action"],
       ["Apply yourself", manual.length, "pre-filled, one click", "action"],
-      ["Applied · 7 days", week, `${appliedSet().length} all time`, "applied"],
-      ["Interviews", J.filter((j) => ["interview", "offer"].includes(j.status)).length, "incl. offers", "applied"],
-      ["Response rate", appliedSet().length ? Math.round(replies / appliedSet().length * 100) + "%" : "—", `${replies} replied`, "applied"],
+      ["Interviews", interviews, ap.length ? `${Math.round(interviews / ap.length * 100)}% of applications` : "—", "applied"],
+      ["Heard back", ap.length ? Math.round(replies / ap.length * 100) + "%" : "—", `${replies} of ${ap.length} applications`, "applied"],
       ["New · 24 h", fresh, "matches", "all"],
     ];
     const sources = (stats.sources || []).map((x) => `<span class="chip ${x.ok ? "good" : "bad"}">${esc(x.name)} · ${x.ok ? esc(String(x.inserted)) + " new" : "failed"}</span>`).join("");
-    const steps = [["Jobs seen", J.length + state.dup.length], ["Unique", J.length], ["Matched", J.filter((j) => j.status !== "skipped").length], ["Prepared", J.filter((j) => ["ready", "applied", "interview", "offer", "rejected"].includes(j.status)).length], ["Applied", appliedSet().length], ["Interview+", J.filter((j) => ["interview", "offer"].includes(j.status)).length]];
+    const steps = [["Jobs seen", J.length + state.dup.length], ["Unique", J.length], ["Matched", J.filter((j) => j.status !== "skipped").length], ["Prepared", J.filter((j) => ["ready", "applied", "interview", "offer", "rejected"].includes(j.status)).length], ["Applied", ap.length], ["Interview+", interviews]];
     const max = Math.max(1, steps[0][1]);
-    const parts = [qs.length && `${qs.length} question${qs.length > 1 ? "s" : ""} to answer`, drafts.length && `${drafts.length} drafts to send`, manual.length && `${manual.length} to apply yourself`, review.length && `${review.length} to review`, state.follow.length && `${state.follow.length} follow-up${state.follow.length > 1 ? "s" : ""} due`].filter(Boolean).join(" · ");
+    const parts = [qs.length && `${qs.length} question${qs.length > 1 ? "s" : ""} to answer`, drafts.length && `${drafts.length} draft${drafts.length > 1 ? "s" : ""} to send`, manual.length && `${manual.length} to apply yourself`, review.length && `${review.length} to review`, state.follow.length && `${state.follow.length} follow-up${state.follow.length > 1 ? "s" : ""} due`].filter(Boolean).join(" · ");
     const hour = new Date().getHours();
     return `
       <div class="page-h"><h2>Good ${hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening"}, <span class="grad">${esc((state.profile?.candidate?.full_name || "").split(" ")[0] || "there")}</span>.</h2><div class="hint">${esc(new Date().toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" }))}</div></div>
       ${todo ? `<div class="callout"><span class="grow"><b>${todo} ${todo === 1 ? "thing needs" : "things need"} you.</b><br><span class="muted">${esc(parts)}</span></span><a class="btn primary" href="#action">Open Needs action →</a></div>` : `<div class="callout"><span class="grow"><b>You're all caught up.</b><br><span class="muted">Run the agent for fresh jobs.</span></span></div>`}
-      ${state.sugg.length ? `<div class="callout amber"><span class="grow"><b>${state.sugg.length} rule${state.sugg.length > 1 ? "s" : ""} learned from your "Not a fit" choices.</b><br><span class="muted">Apply them so the agent stops bringing those jobs.</span></span><a class="btn" href="#settings">Review in Settings →</a></div>` : ""}
-      <div class="grid tiles">${tiles.map(([l, v, h, t]) => `<div class="tile link" data-go="${t}"><div class="label">${l}</div><div class="value">${esc(v)}</div><div class="hint">${h}</div></div>`).join("")}</div>
-      <div class="grid two">
+      ${state.sugg.length ? `<div class="callout amber"><span class="grow"><b>The agent learned ${state.sugg.length} thing${state.sugg.length > 1 ? "s" : ""} from your choices.</b><br><span class="muted">${esc(state.sugg[0].why)}</span></span><a class="btn" href="#settings">Review →</a></div>` : ""}
+      <div class="grid two" style="margin-bottom:14px">
+        <div class="panel goal"><div>${goalRing(week, goal)}</div><div><h3>This week: ${week} of ${goal} applications</h3><div class="sub" style="margin:0">${week >= goal ? "Goal reached. Nice." : `${goal - week} to go${manual.length + drafts.length ? `; ${manual.length + drafts.length} are ready right now` : ""}.`} <a href="#settings">Change the goal</a></div></div></div>
         <div class="panel"><h3>Last run</h3>
           ${r ? `<div class="sub"><span class="chip ${r.status === "success" ? "good" : r.status === "partial" ? "warn" : "bad"}">${esc(r.status)}</span> ${esc(rel(r.finished_at || r.started_at))}${r.finished_at ? ` · took ${Math.round((new Date(r.finished_at) - new Date(r.started_at)) / 60000)} min` : ""}</div>
-          <div>${sources}</div>
-          <div class="muted" style="margin-top:8px">${stats.items ? `${stats.items.processed} items read · ${stats.items.left} left` : ""}${stats.llm ? ` · ${stats.llm.calls} model calls (${stats.llm.failed} failed)` : ""}${stats.companies_discovered ? ` · ${stats.companies_discovered} companies discovered` : ""}</div>
-          ${r.error ? `<div class="reason" style="margin-top:8px">${esc(r.error)}</div>` : ""}` : `<div class="empty">No run yet. Press ▶ Run now.</div>`}
-        </div>
-        <div class="panel"><h3>Funnel</h3><div class="sub">From every job seen to interviews</div><div class="funnel">${steps.map(([k, n]) => `<div class="step"><span>${k}</span><span class="bar" style="width:${n / max * 100}%"></span><span class="num">${n}</span></div>`).join("")}</div></div>
+          <div>${sources}</div><div class="muted" style="margin-top:8px">${stats.items ? `${stats.items.processed} items read · ${stats.items.left} left` : ""}${stats.llm ? ` · ${stats.llm.calls} model calls (${stats.llm.failed} failed)` : ""}</div>
+          ${r.error ? `<div class="reason" style="margin-top:8px">${esc(r.error)}</div>` : ""}` : `<div class="empty">No run yet. Press ▶ Run.</div>`}</div>
       </div>
-      <div class="panel"><h3>Applications per day</h3><div class="sub">Last 14 days</div><div class="chart" id="chart"></div></div>`;
+      <div class="grid tiles">${tiles.map(([l, v, h, t]) => `<div class="tile link" data-go="${t}"><div class="label">${l}</div><div class="value">${esc(v)}</div><div class="hint">${esc(h)}</div></div>`).join("")}</div>
+      <div class="grid two">
+        <div class="panel"><h3>Funnel</h3><div class="sub">From every job seen to interviews</div><div class="funnel">${steps.map(([k, n]) => `<div class="step"><span>${k}</span><span class="bar" style="width:${n / max * 100}%"></span><span class="num">${n}</span></div>`).join("")}</div></div>
+        <div class="panel"><h3>Applications per day</h3><div class="sub">Last 14 days</div><div class="chart" id="chart"></div></div>
+      </div>`;
   }
   function drawChart() {
     const el = $("chart"); if (!el) return;
     const data = state.stats?.applied_per_day || [];
     if (!data.some((d) => d.count)) { el.innerHTML = `<div class="empty">No applications yet.</div>`; return; }
-    const W = el.clientWidth || 700, H = 150, pl = 26, pb = 20, pt = 6, max = Math.max(4, ...data.map((d) => d.count));
-    const step = Math.ceil(max / 4), top = step * 4, slot = (W - pl) / data.length, bw = Math.min(26, slot * .6), y = (v) => pt + (H - pb - pt) * (1 - v / top);
+    const W = el.clientWidth || 600, H = 150, pl = 26, pb = 20, pt = 6, max = Math.max(4, ...data.map((d) => d.count));
+    const step = Math.ceil(max / 4), top = step * 4, slot = (W - pl) / data.length, bw = Math.min(24, slot * .6), y = (v) => pt + (H - pb - pt) * (1 - v / top);
     let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Applications per day"><defs><linearGradient id="gb" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="rgb(56 189 248)"/><stop offset="1" stop-color="rgb(0 112 243)"/></linearGradient></defs>`;
     for (let v = 0; v <= top; v += step) s += `<line x1="${pl}" x2="${W}" y1="${y(v)}" y2="${y(v)}" stroke="var(--border)"/><text x="${pl - 6}" y="${y(v) + 4}" text-anchor="end" font-size="10" fill="var(--muted-2)" font-family="JetBrains Mono">${v}</text>`;
     data.forEach((d, i) => { const x = pl + slot * i + slot / 2;
@@ -467,15 +574,16 @@
 
   // ---------------------------------------------------------------- shared pieces
   const docs = (j) => `${j.files?.cv ? link(j.files.cv, "CV") : ""}${j.files?.cover ? link(j.files.cover, "Letter") : ""}${j.files?.form ? link(j.files.form, "Filled form") : ""}`;
-  const notFit = (id) => `<span class="menu" data-menu><button class="btn small danger" type="button" data-menu-open>Not a fit ▾</button><span class="items">${Object.entries(REASONS).map(([k, v]) => `<button type="button" data-discard="${id}:${k}">${esc(v)}</button>`).join("")}</span></span>`;
+  const notFit = (id, up) => `<span class="menu" data-menu><button class="btn small danger" type="button" data-menu-open>Not a fit ▾</button><span class="items" ${up ? 'style="bottom:calc(100% + 4px);top:auto"' : ""}>${Object.entries(REASONS).map(([k, v]) => `<button type="button" data-discard="${id}:${k}">${esc(v)}</button>`).join("")}</span></span>`;
   const check = (j) => `<input type="checkbox" data-sel="${j.id}" ${state.sel.has(j.id) ? "checked" : ""} aria-label="Select ${esc(j.title)}">`;
+  const meta = (j) => [j.work_mode && j.work_mode !== "unknown" ? j.work_mode : "", j.years_min != null ? `${j.years_min}+ yrs` : "", j.deadline ? `deadline ${j.deadline}` : ""].filter(Boolean).map((x) => `<span class="chip">${esc(x)}</span>`).join("");
   function jobCard(j, body, actions) {
-    return `<div class="card">
-      <div class="top"><div style="display:flex;gap:10px">${check(j)}<div><div class="title" data-open="${j.id}">${esc(j.title)}</div><div class="muted">${company(j)}${j.location ? " · " + esc(j.location) : ""} · ${esc(rel(postedOf(j)))}${inList(j.company, state.settings?.favorite_companies) ? ` <span class="chip warn">★ favorite</span>` : ""}</div></div></div><div style="text-align:right">${prio(j)}<div style="margin-top:4px">${fit(j)}</div></div></div>
+    return `<div class="card" ${state.assistOpen === j.id ? 'style="border-color:var(--c1)"' : ""}>
+      <div class="top"><div style="display:flex;gap:10px">${check(j)}<div><div class="title" data-open="${j.id}">${esc(j.title)}</div><div class="muted">${company(j)}${j.location ? " · " + esc(j.location) : ""} · ${esc(rel(postedOf(j)))}${inList(j.company, state.settings?.favorite_companies) ? ` <span class="chip warn">★</span>` : ""}</div><div style="margin-top:4px">${meta(j)}</div></div></div><div style="text-align:right">${prio(j)}<div style="margin-top:4px">${fit(j)}</div></div></div>
       ${body}<div class="row-actions">${actions}</div></div>`;
   }
   const questionRows = (qs) => qs.map((q) => `<div class="q"><div><b>${esc(q.question)}</b><div class="faint">asked ${q.times}× · saved as <span class="mono">${esc(q.suggested_key)}</span></div></div><input type="text" data-qinput="${q.id}" placeholder="Your answer" aria-label="Answer"><button class="btn primary small" data-answer="${q.id}" data-key="${esc(q.suggested_key)}">Save</button></div>`).join("");
-  const sec = (title, hint, list, card, cmd) => `<div class="section-title"><h3>${title}</h3><span class="count">${list.length || ""}</span>${cmd ? `<span class="faint mono">${cmd}</span>` : ""}</div><div class="section-hint">${hint}</div>${list.length ? `<div class="cards">${list.map(card).join("")}</div>` : `<div class="empty">Nothing here.</div>`}`;
+  const sec = (title, hint, list, card, extra) => `<div class="section-title"><h3>${title}</h3><span class="count">${list.length || ""}</span>${extra || ""}</div><div class="section-hint">${hint}</div>${list.length ? `<div class="cards">${list.map(card).join("")}</div>` : `<div class="empty">Nothing here.</div>`}`;
 
   // ---------------------------------------------------------------- Needs action
   function action() {
@@ -484,21 +592,21 @@
     const fol = state.follow;
     return `<div class="page-h"><h2>Needs action</h2><div class="hint">Everything that waits for you, in the order to do it.</div></div>
       ${qs.length ? `<div class="panel"><h3>Questions forms asked that your profile doesn't answer</h3><div class="sub">Answer once: saved to your profile, and the waiting forms are retried on the next run.</div>${questionRows(qs)}</div>` : ""}
-      ${sec("Email drafts to send", "Read them in Gmail Drafts; edit or delete any; then send all at once.", drafts, (j) => jobCard(j, `<div class="reason">To ${esc(j.apply_email)}</div>`, `${link(j.gmail_draft_url, "Open draft", "btn small primary")}${docs(j)}<button class="btn small good" data-status="${j.id}:applied">Mark sent</button>${notFit(j.id)}`), "./agent.sh send")}
-      ${sec("Apply yourself", "Prepared but not submitted: a captcha, a sign-in, Easy Apply or an open question.", manual, (j) => jobCard(j, `<div class="reason">${esc(j.manual_reason || "apply on the site")}</div>`, `${link(j.apply_url_direct || j.apply_url, j.apply_url_direct ? "Company form" : "Open", "btn small primary")}${docs(j)}<button class="btn small good" data-status="${j.id}:applied">Mark applied</button>${notFit(j.id)}`), "./agent.sh apply")}
-      ${fol.length ? `<div class="section-title"><h3>Follow-ups due</h3><span class="count">${fol.length}</span></div><div class="section-hint">Email applications with no reply after ${esc(state.settings ? "" : "")}${fol[0] ? "" : ""}a week. The agent drafts a short follow-up in the same thread; you send it.</div>
-        <div class="cards">${fol.map((f) => `<div class="card"><div class="top"><div><div class="title" data-open="${f.job_id}">${esc(f.title)}</div><div class="muted">${esc(f.company || "")} · sent ${f.days} days ago to ${esc(f.to)}</div></div></div><div class="row-actions"><button class="btn small primary" data-follow="${f.job_id}">Draft follow-up</button><button class="btn small" data-status="${f.job_id}:rejected">Mark rejected</button></div></div>`).join("")}</div>` : ""}
+      ${sec("Email drafts to send", "Read them in Gmail Drafts; edit or delete any; then send all at once.", drafts, (j) => jobCard(j, `<div class="reason">To ${esc(j.apply_email)}</div>`, `${link(j.gmail_draft_url, "Open draft", "btn small primary")}${docs(j)}<button class="btn small good" data-status="${j.id}:applied">Mark sent</button>${notFit(j.id)}`), drafts.length ? `<button class="btn small primary" data-act="sendall">Send all ${drafts.length}</button>` : "")}
+      ${sec("Apply yourself", "Prepared but not submitted: a captcha, a sign-in, Easy Apply or an open question. “Open pre-filled” puts it on your desktop, ready to submit.", manual, (j) => jobCard(j, `<div class="reason">${esc(j.manual_reason || "apply on the site")}</div>`, `<button class="btn small primary" data-assist="${j.id}">${state.assistOpen === j.id ? "Reopen" : "Open pre-filled"}</button>${docs(j)}<button class="btn small good" data-status="${j.id}:applied">Mark applied</button>${notFit(j.id)}`), manual.length ? `<button class="btn small primary" data-act="applyall">Apply all, one by one</button>` : "")}
+      ${fol.length ? `<div class="section-title"><h3>Follow-ups due</h3><span class="count">${fol.length}</span></div><div class="section-hint">Email applications with no reply after a week. One click drafts a short follow-up in the same Gmail thread; you send it.</div>
+        <div class="cards">${fol.map((f) => `<div class="card"><div class="top"><div><div class="title" data-open="${f.job_id}">${esc(f.title)}</div><div class="muted">${esc(f.company || "")} · sent ${f.days} days ago to ${esc(f.to)}</div></div></div><div class="row-actions"><button class="btn small primary" data-follow="${f.job_id}">Draft follow-up</button><button class="btn small" data-status="${f.job_id}:rejected">They rejected me</button></div></div>`).join("")}</div>` : ""}
       ${sec("Needs review", "The agent stopped before preparing these: an eligibility condition, signs of a scam, or no way to apply.", review, (j) => jobCard(j, `<div class="reason">${esc(j.skip_reason || "check")}${(j.flags || []).length ? " · " + j.flags.map(esc).join(", ") : ""}</div>`, `<button class="btn small primary" data-status="${j.id}:new">Prepare anyway</button>${link(j.apply_url, "Listing")}${notFit(j.id)}`))}
-      ${queued.length ? sec("Queued for the next run", "Prepared by the next run (or ▶ Run now).", queued, (j) => jobCard(j, `<div class="faint">job ${j.id}</div>`, `<button class="btn small" data-status="${j.id}:skipped">Unqueue</button>`)) : ""}`;
+      ${queued.length ? sec("Queued", "Prepared by the next run, or now with ▶ Run → Process the queue only.", queued, (j) => jobCard(j, `<div class="faint">job ${j.id}</div>`, `<button class="btn small" data-status="${j.id}:skipped">Unqueue</button>`), `<button class="btn small primary" data-run="queue">Process the queue now</button>`) : ""}`;
   }
 
   // ---------------------------------------------------------------- Applied board
   function applied() {
-    const cols = [["applied", "Applied"], ["interview", "Interview"], ["offer", "Offer"], ["rejected", "Rejected"]];
+    const cols = [["applied", "Applied"], ["interview", "Interview"], ["offer", "Offer"], ["rejected", "Rejected by the company"]];
     const card = (j) => `<div class="mini" draggable="true" data-drag="${j.id}"><div class="title" data-open="${j.id}" style="font-size:13.5px">${esc(j.title)}</div><div class="faint">${company(j)}</div>
-      <div class="faint" style="margin-top:4px">${j.has_reply ? `<span class="chip good">● reply</span>` : ""}${esc(j.app_mode === "submitted" ? "form submitted" : j.apply_channel === "email" ? "email" : "applied")} · ${esc(rel(j.applied_at || j.posted_at))}</div></div>`;
+      <div class="faint" style="margin-top:4px">${j.has_reply ? `<span class="chip good">● reply</span>` : ""}${esc(j.app_mode === "submitted" ? "form submitted" : CHANNEL[j.apply_channel] || "applied")} · ${esc(rel(appliedAt(j) || j.posted_at))}</div></div>`;
     return `<div class="page-h"><h2>Applied</h2><div class="hint">Drag a card when a company answers. Replies to your emails are detected on every run.</div></div>
-      <div class="board">${cols.map(([k, l]) => { const list = by(k); return `<div class="col" data-col="${k}"><h4>${l}<span class="count">${list.length || ""}</span></h4>${list.map(card).join("") || `<div class="faint" style="padding:6px">Drop cards here</div>`}</div>`; }).join("")}</div>`;
+      <div class="board">${cols.map(([k, l]) => { const list = state.jobs.filter((j) => j.status === k && (k !== "rejected" || everApplied(j))); return `<div class="col" data-col="${k}"><h4>${l}<span class="count">${list.length || ""}</span></h4>${list.map(card).join("") || `<div class="faint" style="padding:6px">Drop cards here</div>`}</div>`; }).join("")}</div>`;
   }
 
   // ---------------------------------------------------------------- Skipped
@@ -507,36 +615,46 @@
     const groups = {};
     for (const j of list) (groups[skipKey(j)] ||= []).push(j);
     const order = Object.keys(SKIP).filter((k) => groups[k]).concat(Object.keys(groups).filter((k) => !SKIP[k]));
-    return `<div class="page-h"><h2>Skipped</h2><div class="hint">What the agent didn't apply to, and why. Rescue anything it missed: "Prepare anyway" queues it for the next run.</div></div>
+    return `<div class="page-h"><h2>Skipped</h2><div class="hint">What the agent didn't apply to, and why. Rescue anything it missed: "Prepare anyway" queues it.</div></div>
       <div class="filters"><label class="faint"><input type="checkbox" id="showdup" ${state.showDup ? "checked" : ""}> show duplicates (${state.dup.length})</label></div>
       ${order.length ? order.map((k) => `<details class="group glass" ${k === "low_fit" ? "open" : ""}><summary><b style="font-family:var(--display)">${esc((SKIP[k] || [k])[0])}</b><span class="count">${groups[k].length}</span><span class="what">${esc((SKIP[k] || ["", ""])[1])}</span></summary>
-        ${groups[k].sort((a, b) => (b.fit_score ?? -1) - (a.fit_score ?? -1)).map((j) => `<div class="li">${check(j)}<div><span class="title" data-open="${j.id}" style="font-size:14px">${esc(j.title)}</span> <span class="muted">${company(j)}</span><div class="faint">${fit(j)} · posted ${esc(rel(postedOf(j)))} · ${esc(SOURCE[j.source] || j.source)}${j.discard_reason ? ` · ${esc(REASONS[j.discard_reason] || j.discard_reason)}` : ""}</div></div>
-          <div class="row-actions">${link(j.apply_url_direct || j.apply_url, "Listing")}${j.skip_reason !== "duplicate" ? `<button class="btn small primary" data-status="${j.id}:new">Prepare anyway</button>` : ""}</div></div>`).join("")}</details>`).join("") : `<div class="empty">Nothing skipped.</div>`}`;
+        ${groups[k].sort((a, b) => (b.fit_score ?? -1) - (a.fit_score ?? -1)).map((j) => `<div class="li">${check(j)}<div><span class="title" data-open="${j.id}" style="font-size:14px">${esc(j.title)}</span> <span class="muted">${company(j)}</span><div class="faint">${fit(j)} · posted ${esc(rel(postedOf(j)))} · ${esc(SOURCE[j.source] || j.source)}${j.years_min != null ? ` · ${j.years_min}+ yrs` : ""}${j.discard_reason ? ` · ${esc(REASONS[j.discard_reason] || j.discard_reason)}` : ""}</div></div>
+          <div class="row-actions">${link(j.apply_url_direct || j.apply_url, "Listing")}${j.discard_reason ? `<button class="btn small" data-undiscard="${j.id}">Undo</button>` : j.skip_reason !== "duplicate" ? `<button class="btn small primary" data-status="${j.id}:new">Prepare anyway</button>` : ""}</div></div>`).join("")}</details>`).join("") : `<div class="empty">Nothing skipped.</div>`}`;
   }
 
   // ---------------------------------------------------------------- All jobs
-  function all() {
-    const q = state.q.toLowerCase();
+  function filteredRows() {
+    const q = state.q.toLowerCase(), now = Date.now();
+    const within = { d1: 1, d3: 3, d7: 7, d30: 30 }[state.within];
     const rows = state.jobs.filter((j) => (!state.status || j.status === state.status) && (!state.source || j.source === state.source)
+      && (!state.mode || j.work_mode === state.mode) && (!state.channel || j.apply_channel === state.channel)
+      && (!within || (now - new Date(postedOf(j))) / 864e5 <= within) && (!state.minfit || (j.fit_score ?? 0) >= state.minfit)
       && (!q || [j.title, j.company, j.location, j.apply_email, j.source_name, j.notes].join(" ").toLowerCase().includes(q)));
-    const key = { posted: (j) => postedOf(j) || "", fit: (j) => j.fit_score ?? -1, title: (j) => j.title.toLowerCase(), status: (j) => j.status, prio: (j) => j.priority ?? 9 }[state.sort.k];
-    rows.sort((a, b) => (key(a) > key(b) ? 1 : key(a) < key(b) ? -1 : 0) * state.sort.d);
+    const key = { posted: (j) => postedOf(j) || "", fit: (j) => j.fit_score ?? -1, title: (j) => j.title.toLowerCase(), status: (j) => j.status, prio: (j) => j.priority ?? 9, years: (j) => j.years_min ?? -1 }[state.sort.k];
+    return rows.sort((a, b) => (key(a) > key(b) ? 1 : key(a) < key(b) ? -1 : 0) * state.sort.d);
+  }
+  function all() {
+    const rows = filteredRows();
     const opt = (v, l, cur) => `<option value="${v}" ${cur === v ? "selected" : ""}>${esc(l)}</option>`;
     const arrow = (k) => state.sort.k === k ? (state.sort.d > 0 ? " ↑" : " ↓") : "";
-    return `<div class="page-h"><h2>All jobs</h2><div class="hint">${rows.length} shown · press <span class="mono">/</span> to search · tick rows for bulk actions</div></div>
+    const pill = (v, l) => `<button type="button" data-within="${v}" class="${state.within === v ? "on" : ""}">${l}</button>`;
+    return `<div class="page-h"><h2>All jobs</h2><div class="hint">${rows.length} shown · <span class="kbd">/</span> search · <span class="kbd">j</span>/<span class="kbd">k</span> move · <span class="kbd">Enter</span> open · tick rows for bulk actions</div></div>
       <div class="filters">
         <input type="search" id="q" placeholder="Search title, company, email, notes…" value="${esc(state.q)}">
         <select id="fstatus">${opt("", "Any status", state.status)}${Object.entries(STATUS).map(([k, v]) => opt(k, v.label, state.status)).join("")}</select>
         <select id="fsource">${opt("", "Any source", state.source)}${Object.entries(SOURCE).filter(([k]) => k !== "whatsapp_export").map(([k, v]) => opt(k, v, state.source)).join("")}</select>
-        <button class="btn small" id="selall" type="button">Select shown</button>
+        <select id="fmode">${opt("", "Any work mode", state.mode)}${["onsite", "hybrid", "remote"].map((k) => opt(k, k, state.mode)).join("")}</select>
+        <select id="fchannel">${opt("", "Any apply channel", state.channel)}${Object.entries(CHANNEL).map(([k, v]) => opt(k, v, state.channel)).join("")}</select>
       </div>
+      <div class="filters"><span class="pill-filter">${pill("", "Any time")}${pill("d1", "24 h")}${pill("d3", "3 days")}${pill("d7", "7 days")}${pill("d30", "30 days")}</span>
+        <label class="faint" style="display:inline-flex;gap:8px;align-items:center">Fit ≥ <input type="range" id="minfit" min="0" max="90" step="5" value="${state.minfit}"> <span class="mono">${state.minfit}</span></label>
+        <button class="btn small" id="selall" type="button">Select shown</button>${state.q || state.status || state.source || state.mode || state.channel || state.within || state.minfit ? `<button class="btn small" id="clearf" type="button">Clear filters</button>` : ""}</div>
       <div class="glass" style="overflow-x:auto;border-radius:var(--radius)"><table><thead><tr><th></th>
-        <th data-sort="prio">Pri${arrow("prio")}</th><th data-sort="title">Role${arrow("title")}</th><th data-sort="posted">Posted${arrow("posted")}</th><th data-sort="fit">Fit${arrow("fit")}</th><th data-sort="status">Status${arrow("status")}</th><th>Source</th></tr></thead>
-        <tbody>${rows.map((j) => `<tr class="r" data-rowids="${j.id}"><td>${check(j)}</td><td>${prio(j)}</td><td class="rowtitle" data-open="${j.id}"><b>${esc(j.title)}</b><div class="muted">${company(j)}${j.location ? " · " + esc(j.location) : ""}</div></td>
-          <td class="muted">${esc(rel(postedOf(j)))}</td><td>${fit(j)}</td><td><span class="dot" style="background:${STATUS[j.status]?.color}"></span>${esc(STATUS[j.status]?.label || j.status)}${j.has_reply ? ` <span class="chip good">reply</span>` : ""}</td><td class="muted">${esc(SOURCE[j.source] || j.source)}</td></tr>`).join("") || `<tr><td colspan="7"><div class="empty">No jobs match.</div></td></tr>`}</tbody></table></div>`;
+        <th data-sort="prio">Pri${arrow("prio")}</th><th data-sort="title">Role${arrow("title")}</th><th data-sort="posted">Posted${arrow("posted")}</th><th data-sort="fit">Fit${arrow("fit")}</th><th data-sort="years">Years${arrow("years")}</th><th>Mode</th><th>Apply via</th><th data-sort="status">Status${arrow("status")}</th><th>Source</th></tr></thead>
+        <tbody>${rows.map((j, i) => `<tr class="r ${state.kf === i ? "kfocus" : ""}" data-rowids="${j.id}"><td>${check(j)}</td><td>${prio(j)}</td><td class="rowtitle" data-open="${j.id}"><b>${esc(j.title)}</b><div class="muted">${company(j)}${j.location ? " · " + esc(j.location) : ""}</div></td>
+          <td class="muted">${esc(rel(postedOf(j)))}</td><td>${fit(j)}</td><td class="num">${j.years_min ?? "—"}</td><td class="muted">${esc(j.work_mode && j.work_mode !== "unknown" ? j.work_mode : "—")}</td><td class="muted">${esc(CHANNEL[j.apply_channel] || j.apply_channel)}</td>
+          <td><span class="dot" style="background:${STATUS[j.status]?.color}"></span>${esc(STATUS[j.status]?.label || j.status)}${j.has_reply ? ` <span class="chip good">reply</span>` : ""}</td><td class="muted">${esc(SOURCE[j.source] || j.source)}</td></tr>`).join("") || `<tr><td colspan="10"><div class="empty">No jobs match.</div></td></tr>`}</tbody></table></div>`;
   }
-  state.visibleIds = () => [...document.querySelectorAll("[data-rowids]")].map((e) => +e.dataset.rowids);
-
   function renderBulk() {
     const n = state.sel.size;
     $("bulkbar").classList.toggle("show", n > 0);
@@ -548,10 +666,10 @@
   // ---------------------------------------------------------------- Sources
   function sources() {
     const rows = state.sources; const max = Math.max(1, ...rows.map((r) => r.jobs));
-    return `<div class="page-h"><h2>Sources</h2><div class="hint">Which groups, channels, searches and boards actually lead to applications and replies.</div></div>
-      <div class="glass" style="overflow-x:auto;border-radius:var(--radius)"><table><thead><tr><th>Source</th><th>Jobs</th><th>Matched</th><th>Prepared</th><th>Applied</th><th>Replies</th><th style="width:30%"></th></tr></thead><tbody>
-      ${rows.map((r) => `<tr><td><b>${esc(r.name)}</b><div class="faint">${esc(SOURCE[r.source] || r.source)}</div></td><td class="num">${r.jobs}</td><td class="num">${r.matched}</td><td class="num">${r.prepared}</td><td class="num">${r.applied}</td><td class="num">${r.replies}</td>
-        <td><div class="bar-h" style="width:${r.jobs / max * 100}%;opacity:.35"></div><div class="bar-h" style="width:${r.prepared / max * 100}%;margin-top:3px"></div></td></tr>`).join("") || `<tr><td colspan="7"><div class="empty">No data yet.</div></td></tr>`}</tbody></table></div>`;
+    return `<div class="page-h"><h2>Sources</h2><div class="hint">Which groups, channels, searches and boards lead to applications and replies.</div></div>
+      <div class="glass" style="overflow-x:auto;border-radius:var(--radius)"><table><thead><tr><th>Source</th><th>Jobs</th><th>Matched</th><th>Prepared</th><th>Applied</th><th>Replies</th><th>Match rate</th><th style="width:26%"></th></tr></thead><tbody>
+      ${rows.map((r) => `<tr><td><b>${esc(r.name)}</b><div class="faint">${esc(SOURCE[r.source] || r.source)}</div></td><td class="num">${r.jobs}</td><td class="num">${r.matched}</td><td class="num">${r.prepared}</td><td class="num">${r.applied}</td><td class="num">${r.replies}</td><td class="num">${r.jobs ? Math.round(r.matched / r.jobs * 100) : 0}%</td>
+        <td><div class="bar-h" style="width:${r.jobs / max * 100}%;opacity:.35"></div><div class="bar-h" style="width:${r.prepared / max * 100}%;margin-top:3px"></div></td></tr>`).join("") || `<tr><td colspan="8"><div class="empty">No data yet.</div></td></tr>`}</tbody></table></div>`;
   }
 
   // ---------------------------------------------------------------- Profile
@@ -577,17 +695,17 @@
 
   // ---------------------------------------------------------------- Settings
   function chipEditor(field, items, placeholder) {
-    return `<div class="chipedit">${(items || []).map((x, i) => `<span class="chip accent">${esc(x)}<span class="x" data-chipdel="${field}:${i}" title="Remove">✕</span></span>`).join("")}
-      <input type="text" data-chipadd="${field}" placeholder="${esc(placeholder)}"></div>`;
+    return `<div class="chipedit">${(items || []).map((x, i) => `<span class="chip accent">${esc(x)}<span class="x" data-chipdel="${field}:${i}" title="Remove">✕</span></span>`).join("")}<input type="text" data-chipadd="${field}" placeholder="${esc(placeholder)}"></div>`;
   }
+  const suggTitle = (g) => ({ exclude_title: `Exclude titles with “${esc(g.value)}”`, block_company: `Block ${esc(g.value)}`, skip_senior: "Skip senior titles unless the post asks for ≤ 2 years", threshold: `Lower the ${esc(g.value.split("=")[0].toUpperCase())} fit threshold to ${esc(g.value.split("=")[1])}` }[g.kind] || esc(g.value));
   function settings() {
     const s = state.settings; if (!s) return `<div class="empty">Settings not available.</div>`;
     const ro = state.editable ? "" : `<div class="banner show">Settings are read-only in this view.</div>`;
     const sw = (field, on) => `<label class="switch"><input type="checkbox" data-switch="${field}" ${on ? "checked" : ""}><span></span></label>`;
     const num = (field, v, min, max) => `<input type="number" data-num="${field}" value="${esc(v)}" min="${min}" max="${max}" style="width:100px">`;
     return `<div class="page-h"><h2>Settings</h2><div class="hint">Saved into config/config.yaml and config/titles.yaml (each change is checked; the previous file is kept as .bak). Used from the next run.</div></div>${ro}
-      ${state.sugg.length ? `<div class="panel" style="border-color:rgb(var(--a3) / .45)"><h3>Rules learned from "Not a fit"</h3><div class="sub">Apply one and the agent stops bringing those jobs; dismiss it and it won't be suggested again.</div>
-        ${state.sugg.map((g) => `<div class="q"><div><b>${g.kind === "exclude_title" ? `Exclude titles with “${esc(g.value)}”` : `Block ${esc(g.value)}`}</b><div class="faint">${esc(g.why)}</div></div><span></span><span class="row-actions"><button class="btn small primary" data-sugg="apply:${esc(g.key)}">Apply</button><button class="btn small" data-sugg="dismiss:${esc(g.key)}">Dismiss</button></span></div>`).join("")}</div>` : ""}
+      ${state.sugg.length ? `<div class="panel" style="border-color:rgb(var(--a3) / .45)"><h3>What the agent learned from your choices</h3><div class="sub">From jobs you turned down, marked not a fit, or applied to. Apply a rule, or dismiss it for good.</div>
+        ${state.sugg.map((g) => `<div class="q"><div><b>${suggTitle(g)}</b><div class="faint">${esc(g.why)}</div></div><span></span><span class="row-actions"><button class="btn small primary" data-sugg="apply:${esc(g.key)}">Apply</button><button class="btn small" data-sugg="dismiss:${esc(g.key)}">Dismiss</button></span></div>`).join("")}</div>` : ""}
       <div class="panel"><h3>Search</h3><div class="sub">LinkedIn's public job search runs each title for jobs posted since the last run (at most 24 h).</div>
         <div class="setrow"><div class="lbl"><b>LinkedIn search</b><span class="faint">Replaces LinkedIn's alert emails</span></div><div>${sw("linkedin_enabled", s.linkedin_enabled)}</div></div>
         <div class="setrow"><div class="lbl"><b>Job titles</b><span class="faint">Press Enter to add</span></div>${chipEditor("search_titles", s.search_titles, "Add a title, e.g. SRE")}</div>
@@ -600,16 +718,15 @@
       <div class="panel"><h3>Filters and scoring</h3>
         <div class="setrow"><div class="lbl"><b>Maximum job age</b><span class="faint">Days since posted</span></div>${num("max_job_age_days", s.max_job_age_days, 1, 365)}</div>
         <div class="setrow"><div class="lbl"><b>Maximum years asked</b></div>${num("max_years_required", s.max_years_required, 0, 20)}</div>
+        <div class="setrow"><div class="lbl"><b>Skip senior titles</b><span class="faint">Senior/Lead/Manager… unless the post asks ≤ 2 years</span></div><div>${sw("skip_senior_titles", s.skip_senior_titles)}</div></div>
         <div class="setrow"><div class="lbl"><b>Fit thresholds</b><span class="faint">P1 target · P2 adjacent · P3 other</span></div><div class="row-actions">P1 ${num("thresholds.p1", s.thresholds.p1, 0, 100)} P2 ${num("thresholds.p2", s.thresholds.p2, 0, 100)} P3 ${num("thresholds.p3", s.thresholds.p3, 0, 100)}</div></div>
         <div class="setrow"><div class="lbl"><b>Excluded titles</b><span class="faint">Patterns, e.g. sales or \\bqa\\b</span></div>${chipEditor("excluded_titles", s.excluded_titles, "Add a pattern")}</div></div>
       <div class="panel"><h3>Companies</h3>
         <div class="setrow"><div class="lbl"><b>Favorites ★</b><span class="faint">Always prepared</span></div>${chipEditor("favorite_companies", s.favorite_companies, "Company name")}</div>
-        <div class="setrow"><div class="lbl"><b>Blocked</b><span class="faint">Never applied to</span></div>${chipEditor("blocked_companies", s.blocked_companies, "Company name")}</div></div>`;
+        <div class="setrow"><div class="lbl"><b>Blocked</b><span class="faint">Never applied to</span></div>${chipEditor("blocked_companies", s.blocked_companies, "Company name")}</div></div>
+      <div class="panel"><h3>Goal</h3><div class="setrow"><div class="lbl"><b>Applications per week</b><span class="faint">The ring on Today</span></div>${num("weekly_goal", s.weekly_goal, 1, 200)}</div></div>`;
   }
-  async function saveSettings(change, msg) {
-    const r = await post("/api/settings", change, msg || "Settings saved");
-    if (r) { state.settings = r.settings; render(); }
-  }
+  async function saveSettings(change, msg) { const r = await post("/api/settings", change, msg || "Settings saved"); if (r) { state.settings = r.settings; render(false); } }
 
   // ---------------------------------------------------------------- Companies, Runs
   function companies() {
@@ -620,22 +737,24 @@
   }
   function runs() {
     return `<div class="page-h"><h2>Runs</h2><div class="hint">Every run, newest first.</div></div>
-      <div class="glass" style="overflow-x:auto;border-radius:var(--radius)"><table><thead><tr><th>#</th><th>When</th><th>Status</th><th>Took</th><th>Items</th><th>Applications</th><th>Model calls</th><th>Note</th></tr></thead><tbody>
+      <div class="glass" style="overflow-x:auto;border-radius:var(--radius)"><table><thead><tr><th>#</th><th>When</th><th>Status</th><th>Took</th><th>Sources</th><th>Items</th><th>Applications</th><th>Model calls</th></tr></thead><tbody>
       ${state.runs.map((r) => { const s = r.stats || {}; const a = s.applications || {}; return `<tr><td class="mono">${r.id}</td><td class="muted">${esc(new Date(r.started_at).toLocaleString())}${r.mode === "dry_run" ? ` <span class="chip">dry run</span>` : ""}</td>
         <td><span class="chip ${r.status === "success" ? "good" : r.status === "partial" ? "warn" : "bad"}">${esc(r.status)}</span></td><td class="muted">${r.finished_at ? Math.round((new Date(r.finished_at) - new Date(r.started_at)) / 60000) + " min" : "—"}</td>
+        <td>${(s.sources || []).map((x) => `<span class="chip ${x.ok ? "" : "bad"}" title="${esc(x.detail)}">${esc(x.name)} ${x.ok ? esc(String(x.inserted)) : "✕"}</span>`).join("")}</td>
         <td class="muted">${s.items ? `${s.items.processed} read, ${s.items.left} left` : "—"}</td><td class="muted">${s.applications ? `${a.drafts || 0} drafts, ${a.submitted || 0} submitted, ${a.packages || 0} yourself` : "—"}</td>
-        <td class="muted">${s.llm ? `${s.llm.calls} (${s.llm.failed} failed)` : "—"}</td><td class="faint">${esc(r.error || "")}</td></tr>`; }).join("") || `<tr><td colspan="8"><div class="empty">No runs yet.</div></td></tr>`}</tbody></table></div>`;
+        <td class="muted">${s.llm ? `${s.llm.calls} (${s.llm.failed} failed)` : "—"}</td></tr>`; }).join("") || `<tr><td colspan="8"><div class="empty">No runs yet.</div></td></tr>`}</tbody></table></div>`;
   }
 
-  // ---------------------------------------------------------------- drawer
+  // ---------------------------------------------------------------- drawer (tabs)
   function prepHtml(p) {
     if (!p) return "";
     return `${(p.questions || []).map((q, i) => `<details ${i < 2 ? "open" : ""} style="margin:8px 0"><summary><b>${esc(q.question)}</b></summary><div class="faint" style="margin:4px 0">${esc(q.why)}</div><ul style="margin:4px 0 0 18px;padding:0">${(q.answer_points || []).map((x) => `<li>${esc(x)}</li>`).join("")}</ul>${(q.evidence || []).length ? `<div style="margin-top:4px">${q.evidence.map((e) => `<span class="chip mono">${esc(e)}</span>`).join("")}</div>` : ""}</details>`).join("")}
-      ${(p.gaps || []).length ? `<div class="faint" style="margin-top:10px">Gaps and how to answer them honestly</div>${p.gaps.map((g) => `<div class="reason" style="margin-top:6px"><b>${esc(g.gap)}</b>: ${esc(g.how)}</div>`).join("")}` : ""}
-      ${(p.questions_to_ask || []).length ? `<div class="faint" style="margin-top:10px">Ask them</div><ul style="margin:4px 0 0 18px;padding:0">${p.questions_to_ask.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}`;
+      ${(p.gaps || []).length ? `<h4>Gaps and how to answer them honestly</h4>${p.gaps.map((g) => `<div class="reason" style="margin-top:6px"><b>${esc(g.gap)}</b>: ${esc(g.how)}</div>`).join("")}` : ""}
+      ${(p.questions_to_ask || []).length ? `<h4>Ask them</h4><ul style="margin:4px 0 0 18px;padding:0">${p.questions_to_ask.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}`;
   }
-  function openDrawer(id) {
+  function openDrawer(id, tab) {
     const j = state.jobs.find((x) => x.id === id) || state.dup.find((x) => x.id === id); if (!j) return;
+    if (state.open !== id) { state.dtab = tab || "overview"; state.cv = false; } else if (tab) state.dtab = tab;
     state.open = id;
     const chips = (arr, cls) => (arr || []).map((x) => `<span class="chip ${cls}">${esc(x)}</span>`).join("");
     const sel = `<select id="dstatus" aria-label="Status">${Object.entries(STATUS).map(([k, v]) => `<option value="${k}" ${k === j.status ? "selected" : ""}>${esc(v.label)}</option>`).join("")}</select>`;
@@ -643,33 +762,45 @@
     const editable = j.cover_text && !done;
     const fav = inList(j.company, state.settings?.favorite_companies), blk = inList(j.company, state.settings?.blocked_companies);
     const due = state.follow.find((f) => f.job_id === j.id);
+    const tabs = [["overview", "Overview"], ["application", "Application"], ["prep", "Interview prep"], ["post", "Original post"]];
+    const body = {
+      overview: () => `
+        <div class="kv">
+          <span class="k">Status</span><span>${sel}</span>
+          <span class="k">Fit</span><span>${fit(j)} ${j.scores ? `<span class="faint">skills ${j.scores.skills} · experience ${j.scores.experience}</span>` : ""} ${prio(j)}</span>
+          <span class="k">Posted</span><span>${esc(rel(postedOf(j)))}${j.job_posted_at ? "" : ` <span class="faint">(date of the post or alert)</span>`}</span>
+          <span class="k">Years asked</span><span>${j.years_min != null ? esc(j.years_min) : "not stated"}</span>
+          <span class="k">Work mode</span><span>${esc(j.work_mode || "unknown")}</span>
+          ${j.deadline ? `<span class="k">Deadline</span><span>${esc(j.deadline)}</span>` : ""}
+          <span class="k">Found via</span><span>${esc(j.source_name || SOURCE[j.source] || j.source)}${j.seen_count > 1 ? ` · seen ${j.seen_count}×` : ""}</span>
+          <span class="k">Apply via</span><span>${esc(CHANNEL[j.apply_channel] || j.apply_channel)}${j.apply_email ? " · " + esc(j.apply_email) : ""}${j.apply_phone ? " · " + esc(j.apply_phone) : ""}</span>
+          ${j.skip_reason ? `<span class="k">Reason</span><span>${esc(j.skip_reason)}</span>` : ""}
+          ${j.manual_reason ? `<span class="k">Why by hand</span><span>${esc(j.manual_reason)}</span>` : ""}
+          ${j.company_board ? `<span class="k">Company board</span><span class="mono">${esc(j.company_board)}</span>` : ""}
+        </div>
+        ${j.why_this_role ? `<h4>Why this role · your interview line</h4><div class="reason">${esc(j.why_this_role)}</div>` : ""}
+        ${j.fit_summary ? `<h4>Fit</h4><div>${esc(j.fit_summary)}</div>` : ""}
+        ${(j.matched || []).length || (j.missing || []).length ? `<h4>Requirements</h4><div>${chips(j.matched, "good")}${chips(j.missing, "bad")}</div>` : (j.requirements || []).length ? `<h4>Requirements</h4><div>${chips(j.requirements, "")}</div>` : ""}
+        <h4>Timeline</h4><div class="timeline">${(j.history || []).map((h) => `<div><b>${esc(STATUS[h.to]?.label || h.to)}</b> <span class="faint">by ${esc(h.by === "ahmed" ? "you" : h.by)} · ${esc(new Date(h.at).toLocaleString())}</span></div>`).join("") || `<div class="faint">—</div>`}</div>
+        <h4>Notes</h4><textarea id="dnotes" rows="3" placeholder="Interview date, contact, follow-up…" aria-label="Notes">${esc(j.notes || "")}</textarea><div style="margin-top:6px"><button class="btn small" id="dsavenotes">Save notes</button></div>`,
+      application: () => `
+        <div class="row-actions" style="margin-bottom:10px">${docs(j)}${j.files?.cv ? `<button class="btn small" id="dcv">${state.cv ? "Hide CV" : "Preview CV"}</button>` : ""}${j.files?.cv_md ? link(j.files.cv_md, "CV text") : ""}${j.ats_keywords != null ? `<span class="faint">CV covers ${Math.round(j.ats_keywords * 100)}% of the job's backed keywords</span>` : ""}</div>
+        ${state.cv && j.files?.cv ? `<iframe class="cv" src="${esc(j.files.cv)}" title="CV preview"></iframe>` : ""}
+        ${(j.form_filled || []).length ? `<h4>What the agent filled in the form</h4><div class="kv">${j.form_filled.map((f) => `<span class="k">${esc(f.label)}</span><span>${esc(f.value)}</span>`).join("")}</div>${(j.form_unanswered || []).length ? `<div class="reason">Left for you: ${j.form_unanswered.map(esc).join("; ")}</div>` : ""}` : ""}
+        ${j.cover_text ? `<h4>Cover letter</h4><textarea id="dcover" rows="14" ${editable ? "" : "disabled"} aria-label="Cover letter">${esc(j.cover_text)}</textarea>
+          <div class="row-actions" style="margin-top:6px">${editable ? `<button class="btn small primary" id="dsavecover">Save letter</button>` : ""}<button class="btn small" id="dcopy">Copy</button><span class="faint">${j.apply_channel === "email" ? "Email jobs: the Gmail draft is what gets sent; edit it there." : "Used by Open pre-filled and for paste boxes."}</span></div>` : `<div class="empty">No application prepared for this job.</div>`}`,
+      prep: () => `${j.interview_prep ? prepHtml(j.interview_prep) : `<div class="faint">Likely questions for this job, answers built from your real projects, honest ways to handle gaps, and questions to ask them. About a minute.</div>`}
+        <div class="row-actions" style="margin-top:10px"><button class="btn small ${j.interview_prep ? "" : "primary"}" data-prep="${j.id}">${j.interview_prep ? "Make it again" : "Prepare me for this interview"}</button></div>`,
+      post: () => j.post_text ? `<pre class="post" style="max-height:none">${esc(j.post_text)}</pre>` : `<div class="empty">No post text.</div>`,
+    };
     $("drawer").innerHTML = `
-      <div style="display:flex;justify-content:space-between;gap:10px"><div><div class="faint mono">job ${j.id} · ${esc(SOURCE[j.source] || j.source)}</div><h2>${esc(j.title)}</h2><div class="muted">${company(j)}${j.location ? " · " + esc(j.location) : ""}${j.work_mode && j.work_mode !== "unknown" ? " · " + esc(j.work_mode) : ""}</div></div><button class="btn small" id="dclose">Esc</button></div>
-      <div class="row-actions" style="margin:14px 0">${link(j.apply_url_direct, "Company form", "btn small primary")}${link(j.apply_url, "Listing")}${link(j.gmail_draft_url, "Gmail draft")}${docs(j)}${j.files?.cv ? `<button class="btn small" id="dcv">${state.cv ? "Hide CV" : "Preview CV"}</button>` : ""}</div>
-      ${state.cv && j.files?.cv ? `<iframe class="cv" src="${esc(j.files.cv)}" title="CV preview"></iframe>` : ""}
-      <div class="row-actions">${["skipped", "needs_review"].includes(j.status) ? `<button class="btn small primary" data-status="${j.id}:new">Prepare anyway</button>` : ""}${j.status === "ready" ? `<button class="btn small good" data-status="${j.id}:applied">Mark applied</button>` : ""}${!done && j.status !== "skipped" ? notFit(j.id) : ""}
-        ${j.company ? `<button class="btn small" data-fav="${esc(j.company)}">${fav ? "★ Favorite" : "☆ Favorite company"}</button><button class="btn small ${blk ? "danger" : ""}" data-block="${esc(j.company)}">${blk ? "Blocked" : "Block company"}</button>` : ""}
+      <div style="display:flex;justify-content:space-between;gap:10px"><div><div class="faint mono">job ${j.id} · ${esc(SOURCE[j.source] || j.source)}</div><h2>${esc(j.title)}</h2><div class="muted">${company(j)}${j.location ? " · " + esc(j.location) : ""}</div><div style="margin-top:6px">${meta(j)}</div></div><button class="btn small" id="dclose">Esc</button></div>
+      <div class="row-actions" style="margin:14px 0 4px">${isManual(j) ? `<button class="btn small primary" data-assist="${j.id}">Open pre-filled</button>` : ""}${link(j.apply_url_direct, "Company form", "btn small")}${link(j.apply_url, "Listing")}${link(j.gmail_draft_url, "Gmail draft")}
+        ${["skipped", "needs_review"].includes(j.status) && !j.discard_reason ? `<button class="btn small primary" data-status="${j.id}:new">Prepare anyway</button>` : ""}${j.discard_reason ? `<button class="btn small" data-undiscard="${j.id}">Undo “Not a fit”</button>` : ""}${j.status === "ready" ? `<button class="btn small good" data-status="${j.id}:applied">Mark applied</button>` : ""}${!done && j.status !== "skipped" ? notFit(j.id) : ""}
+        ${j.company ? `<button class="btn small" data-fav="${esc(j.company)}">${fav ? "★ Favorite" : "☆ Favorite"}</button><button class="btn small ${blk ? "danger" : ""}" data-block="${esc(j.company)}">${blk ? "Blocked" : "Block company"}</button>` : ""}
         ${due ? `<button class="btn small primary" data-follow="${j.id}">Draft follow-up</button>` : ""}</div>
-      <div class="kv">
-        <span class="k">Status</span><span>${sel}</span>
-        <span class="k">Fit</span><span>${fit(j)} ${j.scores ? `<span class="faint">skills ${j.scores.skills} · experience ${j.scores.experience}</span>` : ""} ${prio(j)}</span>
-        <span class="k">Posted</span><span>${esc(rel(postedOf(j)))}${j.job_posted_at ? "" : ` <span class="faint">(date of the post or alert)</span>`}</span>
-        <span class="k">Found via</span><span>${esc(j.source_name || SOURCE[j.source] || j.source)}${j.seen_count > 1 ? ` · seen ${j.seen_count}×` : ""}</span>
-        <span class="k">Apply via</span><span>${esc(j.apply_channel)}${j.apply_email ? " · " + esc(j.apply_email) : ""}${j.apply_phone ? " · " + esc(j.apply_phone) : ""}</span>
-        ${j.skip_reason ? `<span class="k">Reason</span><span>${esc(j.skip_reason)}</span>` : ""}
-        ${j.manual_reason ? `<span class="k">Why by hand</span><span>${esc(j.manual_reason)}</span>` : ""}
-        ${j.company_board ? `<span class="k">Company board</span><span class="mono">${esc(j.company_board)}</span>` : ""}
-        ${j.ats_keywords != null ? `<span class="k">CV keywords</span><span>${Math.round(j.ats_keywords * 100)}% of the job's backed keywords</span>` : ""}
-      </div>
-      ${j.why_this_role ? `<h4>Why this role · your interview line</h4><div class="reason">${esc(j.why_this_role)}</div>` : ""}
-      ${j.fit_summary ? `<h4>Fit</h4><div>${esc(j.fit_summary)}</div>` : ""}
-      ${(j.matched || []).length || (j.missing || []).length ? `<h4>Requirements</h4><div>${chips(j.matched, "good")}${chips(j.missing, "bad")}</div>` : (j.requirements || []).length ? `<h4>Requirements</h4><div>${chips(j.requirements, "")}</div>` : ""}
-      <h4>Interview prep</h4>${j.interview_prep ? prepHtml(j.interview_prep) : ""}<div class="row-actions" style="margin-top:8px"><button class="btn small ${j.interview_prep ? "" : "primary"}" data-prep="${j.id}">${j.interview_prep ? "Make it again" : "Prepare me for this interview"}</button><span class="faint">Likely questions, answers from your real projects, honest gaps. About a minute.</span></div>
-      ${(j.form_filled || []).length ? `<h4>What the agent filled in the form</h4><div class="kv">${j.form_filled.map((f) => `<span class="k">${esc(f.label)}</span><span>${esc(f.value)}</span>`).join("")}</div>${(j.form_unanswered || []).length ? `<div class="reason">Left for you: ${j.form_unanswered.map(esc).join("; ")}</div>` : ""}` : ""}
-      ${j.cover_text ? `<h4>Cover letter</h4><textarea id="dcover" rows="14" ${editable ? "" : "disabled"} aria-label="Cover letter">${esc(j.cover_text)}</textarea>
-        <div class="row-actions" style="margin-top:6px">${editable ? `<button class="btn small primary" id="dsavecover">Save letter</button>` : ""}<button class="btn small" id="dcopy">Copy</button><span class="faint">${j.apply_channel === "email" ? "Email jobs: the Gmail draft is what gets sent; edit it there." : "Used by ./agent.sh apply and for paste boxes."}</span></div>` : ""}
-      <h4>Notes</h4><textarea id="dnotes" rows="3" placeholder="Interview date, contact, follow-up…" aria-label="Notes">${esc(j.notes || "")}</textarea><div style="margin-top:6px"><button class="btn small" id="dsavenotes">Save notes</button></div>
-      ${j.post_text ? `<h4>Original post</h4><pre class="post">${esc(j.post_text)}</pre>` : ""}`;
+      <div class="tabs">${tabs.map(([k, l]) => `<button type="button" data-dtab="${k}" class="${state.dtab === k ? "on" : ""}">${l}${k === "prep" && j.interview_prep ? " ✓" : ""}</button>`).join("")}</div>
+      ${body[state.dtab]()}`;
     $("drawer").classList.add("open"); $("scrim").classList.add("open");
   }
   function closeDrawer() { state.open = null; state.cv = false; $("drawer").classList.remove("open"); $("scrim").classList.remove("open"); }
@@ -678,51 +809,75 @@
     try {
       const r = await api("/api/profile/answers", { method: "PUT", body: JSON.stringify({ key, value, ...(questionId ? { question_id: questionId } : {}) }) });
       state.profile.answers = r.answers; state.profile.questions = r.questions;
-      toast(value ? `Saved "${key}"${questionId ? ". Waiting forms are retried on the next run" : ""}` : `Removed "${key}"`);
-      render();
+      toast(value ? `Saved "${key}"${questionId ? ". Waiting forms are retried on the next run" : ""}` : `Removed "${key}"`); render(false);
     } catch (e) { toast(`Not saved: ${e.message}`); }
   }
   async function discard(id, reason) {
-    const r = await post(`/api/jobs/${id}/discard`, { reason }, (x) => `Marked not a fit${x.draftDeleted ? "; its Gmail draft was deleted" : ""}${x.draftNote ? ` (${x.draftNote})` : ""}`);
+    const r = await post(`/api/jobs/${id}/discard`, { reason }, null);
     if (!r) return;
     const j = state.jobs.find((x) => x.id === id); if (j) Object.assign(j, { status: "skipped", skip_reason: `discarded: ${reason}`, discard_reason: reason });
     state.sugg = r.suggestions || state.sugg;
-    if (r.suggestions?.length) toast(`Marked not a fit. ${r.suggestions.length} rule suggestion${r.suggestions.length > 1 ? "s" : ""} in Settings.`);
+    toast(`Marked not a fit${r.draftDeleted ? "; its Gmail draft was deleted" : ""}${r.draftNote ? ` (${r.draftNote})` : ""}`, () => undiscard(id));
     if (state.open === id) closeDrawer();
-    render();
+    render(false);
+    if (state.applyQueue && state.assistOpen === id) applyNext();
+  }
+  async function undiscard(id) {
+    const r = await post(`/api/jobs/${id}/undiscard`, {}, "Undone");
+    if (r) { const j = state.jobs.find((x) => x.id === id); if (j) Object.assign(j, { status: r.status, skip_reason: null, discard_reason: null }); render(false); }
+  }
+  async function addJob(now) {
+    const text = $("addtext").value.trim(); if (text.length < 40) return toast("Paste the whole post (at least 40 characters)");
+    const r = await post("/api/add", { text, name: $("addname").value.trim() || undefined }, (x) => x.inserted ? "Added to the queue" : "Already added before");
+    if (!r) return; closeModal(); if (now) startJob("queue");
   }
 
   // ---------------------------------------------------------------- events
+  const TABS = ["today", "action", "applied", "skipped", "all", "sources", "companies", "runs", "profile", "settings"];
   document.addEventListener("click", async (e) => {
     const t = e.target;
+    if (t.id === "undo" && undoFn) { const f = undoFn; undoFn = null; $("toast").classList.remove("show"); return f(); }
     const mo = t.closest("[data-menu-open]");
     document.querySelectorAll(".menu.open").forEach((m) => { if (!mo || m !== mo.closest(".menu")) m.classList.remove("open"); });
     if (mo) { mo.closest(".menu").classList.toggle("open"); return; }
     if (t.id === "runbtn") { $("runmenu").classList.toggle("open"); return; }
     $("runmenu").classList.remove("open");
-    const rn = t.closest("[data-run]"); if (rn) return startRun(rn.dataset.run === "dry");
+    if (t.closest("[data-close]") || t.id === "modal") return closeModal();
+    const rn = t.closest("[data-run]"); if (rn) return startJob(rn.dataset.run);
+    if (t.id === "sendall" || t.closest('[data-act="sendall"]')) return sendAllModal();
+    if (t.id === "confirmsend") { closeModal(); return startJob("send"); }
+    if (t.id === "addjob") return addModal();
+    if (t.id === "addsave") return addJob(false);
+    if (t.id === "addnow") return addJob(true);
+    if (t.id === "keys") return keysModal();
+    if (t.id === "applynext" || t.closest('[data-act="applyall"]')) return applyNext();
     if (t.id === "closerun") { state.run = { ...state.run, lines: [] }; renderRun(); return; }
     const go = t.closest("[data-go]"); if (go) { location.hash = go.dataset.go; return; }
-    const st = t.closest("[data-status]"); if (st) { const [id, s] = st.dataset.status.split(":"); return patch(+id, { status: s }, s === "new" ? `Queued: the next run prepares it` : `Moved to ${STATUS[s].label}`); }
+    const st = t.closest("[data-status]"); if (st) { const [id, s] = st.dataset.status.split(":"); return setStatus(+id, s, s === "new" ? "Queued: the next run prepares it" : undefined); }
     const dc = t.closest("[data-discard]"); if (dc) { const [id, r] = dc.dataset.discard.split(":"); return discard(+id, r); }
+    const ud = t.closest("[data-undiscard]"); if (ud) return undiscard(+ud.dataset.undiscard);
+    const as2 = t.closest("[data-assist]"); if (as2) return openAssist(+as2.dataset.assist);
+    const dt = t.closest("[data-dtab]"); if (dt) return openDrawer(state.open, dt.dataset.dtab);
+    const wi = t.closest("[data-within]"); if (wi) { state.within = wi.dataset.within; return render(false); }
     const bk = t.closest("[data-bulk]");
     if (bk) {
-      const a = bk.dataset.bulk; if (a === "clear") { state.sel.clear(); return render(); }
+      const a = bk.dataset.bulk; if (a === "clear") { state.sel.clear(); return render(false); }
       const [action, reason] = a.split(":");
       const r = await post("/api/jobs/bulk", { ids: [...state.sel], action, ...(reason ? { reason } : {}) }, (x) => `${x.done} updated${x.failed.length ? `, ${x.failed.length} failed` : ""}`);
       if (r) { state.sel.clear(); await load(); }
       return;
     }
-    if (t.id === "selall") { state.visibleIds().forEach((i) => state.sel.add(i)); return render(); }
+    if (t.id === "selall") { filteredRows().forEach((j) => state.sel.add(j.id)); return render(false); }
+    if (t.id === "clearf") { Object.assign(state, { q: "", status: "", source: "", mode: "", channel: "", within: "", minfit: 0 }); return render(false); }
     const op = t.closest("[data-open]"); if (op && !t.closest("a, button, select, input")) { openDrawer(+op.dataset.open); return; }
     const an = t.closest("[data-answer]");
     if (an) { const v = document.querySelector(`[data-qinput="${an.dataset.answer}"]`).value.trim(); if (!v) return toast("Type an answer first"); return saveAnswer(an.dataset.key, v, +an.dataset.answer); }
-    const as = t.closest("[data-asave]"); if (as) return saveAnswer(as.dataset.asave, document.querySelector(`[data-akey="${CSS.escape(as.dataset.asave)}"]`).value);
+    const asv = t.closest("[data-asave]"); if (asv) return saveAnswer(asv.dataset.asave, document.querySelector(`[data-akey="${CSS.escape(asv.dataset.asave)}"]`).value);
     const ad = t.closest("[data-adel]"); if (ad) { if (confirm(`Remove the answer "${ad.dataset.adel}"?`)) saveAnswer(ad.dataset.adel, ""); return; }
     if (t.id === "addanswer") { const k = $("newkey").value.trim(), v = $("newval").value.trim(); if (!k || !v) return toast("Fill in both the key and the answer"); return saveAnswer(k, v); }
     const cd = t.closest("[data-chipdel]"); if (cd) { const [f, i] = cd.dataset.chipdel.split(":"); const list = [...state.settings[f]]; list.splice(+i, 1); return saveSettings({ [f]: list }, "Removed"); }
     const sg = t.closest("[data-sugg]");
-    if (sg) { const [a, ...k] = sg.dataset.sugg.split(":"); const r = await post(`/api/suggestions/${a}`, { key: k.join(":") }, a === "apply" ? "Rule applied: used from the next run" : "Dismissed"); if (r) { state.sugg = r.suggestions; if (r.settings) state.settings = r.settings; render(); } return; }
+    if (sg) { const [a, ...k] = sg.dataset.sugg.split(":"); const r = await post(`/api/suggestions/${a}`, { key: k.join(":") }, a === "apply" ? "Rule applied: used from the next run" : "Dismissed"); if (r) { state.sugg = r.suggestions; if (r.settings) state.settings = r.settings; render(false); } return; }
     const fv = t.closest("[data-fav]");
     if (fv) { const c = fv.dataset.fav, list = state.settings.favorite_companies; const on = inList(c, list); await saveSettings({ favorite_companies: on ? list.filter((x) => norm(x) !== norm(c)) : [...list, c] }, on ? `${c} is no longer a favorite` : `★ ${c}: always prepared from now on`); if (state.open) openDrawer(state.open); return; }
     const bl = t.closest("[data-block]");
@@ -730,47 +885,52 @@
     const fu = t.closest("[data-follow]");
     if (fu) { fu.disabled = true; const r = await post(`/api/jobs/${fu.dataset.follow}/followup`, {}, "Follow-up drafted in Gmail: review and send it there"); if (r) { if (r.draft_url) window.open(r.draft_url, "_blank", "noopener"); await load(); } fu.disabled = false; return; }
     const pp = t.closest("[data-prep]");
-    if (pp) { pp.disabled = true; pp.textContent = "Preparing… (about a minute)"; const id = +pp.dataset.prep; const r = await post(`/api/jobs/${id}/prep`, {}, "Interview prep ready"); if (r) { const j = state.jobs.find((x) => x.id === id); if (j) j.interview_prep = r.prep; openDrawer(id); } else { pp.disabled = false; pp.textContent = "Try again"; } return; }
+    if (pp) { pp.disabled = true; pp.textContent = "Preparing… (about a minute)"; const id = +pp.dataset.prep; const r = await post(`/api/jobs/${id}/prep`, {}, "Interview prep ready"); if (r) { const j = state.jobs.find((x) => x.id === id); if (j) j.interview_prep = r.prep; openDrawer(id, "prep"); } else { pp.disabled = false; pp.textContent = "Try again"; } return; }
     if (t.id === "dcv") { state.cv = !state.cv; return openDrawer(state.open); }
     if (t.id === "dclose") return closeDrawer();
     if (t.id === "dsavecover") return patch(state.open, { cover_text: $("dcover").value });
     if (t.id === "dsavenotes") return patch(state.open, { notes: $("dnotes").value }, "Notes saved");
     if (t.id === "dcopy") { navigator.clipboard?.writeText($("dcover").value).then(() => toast("Letter copied"), () => toast("Copy failed: select the text and copy")); return; }
-    const th = t.closest("th[data-sort]"); if (th) { const k = th.dataset.sort; state.sort = { k, d: state.sort.k === k ? -state.sort.d : -1 }; render(); }
+    const th = t.closest("th[data-sort]"); if (th) { const k = th.dataset.sort; state.sort = { k, d: state.sort.k === k ? -state.sort.d : -1 }; render(false); }
   });
   document.addEventListener("change", (e) => {
     const t = e.target;
     if (t.dataset.sel) { const id = +t.dataset.sel; t.checked ? state.sel.add(id) : state.sel.delete(id); return renderBulk(); }
-    if (t.id === "dstatus") return patch(state.open, { status: t.value }, `Moved to ${STATUS[t.value].label}`);
-    if (t.id === "fstatus") { state.status = t.value; render(); }
-    if (t.id === "fsource") { state.source = t.value; render(); }
-    if (t.id === "showdup") { state.showDup = t.checked; render(); }
+    if (t.id === "dstatus") return setStatus(state.open, t.value);
+    const f = { fstatus: "status", fsource: "source", fmode: "mode", fchannel: "channel" }[t.id]; if (f) { state[f] = t.value; return render(false); }
+    if (t.id === "minfit") { state.minfit = +t.value; return render(false); }
+    if (t.id === "showdup") { state.showDup = t.checked; return render(false); }
     if (t.dataset.switch) return saveSettings({ [t.dataset.switch]: t.checked });
-    if (t.dataset.num) {
-      const v = +t.value; const [a, b] = t.dataset.num.split(".");
-      return saveSettings(b ? { thresholds: { ...state.settings.thresholds, [b]: v } } : { [a]: v });
-    }
+    if (t.dataset.num) { const v = +t.value; const [a, b] = t.dataset.num.split("."); return saveSettings(b ? { thresholds: { ...state.settings.thresholds, [b]: v } } : { [a]: v }); }
   });
   document.addEventListener("input", (e) => {
     if (e.target.id !== "q") return;
-    state.q = e.target.value; const pos = e.target.selectionStart; render();
+    state.q = e.target.value; state.kf = -1; const pos = e.target.selectionStart; render(false);
     const q = $("q"); q.focus(); q.setSelectionRange(pos, pos);
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") { closeDrawer(); document.querySelectorAll(".menu.open").forEach((m) => m.classList.remove("open")); }
-    if (e.key === "/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) { e.preventDefault(); location.hash = "all"; setTimeout(() => $("q")?.focus(), 0); }
-    if (e.key === "Enter" && e.target.dataset?.qinput) document.querySelector(`[data-answer="${e.target.dataset.qinput}"]`)?.click();
-    if (e.key === "Enter" && e.target.dataset?.chipadd) {
-      const f = e.target.dataset.chipadd, v = e.target.value.trim(); if (!v) return;
-      saveSettings({ [f]: [...(state.settings[f] || []), v] }, `Added "${v}"`);
+    const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+    if (e.key === "Escape") { closeDrawer(); closeModal(); document.querySelectorAll(".menu.open").forEach((m) => m.classList.remove("open")); return; }
+    if (e.key === "Enter" && e.target.dataset?.qinput) { document.querySelector(`[data-answer="${e.target.dataset.qinput}"]`)?.click(); return; }
+    if (e.key === "Enter" && e.target.dataset?.chipadd) { const f = e.target.dataset.chipadd, v = e.target.value.trim(); if (v) saveSettings({ [f]: [...(state.settings[f] || []), v] }, `Added "${v}"`); return; }
+    if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === "/") { e.preventDefault(); location.hash = "all"; setTimeout(() => $("q")?.focus(), 0); return; }
+    if (e.key === "?") return keysModal();
+    if (e.key === "r") return load().then(() => toast("Refreshed"));
+    if (/^[1-9]$/.test(e.key)) { location.hash = TABS[+e.key - 1]; return; }
+    if (state.tab === "all" && ["j", "k", "Enter"].includes(e.key)) {
+      const rows = filteredRows(); if (!rows.length) return;
+      if (e.key === "Enter") { if (state.kf >= 0) openDrawer(rows[state.kf].id); return; }
+      state.kf = Math.max(0, Math.min(rows.length - 1, state.kf + (e.key === "j" ? 1 : -1))); render(false);
+      document.querySelector("tr.kfocus")?.scrollIntoView({ block: "nearest" });
     }
   });
   document.addEventListener("dragstart", (e) => { const c = e.target.closest?.("[data-drag]"); if (c) e.dataTransfer.setData("text/plain", c.dataset.drag); });
   document.addEventListener("dragover", (e) => { const col = e.target.closest?.("[data-col]"); if (col) { e.preventDefault(); col.classList.add("drop"); } });
   document.addEventListener("dragleave", (e) => { e.target.closest?.("[data-col]")?.classList.remove("drop"); });
-  document.addEventListener("drop", (e) => { const col = e.target.closest?.("[data-col]"); if (!col) return; e.preventDefault(); col.classList.remove("drop"); const id = +e.dataTransfer.getData("text/plain"); if (id) patch(id, { status: col.dataset.col }, `Moved to ${STATUS[col.dataset.col].label}`); });
+  document.addEventListener("drop", (e) => { const col = e.target.closest?.("[data-col]"); if (!col) return; e.preventDefault(); col.classList.remove("drop"); const id = +e.dataTransfer.getData("text/plain"); if (id) setStatus(id, col.dataset.col); });
 
-  function route() { state.tab = (location.hash || "#today").slice(1) || "today"; closeDrawer(); render(); window.scrollTo(0, 0); }
+  function route() { state.tab = (location.hash || "#today").slice(1) || "today"; state.kf = -1; closeDrawer(); render(); window.scrollTo(0, 0); }
   window.addEventListener("hashchange", route);
   $("scrim").addEventListener("click", closeDrawer);
   $("refresh").addEventListener("click", () => load().then(() => toast("Refreshed")));
@@ -785,7 +945,7 @@
   let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => state.tab === "today" && drawChart(), 150); });
   state.tab = (location.hash || "#today").slice(1) || "today";
   load().then(() => { if (state.run?.running) { notified = false; runPoll = setInterval(pollRun, 2000); } });
-  setInterval(() => { if (!state.open && !state.run?.running && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) load(); }, 120000);
+  setInterval(() => { if (!state.open && !state.run?.running && !$("modal").classList.contains("open") && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) load(); }, 120000);
 })();
 </script>
 </body>

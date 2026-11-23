@@ -438,3 +438,30 @@ repo, commit 1769845).
 - **Sources scoreboard:** jobs, matched, prepared, applied and replies per group, channel, search title, alert sender and board.
 - **CV preview** inside the job panel. Only `/files/*` may be framed, and only by the dashboard itself (`X-Frame-Options: SAMEORIGIN`, `frame-ancestors 'self'`).
 - **Look:** the portfolio's design (monochrome, one blue gradient, glass panels, Space Grotesk / Inter / JetBrains Mono). The fonts (OFL) are served locally from `dashboard/fonts`, so the page loads nothing from outside the VM.
+
+## D42: Title tiers from evidence, and learning from Ahmed's choices (audit 2026-11-23)
+
+- **Source:** `docs/audits/2026-11-23-final-test.md`, an independent re-collection compared with the database. Collection was complete; the errors were in title tiers and in what the agent learned from.
+- **Title tiers** (`config/titles.yaml`):
+  - **P1:** Kubernetes, DevSecOps, and cloud solutions/platform/administrator. IT support/specialist/administrator and help/service desk also move up (from P2/P3), because those are the jobs Ahmed applies to.
+  - **P2:** data center, SOC, back-office engineer, and M365.
+- **Learning:** suggestions now come from three signals:
+  - "Not a fit" reasons (D39);
+  - jobs Ahmed turned down (Rejected or skipped by him) that were **never marked applied**. A job marked applied and then rejected may be a company's rejection, so it isn't counted;
+  - his applications to jobs scored under their tier's threshold, which suggest a lower threshold.
+- **The senior rule:** "Skip senior titles unless the post asks for ≤ 2 years" (`filters.skip_senior_titles`) is a suggestion he switches on. It reverses his D21 "no seniority rules", so it's his decision, not the agent's.
+
+## D43: Run, apply and send from the dashboard
+
+- **▶ Run menu:** run, process the queue only (`run --no-collect`), dry run, retry waiting forms, recheck posting dates.
+- **Send all drafts:** a confirmation dialog listing every draft, then `send-drafts --yes` with live progress.
+- **Open pre-filled / Apply next:** the dashboard server opens the job in the assisted browser (visible Chrome, `data/browser-profile`) on Ahmed's desktop. Forms are filled, never submitted; Easy Apply and board pages open on the job with the letter on the clipboard. After Mark applied, Skip or Not a fit, "Apply all" opens the next one. `agent.sh dashboard` passes the desktop session to the server.
+- **Fixed commands only:** every job is a fixed agent command chosen by a name from the request (A22), and the run lock prevents overlaps.
+- **Dashboard additions** (from common job-tracker features: Huntr, Teal, Simplify):
+  - a weekly application goal with a ring;
+  - "heard back" and interview rates, counted only over jobs really applied to;
+  - a job panel in tabs (Overview with a status timeline, Application, Interview prep, Original post);
+  - more fields (years asked, work mode, apply channel, deadline) and filters (posted within, minimum fit);
+  - quick add of a pasted post;
+  - undo after status changes and "Not a fit";
+  - keyboard shortcuts (`/`, `j`/`k`, `Enter`, `1`–`9`, `r`, `?`).

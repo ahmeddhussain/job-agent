@@ -57,7 +57,12 @@ facts from your profile.
 `./agent.sh dashboard` (Ctrl-C stops it); `./agent.sh dashboard settings` opens a section directly.
 Only reachable from this VM (127.0.0.1). Click any job for its detail panel.
 
-- **▶ Run now** (top right) does the same as `./agent.sh run`, or a dry run, from the browser. It shows the live output and a desktop notification at the end.
+- **Top bar:**
+  - **▶ Run** menu: run, process the queue only, dry run, retry waiting forms, recheck dates. It shows live output and a desktop notification at the end.
+  - **Send all drafts:** confirm once, then the reviewed drafts are sent.
+  - **Apply next:** opens the next "apply yourself" job pre-filled on your desktop; after Mark applied (or Skip / Not a fit) the next one opens.
+  - **＋ Add a job:** paste a post.
+- **Keyboard:** `?` lists the shortcuts.
 
 | Section | What it's for |
 |---|---|

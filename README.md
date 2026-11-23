@@ -39,7 +39,7 @@ A daily job-application agent for one person, run from the command line. It read
 | Dashboard            | Tracker on 127.0.0.1: what to finish, drafts waiting, every job and its status                                                                                              | `src/dashboard/`, `dashboard/index.html`                |
 | `agent.sh`           | The daily commands: `run`, `dashboard`, `apply`, `send`, `skipped` (and `retry`, `recheck`, `redo`, `dry-run`)                                                              | `agent.sh`                                              |
 
-The decisions behind each part, with alternatives, are in [`docs/decisions.md`](docs/decisions.md) (D1–D41). The original spec is [`PLAN.md`](PLAN.md).
+The decisions behind each part, with alternatives, are in [`docs/decisions.md`](docs/decisions.md) (D1–D43). The original spec is [`PLAN.md`](PLAN.md).
 
 ---
 
@@ -263,7 +263,7 @@ The agent never solves or bypasses a captcha, never logs in to your accounts, ne
 **How it's wired** (D32, D36): Fastify on `127.0.0.1:8080` serves `dashboard/index.html` and a small JSON API.
 
 - **Sections:** Today, Needs action, Applied (a drag-and-drop board), Skipped (by reason, with "Prepare anyway"), All jobs (bulk actions), Sources (scoreboard), Companies, Runs, Profile and Settings, plus a detail panel per job.
-- **In the browser:** ▶ Run now (live output, desktop notification at the end); "Not a fit" with reasons and the rules learned from it; favorite and blocked companies; follow-up drafts; on-demand interview prep; a CV preview (D39–D41).
+- **In the browser:** ▶ Run (run, queue only, dry run, retry, recheck; live output and a notification at the end), Send all drafts, Apply next (pre-filled on your desktop), quick add; "Not a fit" with reasons and the rules learned from it; favorite and blocked companies; follow-up drafts; on-demand interview prep; a CV preview (D39–D41).
 - **Look:** the same design as the portfolio. Fonts are served locally, so the page loads nothing from outside the VM.
 - **Profile edits:** the Profile section edits your ready answers, written to `profile/master_profile.yaml` with comments kept and a `.bak`. Form questions your profile can't answer are listed there to answer once (D35).
 - **Status edits** are written to `status_history`.
@@ -304,6 +304,8 @@ npm run lint && npm run typecheck && npm test
 - the orchestrator end to end, including the usage-limit stop and resume;
 - the dashboard API, including path traversal, DNS rebinding and cross-site writes;
 - the WhatsApp read-only guard.
+
+**Independent audit (2026-11-23):** a hand re-collection of WhatsApp, alerts and LinkedIn compared with the database found nothing missed; title tiers were widened from the evidence ([`docs/audits/2026-11-23-final-test.md`](docs/audits/2026-11-23-final-test.md)).
 
 **Live checks (2026-11-22):**
 
