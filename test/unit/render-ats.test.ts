@@ -149,3 +149,29 @@ describe('one-page CV + ATS check', () => {
     expect(text).not.toContain('SCRIPT RAN');
   }, 60_000);
 });
+
+describe('keyword coverage (troubleshooting #32)', () => {
+  const find = (t: string) =>
+    new Set(
+      ['linux', 'java', 'sql', 'terraform', 'kubernetes'].filter((k) =>
+        t.toLowerCase().includes(k),
+      ),
+    );
+  const backed = new Set(['linux', 'java', 'sql', 'terraform', 'kubernetes']);
+  it('a requirement listing alternatives is covered by any one of them', async () => {
+    const { keywordCoverageOf } = await import('../../src/render/ats.js');
+    const r = keywordCoverageOf(
+      ['one or more of: Linux, Java, SQL'],
+      backed,
+      new Set(['linux']),
+      find,
+    );
+    expect(r).toEqual({ coverage: 1, missing: [], units: 1 });
+  });
+  it('a plain requirement still needs each of its terms', async () => {
+    const { keywordCoverageOf } = await import('../../src/render/ats.js');
+    const r = keywordCoverageOf(['Terraform and Kubernetes'], backed, new Set(['terraform']), find);
+    expect(r.coverage).toBe(0.5);
+    expect(r.missing).toEqual(['kubernetes']);
+  });
+});

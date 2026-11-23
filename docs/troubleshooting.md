@@ -676,3 +676,25 @@ the same page succeeded when asked again.
 **Fix.** One paced LinkedIn client per run (6 s); a refused page is retried after 45 s × attempt
 (2 retries); a search that still couldn't read every page keeps its window for the next run (D38).
 Live: 33 pages, 0 refused.
+
+---
+
+## 32. A job queued with "Prepare anyway" kept returning to Needs review
+
+**Symptom.** "Technical Support Specialist Level 2 - CA by Broadcom" went new → needs_review four
+times (2026-11-23), each time with:
+
+```
+documents: ATS check failed: keyword coverage 50% < 70%     keywordsMissing: ["java"]
+```
+
+**Diagnosis.**
+- **Alternatives treated as a list:** the requirement reads *"one or more of: foundational networking, Linux and Windows, APIs, Tomcat, **Java**, SSL, Oracle and SQL…"*. The check counted each backed term on its own. Java (in the profile only inside one project bullet, not chosen for this CV) was demanded although Linux and SQL already met the requirement.
+- **A tiny sample:** only 2 keywords were counted, so one miss gave 50%.
+- **No way out:** a keyword-only failure sent the job back to review, so "Prepare anyway" looped.
+
+**Fix.**
+- A requirement phrased as alternatives ("one or more of", "any of", "such as", "or …") counts once, covered when any of its terms is in the CV.
+- With 3 or fewer keywords one miss is allowed.
+- A job Ahmed queued himself goes ahead on a keyword-only failure, flagged `low_keyword_coverage`. Page count, images, fonts, headings and contact checks still block.
+- Re-prepared live: ready, CV one page, ATS 100%.

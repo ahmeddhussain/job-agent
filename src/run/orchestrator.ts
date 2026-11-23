@@ -539,7 +539,25 @@ export async function tailorQueue(
           dir,
           `job${String(job.id)}.tailor`,
         );
-        if (!prep.ok) {
+        // A job Ahmed queued himself ("Prepare anyway") is not sent back to review for a
+        // low keyword score alone; the structural ATS checks still block (#32).
+        const keywordOnly =
+          !prep.ok &&
+          prep.fit.pages === 1 &&
+          prep.needsReview.length === 0 &&
+          prep.ats.failures.length > 0 &&
+          prep.ats.failures.every((f) => f.startsWith('keyword coverage'));
+        const queuedByAhmed =
+          db
+            .prepare('SELECT by FROM status_history WHERE job_id = ? ORDER BY id DESC LIMIT 1')
+            .pluck()
+            .get(job.id) === 'ahmed';
+        if (keywordOnly && queuedByAhmed) {
+          const flags = JSON.parse(job.flags) as string[];
+          if (!flags.includes('low_keyword_coverage')) flags.push('low_keyword_coverage');
+          db.prepare('UPDATE jobs SET flags = ? WHERE id = ?').run(JSON.stringify(flags), job.id);
+          d.out(`  note: ${job.title}: ${prep.problems.join('; ')} (you queued it: going ahead)`);
+        } else if (!prep.ok) {
           updateJobStatus(
             db,
             job.id,

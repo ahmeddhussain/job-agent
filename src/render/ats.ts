@@ -20,6 +20,39 @@ export interface AtsReport {
 
 const digits = (s: string) => s.replace(/\D/g, '');
 
+/** "one or more of: networking, Linux, Java…" lists alternatives: any one of them covers it. */
+const ALTERNATIVES =
+  /\b(one or more of|any of|at least one of|either|such as|e\.g\.|for example|or similar|or equivalent)\b|\bor\b/i;
+
+/**
+ * Coverage of the technologies named in backed requirements, by the CV text. A plain
+ * requirement counts each backed term; a requirement listing alternatives counts once,
+ * covered when any of its backed terms is in the CV (troubleshooting #32).
+ */
+export function keywordCoverageOf(
+  requirements: string[],
+  backed: Set<string>,
+  inCv: Set<string>,
+  find: (text: string) => Set<string>,
+): { coverage: number; missing: string[]; units: number } {
+  const singles = new Set<string>();
+  const groups: string[][] = [];
+  for (const r of requirements) {
+    const terms = [...find(r)].filter((t) => backed.has(t));
+    if (terms.length === 0) continue;
+    if (terms.length > 1 && ALTERNATIVES.test(r)) groups.push(terms);
+    else for (const t of terms) singles.add(t);
+  }
+  const missing = [...singles].filter((t) => !inCv.has(t));
+  let covered = singles.size - missing.length;
+  for (const g of groups) {
+    if (g.some((t) => inCv.has(t))) covered++;
+    else missing.push(g.join(' / '));
+  }
+  const units = singles.size + groups.length;
+  return { coverage: units === 0 ? 1 : covered / units, missing, units };
+}
+
 /** Every URI link target in the PDF (Chrome writes link annotations uncompressed). */
 export function linkTargets(pdf: Buffer): Set<string> {
   const text = pdf.toString('latin1');
@@ -82,15 +115,19 @@ export async function atsCheck(
   // Keyword coverage: technologies named in backed requirements must be in the CV text.
   // Only keywords the profile backs count: a requirement note like "Jira itself not
   // shown" must not demand Jira (troubleshooting #13).
-  const backed = vocab.find(profileText(profile));
-  const wanted = new Set<string>();
-  for (const r of backedRequirements)
-    for (const t of vocab.find(r)) if (backed.has(t)) wanted.add(t);
-  const inCv = vocab.find(text);
-  const keywordsMissing = [...wanted].filter((t) => !inCv.has(t));
-  const keywordCoverage =
-    wanted.size === 0 ? 1 : (wanted.size - keywordsMissing.length) / wanted.size;
-  if (keywordCoverage < cfg.ats_check.min_keyword_coverage) {
+  const {
+    coverage: keywordCoverage,
+    missing: keywordsMissing,
+    units,
+  } = keywordCoverageOf(
+    backedRequirements,
+    vocab.find(profileText(profile)),
+    vocab.find(text),
+    (t) => vocab.find(t),
+  );
+  // With 3 or fewer keywords one miss is allowed: 1 of 2 is 50% but says little (#32).
+  const smallSetOk = units <= 3 && units - Math.round(keywordCoverage * units) <= 1;
+  if (keywordCoverage < cfg.ats_check.min_keyword_coverage && !smallSetOk) {
     failures.push(
       `keyword coverage ${(keywordCoverage * 100).toFixed(0)}% < ${(cfg.ats_check.min_keyword_coverage * 100).toFixed(0)}%`,
     );
