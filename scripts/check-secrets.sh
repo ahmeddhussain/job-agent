@@ -26,8 +26,10 @@ rules=(
   'private-key|-----BEGIN [A-Z ]*PRIVATE KEY-----'
 )
 
-forbidden_path='(^|/)\.env$|(^|/)\.env\.[^/]+$|^secrets/|^data/|^output/|^backups/|^profile/master_profile\.yaml$|^config/config\.yaml$|^config/companies\.yaml$|\.(pem|key|p12|pfx)$|(^|/)\.secrets-blocklist$|wa-session'
-allowed_path='(^|/)\.env\.example$'
+# Also backups of any of these (settings edits and conversions write *.bak / *.pre-*), and
+# every personal profile folder except the shipped example (profiles/<name>/).
+forbidden_path='(^|/)\.env$|(^|/)\.env\.[^/]+$|^secrets/|^data/|^output/|^backups/|^profile/master_profile\.yaml|^config/config\.yaml|^config/companies\.yaml|\.(pem|key|p12|pfx)$|(^|/)\.secrets-blocklist$|wa-session|\.bak$|\.bak-|\.pre-[a-z]+$|^profiles/[^/]+/'
+allowed_path='(^|/)\.env\.example$|^profiles/example/'
 
 blocked=()
 if [[ -f "$blocklist" ]]; then

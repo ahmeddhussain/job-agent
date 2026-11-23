@@ -74,10 +74,18 @@ describe('scripts/check-secrets.sh', () => {
     'data/agent.db',
     'profile/master_profile.yaml',
     'config/config.yaml',
+    'config/config.yaml.bak',
+    'config/config.yaml.pre-specialisms',
+    'profiles/ahmed/profile.yaml',
   ])('blocks the forbidden path %s even when force-added', (path) => {
     stage(path, 'x\n');
     const r = scan();
     expect(r.code).toBe(1);
     expect(r.out).toContain('forbidden path');
+  });
+
+  it('allows the shipped example profile', () => {
+    stage('profiles/example/profile.yaml', 'name: example\n');
+    expect(scan().code).toBe(0);
   });
 });
