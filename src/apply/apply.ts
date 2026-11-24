@@ -15,6 +15,7 @@ import { formEligible, saveFormReport, type FormFiller, type FormReport } from '
 import { allAnswered, recordQuestions } from './questions.js';
 import { applicationGuard } from './guard.js';
 import type { Prepared } from './prepare.js';
+import { waNumber } from './wa-message.js';
 
 export interface ApplyDeps {
   db: Db;
@@ -239,7 +240,7 @@ export async function applyJob(d: ApplyDeps, job: JobRow, p: Prepared): Promise<
   }
 
   if (job.apply_channel === 'form' || job.apply_channel === 'whatsapp_dm') {
-    const phone = job.apply_channel === 'whatsapp_dm' ? waNumber(job) : null;
+    const phone = job.apply_channel === 'whatsapp_dm' ? waNumber(job.apply_phone) : null;
     const waLink = phone ? `https://wa.me/${phone}` : null;
     writeFileSync(join(p.dir, 'apply.md'), packageText(d, job, p, waLink));
     const formUrl = job.apply_url_direct ?? job.apply_url;
@@ -313,13 +314,6 @@ export async function applyJob(d: ApplyDeps, job: JobRow, p: Prepared): Promise<
 
   updateJobStatus(d.db, job.id, 'needs_review', 'agent', at(), 'no_apply_target');
   return { status: 'needs_review', mode: null, detail: 'no way to apply was found in the post' };
-}
-
-/** The WhatsApp number to apply to, as digits, Egyptian local numbers made international. */
-function waNumber(job: JobRow): string | null {
-  const digits = (job.apply_phone ?? '').replace(/\D/g, '');
-  if (/^01\d{9}$/.test(digits)) return `20${digits.slice(1)}`;
-  return digits.length >= 10 ? digits : null;
 }
 
 /**

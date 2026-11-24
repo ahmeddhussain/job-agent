@@ -11,6 +11,7 @@ import {
 } from '../collect/whatsapp/collect.js';
 import { exportRef, parseWhatsAppExport } from '../collect/whatsapp/export.js';
 import { ReadOnlyWhatsApp } from '../collect/whatsapp/readonly.js';
+import { startWithRetry } from '../collect/whatsapp/retry.js';
 import { migrate, openDb, type Db } from '../db/index.js';
 import { insertRawItem, prepareRawItem } from '../pipeline/dedupe.js';
 import { alive } from '../util/lock.js';
@@ -100,7 +101,7 @@ export async function waLogin(cfg: Config, io: Io): Promise<void> {
         `Linked. Session saved in ${cfg.whatsapp.session_path} (keep it private). Groups visible: ${String(groups)}.`,
       );
       io.out(
-        'Next: agent wa:groups, then put the job groups in whatsapp.groups in config/config.yaml.',
+        "Next: ./agent.sh whatsapp-groups, then put the job groups in whatsapp.groups in your profile's config.yaml.",
       );
     } finally {
       await wa.destroy();
@@ -110,12 +111,16 @@ export async function waLogin(cfg: Config, io: Io): Promise<void> {
 
 export async function waGroups(cfg: Config, io: Io): Promise<void> {
   await withWhatsAppLock(cfg, async (onExit) => {
-    const wa = await ReadOnlyWhatsApp.start({
-      ...startOptions(cfg, cfg.whatsapp.ready_timeout_seconds),
-      onProgress: (step) => {
-        io.out(`… ${step}`);
-      },
-    });
+    const wa = await startWithRetry(
+      () =>
+        ReadOnlyWhatsApp.start({
+          ...startOptions(cfg, cfg.whatsapp.ready_timeout_seconds),
+          onProgress: (step) => {
+            io.out(`… ${step}`);
+          },
+        }),
+      logger,
+    );
     onExit(() => wa.destroy());
     try {
       const allow = new Set(cfg.whatsapp.groups.map((g) => g.trim().toLowerCase()));
@@ -141,7 +146,10 @@ export async function collectWhatsAppCommand(
   await withWhatsAppLock(cfg, async (onExit) => {
     const db = openDb(cfg.paths.db);
     migrate(db);
-    const wa = await ReadOnlyWhatsApp.start(startOptions(cfg, cfg.whatsapp.ready_timeout_seconds));
+    const wa = await startWithRetry(
+      () => ReadOnlyWhatsApp.start(startOptions(cfg, cfg.whatsapp.ready_timeout_seconds)),
+      logger,
+    );
     onExit(async () => {
       await wa.destroy();
       db.close();
@@ -215,7 +223,10 @@ export async function collectWhatsAppForRun(
   since?: Date,
 ): Promise<{ inserted: number; detail: string }> {
   return withWhatsAppLock(cfg, async (onExit) => {
-    const wa = await ReadOnlyWhatsApp.start(startOptions(cfg, cfg.whatsapp.ready_timeout_seconds));
+    const wa = await startWithRetry(
+      () => ReadOnlyWhatsApp.start(startOptions(cfg, cfg.whatsapp.ready_timeout_seconds)),
+      logger,
+    );
     onExit(async () => {
       await wa.destroy();
     });

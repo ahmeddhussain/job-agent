@@ -119,7 +119,7 @@ export function buildProgram(io: Io): Command {
 
   program
     .command('assist')
-    .description('open each "apply yourself" job in a visible browser, pre-filled; you submit')
+    .description('open each "apply yourself" job in your browser; you submit')
     .option('--job <id>', 'only this job')
     .action(async (opts: { job?: string }) => {
       const { assistCommand } = await import('./assist.js');

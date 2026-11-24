@@ -33,6 +33,8 @@ import type { PoliteHttp } from '../util/http.js';
 
 export interface SourceRun {
   name: string;
+  /** A failure stops the run instead of going on without this source. */
+  required?: boolean;
   /** Stores raw items (and advances the source's watermark); returns a one-line summary. */
   collect: (runId: number) => Promise<{ inserted: number; detail: string }>;
 }
@@ -163,7 +165,8 @@ export async function runAgent(d: RunDeps): Promise<RunReport> {
       }
     }
 
-    // 3. Collect: one failing source makes the run partial; the others continue.
+    // 3. Collect: one failing source makes the run partial; the others continue,
+    // unless that source is required.
     for (const s of d.sources) {
       try {
         const r = await s.collect(runId);
@@ -174,6 +177,10 @@ export async function runAgent(d: RunDeps): Promise<RunReport> {
         stats.sources.push({ name: s.name, ok: false, inserted: 0, detail: msg });
         d.out(`collect ${s.name} FAILED: ${msg}`);
         d.log.warn({ source: s.name, err: msg }, 'source failed');
+        if (s.required)
+          throw new Error(`stopped: ${s.name} is required and could not be read (${msg})`, {
+            cause: err,
+          });
       }
     }
 

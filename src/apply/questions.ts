@@ -8,7 +8,7 @@ export const normQuestion = (q: string): string =>
   q
     .toLowerCase()
     .replace(/\(could not fill:.*$/, '')
-    .replace(/[*:?]+/g, ' ')
+    .replace(/[*:?✱]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 
@@ -35,7 +35,7 @@ export function recordQuestions(db: Db, labels: string[], jobId: number, at: str
          VALUES (@q, @n, @at, @at, @job)
          ON CONFLICT (question_norm) DO UPDATE SET times = times + 1, last_seen = @at, last_job_id = @job`,
       )
-      .run({ q: label.replace(/\*+\s*$/, '').trim(), n: norm, at, job: jobId });
+      .run({ q: label.replace(/^[*✱\s]+|[*✱\s]+$/g, ''), n: norm, at, job: jobId });
     if (
       r.changes === 1 &&
       db.prepare('SELECT times FROM form_questions WHERE question_norm = ?').pluck().get(norm) === 1
@@ -60,7 +60,9 @@ export function pendingQuestions(db: Db): PendingQuestion[] {
     db
       .prepare(
         `SELECT id, question, times, first_seen, last_seen, last_job_id FROM form_questions
-         WHERE answer_key IS NULL ORDER BY times DESC, last_seen DESC`,
+         WHERE answer_key IS NULL
+           AND question_norm NOT IN (SELECT question_norm FROM learned_answers)
+         ORDER BY times DESC, last_seen DESC`,
       )
       .all() as Omit<PendingQuestion, 'suggested_key'>[]
   ).map((q) => ({ ...q, suggested_key: answerKey(q.question) }));

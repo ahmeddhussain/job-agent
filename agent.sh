@@ -3,7 +3,7 @@
 #   ./agent.sh init            create your profile (from your CV, with Claude)
 #   ./agent.sh run             collect, score, prepare CVs and letters, apply
 #   ./agent.sh dashboard       open the tracker in the browser (Ctrl-C stops it)
-#   ./agent.sh apply           finish the "apply yourself" jobs in a pre-filled window
+#   ./agent.sh apply           open each "apply yourself" job in your browser
 #   ./agent.sh send            send every reviewed email draft (asks once)
 #   ./agent.sh help            everything else
 # Any command can take a profile first: ./agent.sh --profile <name> run
@@ -74,7 +74,7 @@ dashboard() {
     open_url "http://127.0.0.1:${PORT}${path}"
     return
   fi
-  # The dashboard's "Open pre-filled" needs the desktop for its browser window.
+  # The dashboard's "Open to apply" needs the desktop for its browser.
   use_desktop soft
   agent dashboard &
   local pid=$!
@@ -155,7 +155,7 @@ Daily
                               letter for each fit; draft emails; submit web forms
   ./agent.sh dashboard [tab]  tracker in the browser (tabs: today, action, applied, skipped,
                               all, sources, profile, settings)
-  ./agent.sh apply            open each "apply yourself" job pre-filled (incl. LinkedIn Easy Apply)
+  ./agent.sh apply            open each "apply yourself" job in your browser, with a fill request for Claude
   ./agent.sh send             send all reviewed email drafts (asks once; needs Gmail)
   ./agent.sh skipped [days]   skipped jobs with reasons and links (default 7 days)
 

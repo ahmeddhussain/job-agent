@@ -16,7 +16,7 @@ import { migrate, openDb, type Db } from '../db/index.js';
 import { updateJobStatus, type Status } from '../db/jobs.js';
 import { insertRawItem, prepareRawItem } from '../pipeline/dedupe.js';
 import { sha256 } from '../util/hash.js';
-import { pendingQuestions } from '../apply/questions.js';
+import { answerKey, pendingQuestions } from '../apply/questions.js';
 import { mailtoLink } from '../apply/apply.js';
 import { loadProfile, parseProfile } from '../profile/load.js';
 import { AnswerError, setAnswer } from '../profile/answers.js';
@@ -40,6 +40,15 @@ import {
 } from './actions.js';
 import { RunManager } from './runner.js';
 import { AssistSession } from './assist.js';
+import { forget, learnedAnswers } from '../apply/learned.js';
+import {
+  EXTENSION_ORIGIN,
+  ExtAnswerBody,
+  ExtJobsBody,
+  ExtLearnBody,
+  ExtSession,
+  ExtWhatsAppBody,
+} from './ext.js';
 import type { Io } from '../cli/program.js';
 
 const PAGE = join(dirname(fileURLToPath(import.meta.url)), '..', '..', 'dashboard', 'index.html');
@@ -247,8 +256,10 @@ export interface DashboardOptions {
   /** The model client for interview prep (D41). */
   llm?: () => Llm;
   runner?: RunManager;
-  /** Opens "apply yourself" jobs in the visible browser (D43). */
+  /** Opens "apply yourself" jobs in the user's browser (D43, D46). */
   assist?: AssistSession;
+  /** Answers the browser add-on (D49). */
+  ext?: ExtSession;
 }
 
 const SettingsBody = z
@@ -312,7 +323,11 @@ export function buildDashboard(cfg: Config, db: Db, opts: DashboardOptions = {})
     }
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       const origin = req.headers.origin;
-      if (origin && !allowedHosts.has(origin.replace(/^http:\/\//, ''))) {
+      const fromExt = origin === EXTENSION_ORIGIN;
+      if (req.url.startsWith('/api/ext/') !== fromExt) {
+        return reply.code(403).send({ error: 'only the add-on may use this' });
+      }
+      if (!fromExt && origin && !allowedHosts.has(origin.replace(/^http:\/\//, ''))) {
         return reply.code(403).send({ error: 'cross-origin write refused' });
       }
       if (!(req.headers['content-type'] ?? '').startsWith('application/json')) {
@@ -458,16 +473,50 @@ export function buildDashboard(cfg: Config, db: Db, opts: DashboardOptions = {})
   app.post('/api/jobs/:id/assist', async (req, reply) => {
     const id = Number((req.params as { id: string }).id);
     if (!Number.isInteger(id)) return reply.code(400).send({ error: 'bad id' });
-    if (!opts.assist) return reply.code(503).send({ error: 'the apply window is not available here' });
+    if (!opts.assist) return reply.code(503).send({ error: 'not available here' });
     try {
       return await reply.send(await opts.assist.open(id));
     } catch (err) {
       return reply.code(400).send({ error: err instanceof Error ? err.message : String(err) });
     }
   });
-  app.post('/api/assist/close', async (_req, reply) => {
-    await opts.assist?.close();
-    return reply.send({ ok: true });
+  const extError = (err: unknown) => ({ error: err instanceof Error ? err.message : String(err) });
+  app.post('/api/ext/jobs', (req, reply) => {
+    const b = ExtJobsBody.safeParse(req.body);
+    if (!b.success || !opts.ext) return reply.code(400).send({ error: 'bad request' });
+    return reply.send(opts.ext.jobs(b.data.url));
+  });
+  app.post('/api/ext/whatsapp', (req, reply) => {
+    const b = ExtWhatsAppBody.safeParse(req.body);
+    if (!b.success || !opts.ext) return reply.code(400).send({ error: 'bad request' });
+    try {
+      return reply.send(opts.ext.whatsapp(b.data.job_id));
+    } catch (err) {
+      return reply.code(400).send(extError(err));
+    }
+  });
+  app.post('/api/ext/learn', { bodyLimit: 256 * 1024 }, (req, reply) => {
+    const b = ExtLearnBody.safeParse(req.body);
+    if (!b.success || !opts.ext) return reply.code(400).send({ error: 'bad request' });
+    try {
+      return reply.send(opts.ext.learn(b.data));
+    } catch (err) {
+      return reply.code(400).send(extError(err));
+    }
+  });
+  app.post('/api/learned/forget', (req, reply) => {
+    const b = z.strictObject({ question_norm: z.string().min(1).max(300) }).safeParse(req.body);
+    if (!b.success) return reply.code(400).send({ error: 'bad request' });
+    return reply.send({ ok: forget(db, b.data.question_norm) });
+  });
+  app.post('/api/ext/answer', { bodyLimit: 512 * 1024 }, async (req, reply) => {
+    const b = ExtAnswerBody.safeParse(req.body);
+    if (!b.success || !opts.ext) return reply.code(400).send({ error: 'bad request' });
+    try {
+      return await reply.send(await opts.ext.answer(b.data));
+    } catch (err) {
+      return reply.code(400).send(extError(err));
+    }
   });
 
   // ------------------------------------------------------------------ run now
@@ -670,6 +719,7 @@ export function buildDashboard(cfg: Config, db: Db, opts: DashboardOptions = {})
       default_specialism: p.default_specialism,
       answers: p.application_answers,
       questions: pendingQuestions(db),
+      learned: learnedAnswers(db).map((x) => ({ ...x, suggested_key: answerKey(x.question) })),
       counts: {
         projects: p.projects.length,
         experience: p.experience.length,
@@ -791,6 +841,7 @@ export async function serveDashboard(cfg: Config, io: Io, configPath: string): P
   const db = openDb(cfg.paths.db);
   migrate(db);
   let gmail: GmailFacade | null | undefined;
+  const assist = new AssistSession(() => cfg, db);
   const app = buildDashboard(cfg, db, {
     configPath,
     gmail: async () => {
@@ -806,7 +857,13 @@ export async function serveDashboard(cfg: Config, io: Io, configPath: string): P
     },
     llm: () => claude(cfg, []),
     runner: new RunManager(),
-    assist: new AssistSession(() => cfg, db, () => claude(cfg, [])),
+    assist,
+    ext: new ExtSession(
+      () => cfg,
+      db,
+      () => claude(cfg, []),
+      () => assist.recent(15),
+    ),
   });
   const close = async () => {
     await app.close();

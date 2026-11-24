@@ -81,7 +81,7 @@ export async function prepareApplication(
   };
   ensureDir(dir);
   const t = await tailorJob(d.llm, d.cfg, d.profile, d.vocab, angle, tj, key);
-  const cvPath = join(dir, fileName(d.profile, 'CV', job.company, job.title));
+  const cvPath = join(dir, fileName(d.profile, 'CV'));
   const ctx = renderContextFor(
     d.profile,
     angle,

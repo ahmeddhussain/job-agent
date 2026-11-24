@@ -19,6 +19,7 @@ run:
 
 whatsapp:
   enabled: false # optional source: link with ./agent.sh whatsapp-login (docs/sources.md)
+  required: false # true: a run stops when WhatsApp can't be read, instead of going on without it
   session_path: data/wa-session # equivalent to a logged-in WhatsApp — keep private
   groups: [] # allowlist of group names or ids; fill from `agent wa:groups` (P4)
   fetch_limit: 500 # per group per run
@@ -166,7 +167,7 @@ forms:
   never_hosts: [ linkedin.com, wuzzuf.net, indeed.com, bayt.com, glassdoor.com, facebook.com, t.me, wa.me ]
   timeout_seconds: 45
   max_pages: 6
-  browser_profile: data/browser-profile # ./agent.sh apply: sign in to LinkedIn here once
+  browser: null # the browser jobs open in, e.g. brave-browser (null = your default browser)
 
 cv:
   max_pages: 1 # R14: every applied CV is exactly one page

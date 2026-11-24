@@ -1,14 +1,11 @@
-// `agent assist`, `agent send-drafts`, `agent skipped` (D33): the parts where Ahmed is
-// the last step. assist opens each "apply yourself" job in a visible Chrome window with
-// its own persistent profile (data/browser-profile: sign in to LinkedIn there once):
-// company forms come pre-filled (CV attached, answers typed) for him to check and
-// submit; LinkedIn Easy Apply and other board pages open on the job with the cover
-// letter on the clipboard. Nothing is clicked on his behalf in those windows.
-import { mkdirSync } from 'node:fs';
+// `agent assist`, `agent send-drafts`, `agent skipped` (D33, D46): the parts where the user
+// is the last step. assist opens each "apply yourself" job in their own browser, with the cover
+// letter on the clipboard. Nothing is clicked for them.
 import { createInterface } from 'node:readline/promises';
 import type { Config } from '../config.js';
 import { mailtoLink, retryAnsweredForms } from '../apply/apply.js';
 import { formEligible, FormFiller } from '../apply/forms.js';
+import { openInOwnBrowser } from '../apply/own-browser.js';
 import { jsonLdJobPosting, linkedinGuestJob, linkedinJobId } from '../collect/pages/jobpage.js';
 import { PoliteHttp } from '../util/http.js';
 import { sendReviewedDrafts } from '../apply/send.js';
@@ -35,7 +32,6 @@ async function ask(question: string): Promise<string> {
 
 interface ManualRow {
   id: number;
-  raw_item_id: number;
   title: string;
   company: string | null;
   apply_url: string | null;
@@ -55,20 +51,11 @@ export async function assistCommand(cfg: Config, opts: { job?: number }, io: Io)
   const release = acquireLock(cfg.run.lock_file, 'agent run');
   const db = openDb(cfg.paths.db);
   migrate(db);
-  mkdirSync(cfg.forms.browser_profile, { recursive: true, mode: 0o700 });
-  const filler = new FormFiller({
-    cfg,
-    profile: loadProfile(cfg.paths.profile),
-    llm: claude(cfg, []),
-    log: logger,
-    headless: false,
-    userDataDir: cfg.forms.browser_profile,
-  });
   try {
     const rows = (
       db
         .prepare(
-          `SELECT j.id, j.raw_item_id, j.title, j.company, j.apply_url, j.apply_url_direct,
+          `SELECT j.id, j.title, j.company, j.apply_url, j.apply_url_direct,
              a.package_dir, a.cv_pdf, a.cover_text, a.why_this_role, a.manual_reason,
              a.channel, a.to_email, a.subject, a.body
            FROM jobs j JOIN applications a ON a.job_id = j.id
@@ -81,7 +68,7 @@ export async function assistCommand(cfg: Config, opts: { job?: number }, io: Io)
       io.out('nothing to apply to by hand');
       return;
     }
-    io.out(`${String(rows.length)} applications to finish. In each window: check, then submit.`);
+    io.out(`${String(rows.length)} applications to finish. Check each one, then submit it.`);
     for (const [i, r] of rows.entries()) {
       const url = r.apply_url_direct ?? r.apply_url;
       io.out(
@@ -114,40 +101,11 @@ export async function assistCommand(cfg: Config, opts: { job?: number }, io: Io)
       io.out(
         `  cover letter ${copied ? 'copied to the clipboard' : `in ${r.package_dir ?? '-'}/cover_letter.txt`}`,
       );
-      let page;
-      try {
-        if (formEligible(url, cfg) && r.package_dir && r.cv_pdf) {
-          const res = await filler.run(
-            {
-              id: r.id,
-              title: r.title,
-              company: r.company,
-              source: sourceLabel(db, r.raw_item_id),
-            },
-            url,
-            {
-              dir: r.package_dir,
-              cvPath: r.cv_pdf,
-              coverText: r.cover_text ?? '',
-              whyThisRole: r.why_this_role ?? '',
-            },
-            { submit: false },
-          );
-          page = res.page;
-          io.out(
-            `  pre-filled ${String(res.filled.length)} fields${res.unanswered.length ? `; fill in: ${res.unanswered.join('; ')}` : ''}`,
-          );
-        } else {
-          page = await filler.page();
-          await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60_000 });
-          io.out('  opened the job page (Easy Apply / job board): apply there with the CV above');
-        }
-        await page.bringToFront();
-      } catch (err) {
-        io.out(`  could not open it here (${String(err).slice(0, 120)}); open it yourself: ${url}`);
-      }
+      const ok = await openInOwnBrowser(url, cfg.forms.browser);
+      io.out(
+        ok ? '  opened in your browser' : `  could not open the browser; open it yourself: ${url}`,
+      );
       const a = await ask('  [Enter] I applied   [s] skip   [q] quit > ');
-      await page?.close().catch(() => undefined);
       if (a === 'q') break;
       if (a === 's') continue;
       const at = new Date().toISOString();
@@ -156,7 +114,6 @@ export async function assistCommand(cfg: Config, opts: { job?: number }, io: Io)
       io.out('  marked applied');
     }
   } finally {
-    await filler.close();
     db.close();
     release();
   }

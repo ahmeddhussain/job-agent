@@ -143,7 +143,12 @@ const SCAN = String.raw`(() => {
 const SUCCESS =
   /thank you|thanks for applying|application (has been |was )?(received|submitted|sent)|we('|’)ve received|successfully (submitted|applied)|your response has been recorded|تم (إرسال|استلام|تسجيل)|شكرا/i;
 
-const norm = (s: string) => s.toLowerCase().replace(/[*:]+/g, ' ').replace(/\s+/g, ' ').trim();
+const norm = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[*:✱]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 
 /** Deterministic answers for the standard fields; everything else goes to the model. */
 export function standardAnswer(f: FormField, p: Profile, d: FormDocs): Answer | null {
@@ -155,6 +160,8 @@ export function standardAnswer(f: FormField, p: Profile, d: FormDocs): Answer | 
     return { value: d.cvPath, options: [], source: 'cv' };
   }
   if (f.kind !== 'text' && f.kind !== 'textarea') return null;
+  // Not the candidate's name: a middle name, a login, a title.
+  if (/middle|login|user\s*name|nick\s*name|preferred name|اسم المستخدم/.test(l)) return null;
   if (/first\s*name|given name|الاسم الأول/.test(l)) return a(c.first_name, 'candidate.first_name');
   if (/last\s*name|family name|surname|اسم العائلة/.test(l))
     return a(c.last_name, 'candidate.last_name');
@@ -195,6 +202,62 @@ export function validAnswer(f: FormField, a: Answer): Answer | null {
   return v ? { ...a, value: v.slice(0, 3000), options: [] } : null;
 }
 
+/** Answers for a form's fields: the standard ones directly, the rest by the model, all from the profile. */
+export async function answerFields(
+  deps: { cfg: Config; profile: Profile; llm: Llm },
+  fields: FormField[],
+  job: FormJob,
+  d: FormDocs,
+): Promise<Map<string, Answer>> {
+  const out = new Map<string, Answer>();
+  const rest: FormField[] = [];
+  for (const f of fields) {
+    const s = standardAnswer(f, deps.profile, d);
+    if (s) out.set(f.id, s);
+    else if (f.kind !== 'file') rest.push(f);
+  }
+  if (rest.length === 0) return out;
+  const res = await deps.llm.call({
+    purpose: 'form',
+    model: deps.cfg.llm.extract_model,
+    system: loadPrompt('form', {
+      profile: profileForPrompt(deps.profile),
+      answers: JSON.stringify(deps.profile.application_answers, null, 2),
+    }),
+    prompt: [
+      `Job: ${job.title}${job.company ? ` at ${job.company}` : ''}. Found via: ${job.source}.`,
+      `Why this role (for motivation questions): ${d.whyThisRole}`,
+      `Cover letter:\n${d.coverText.trim()}`,
+      '<form>',
+      fence(
+        JSON.stringify(
+          rest.map((f) => ({
+            id: f.id,
+            kind: f.kind,
+            question: f.label.slice(0, 300),
+            required: f.required,
+            ...(f.options
+              ? { options: f.options.map((o) => ({ id: o.id, label: o.label.slice(0, 150) })) }
+              : {}),
+          })),
+          null,
+          1,
+        ),
+      ),
+      '</form>',
+    ].join('\n'),
+    schema: FormAnswersSchema,
+    jobId: job.id,
+    key: `job${String(job.id)}.form`,
+  });
+  for (const a of res.answers) {
+    const f = rest.find((x) => x.id === a.id);
+    const v = f ? validAnswer(f, a) : null;
+    if (f && v) out.set(f.id, v);
+  }
+  return out;
+}
+
 export class FormFiller {
   private browser: Browser | null = null;
   private readonly dns = new Map<string, Promise<boolean>>();
@@ -205,22 +268,33 @@ export class FormFiller {
       profile: Profile;
       llm: Llm;
       log: Logger;
-      /** Assisted mode: a visible window and a persistent profile (D33). */
-      headless?: boolean;
-      userDataDir?: string;
     },
   ) {}
 
-  async page(): Promise<Page> {
-    if (!this.browser) {
-      this.browser = await puppeteer.launch({
-        headless: this.o.headless ?? true,
-        defaultViewport: this.o.headless === false ? null : { width: 1280, height: 900 },
-        ...(this.o.userDataDir ? { userDataDir: this.o.userDataDir } : {}),
-        args: this.o.headless === false ? ['--start-maximized'] : [],
-      });
+  /**
+   * The browser we hold may have crashed or been closed: start a new one then. The second
+   * try covers one closing at this very moment (troubleshooting #37).
+   */
+  private async newTab(): Promise<Page> {
+    for (let attempt = 1; ; attempt++) {
+      if (!this.browser?.connected) {
+        await this.close();
+        this.browser = await puppeteer.launch({
+          headless: true,
+          defaultViewport: { width: 1280, height: 900 },
+        });
+      }
+      try {
+        return await this.browser.newPage();
+      } catch (err) {
+        if (attempt > 1) throw err;
+        await this.close();
+      }
     }
-    const page = await this.browser.newPage();
+  }
+
+  async page(): Promise<Page> {
+    const page = await this.newTab();
     const cdp = await page.createCDPSession();
     await cdp.send('Browser.setDownloadBehavior', { behavior: 'deny' }).catch(() => undefined);
     await page.setRequestInterception(true);
@@ -258,62 +332,9 @@ export class FormFiller {
   }
 
   async close(): Promise<void> {
-    await this.browser?.close();
+    const browser = this.browser;
     this.browser = null;
-  }
-
-  private async answerAll(
-    fields: FormField[],
-    job: FormJob,
-    d: FormDocs,
-  ): Promise<Map<string, Answer>> {
-    const out = new Map<string, Answer>();
-    const rest: FormField[] = [];
-    for (const f of fields) {
-      const s = standardAnswer(f, this.o.profile, d);
-      if (s) out.set(f.id, s);
-      else if (f.kind !== 'file') rest.push(f);
-    }
-    if (rest.length === 0) return out;
-    const res = await this.o.llm.call({
-      purpose: 'form',
-      model: this.o.cfg.llm.extract_model,
-      system: loadPrompt('form', {
-        profile: profileForPrompt(this.o.profile),
-        answers: JSON.stringify(this.o.profile.application_answers, null, 2),
-      }),
-      prompt: [
-        `Job: ${job.title}${job.company ? ` at ${job.company}` : ''}. Found via: ${job.source}.`,
-        `Why this role (for motivation questions): ${d.whyThisRole}`,
-        `Cover letter:\n${d.coverText.trim()}`,
-        '<form>',
-        fence(
-          JSON.stringify(
-            rest.map((f) => ({
-              id: f.id,
-              kind: f.kind,
-              question: f.label.slice(0, 300),
-              required: f.required,
-              ...(f.options
-                ? { options: f.options.map((o) => ({ id: o.id, label: o.label.slice(0, 150) })) }
-                : {}),
-            })),
-            null,
-            1,
-          ),
-        ),
-        '</form>',
-      ].join('\n'),
-      schema: FormAnswersSchema,
-      jobId: job.id,
-      key: `job${String(job.id)}.form`,
-    });
-    for (const a of res.answers) {
-      const f = rest.find((x) => x.id === a.id);
-      const v = f ? validAnswer(f, a) : null;
-      if (f && v) out.set(f.id, v);
-    }
-    return out;
+    await browser?.close().catch(() => undefined); // already closed by the user
   }
 
   private async fill(page: Page, f: FormField, a: Answer): Promise<void> {
@@ -341,6 +362,10 @@ export class FormFiller {
     }
     const value = a.value ?? '';
     await el.click({ clickCount: 3 }).catch(() => undefined);
+    // Select everything: a triple click can miss text the site put in itself (it reads the
+    // uploaded CV), and typing then appends to it (troubleshooting #39).
+    const selectAll = `(() => { const e = document.querySelector('${sel}'); if (e && e.select) { e.focus(); e.select(); } })()`;
+    await page.evaluate(selectAll);
     if (value.length > 150) {
       // Long text: set it the way React expects (native setter + input event), then a key
       // press so frameworks that listen to keyboard events see a change too.
@@ -351,6 +376,15 @@ export class FormFiller {
       );
     } else {
       await el.type(value);
+      // The site may also write its own value while or just after we type: look again a
+      // moment later, and type once more if it added something.
+      for (let again = 0; again < 2 && value !== ''; again++) {
+        await new Promise((r) => setTimeout(r, 150));
+        const now: unknown = await page.evaluate(`document.querySelector('${sel}')?.value`);
+        if (typeof now !== 'string' || now === value || !now.includes(value)) break;
+        await page.evaluate(selectAll);
+        await el.type(value);
+      }
     }
     if (f.combobox) {
       await new Promise((r) => setTimeout(r, 700));
@@ -418,7 +452,7 @@ export class FormFiller {
         report.reason = pageNo === 1 ? 'no application form found on the page' : report.reason;
         break;
       }
-      const answers = await this.answerAll(real, job, d);
+      const answers = await answerFields(this.o, real, job, d);
       // The CV first: some forms (Ashby, Greenhouse) read it and pre-fill other fields.
       const order = [...real].sort((a, b) => Number(b.kind === 'file') - Number(a.kind === 'file'));
       for (const f of order) {

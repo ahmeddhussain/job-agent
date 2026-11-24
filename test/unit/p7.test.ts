@@ -136,6 +136,7 @@ describe('migration 002', () => {
       '003_forms.sql',
       '004_dates_questions.sql',
       '005_search_channels.sql',
+      '006_learned_answers.sql',
     ]);
     expect(
       db.prepare('SELECT count(*) FROM raw_items WHERE processed_at IS NULL').pluck().get(),
@@ -547,6 +548,26 @@ describe('agent run end to end (fixtures, recorded model outputs, fake Gmail)', 
   function seed(db: Db) {
     for (const f of fixtures) insertRawItem(db, prepareRawItem({ ...f }), f.posted_at);
   }
+
+  it('stops when a required source fails, and goes on when an optional one does', async () => {
+    const failing = (required: boolean) => [
+      { name: 'whatsapp', required, collect: () => Promise.reject(new Error('not ready')) },
+    ];
+    const db = freshDb();
+    seed(db);
+    const run = (required: boolean) =>
+      runAgent({
+        ...deps(db, new FixtureLlm(byHash, byTitle), gmail([]), []),
+        sources: failing(required),
+      });
+    const stopped = await run(true);
+    expect(stopped.status).toBe('failed');
+    expect(stopped.error).toContain('whatsapp is required');
+    expect(stopped.stats.items.processed).toBe(0); // kept for the next run
+    const partial = await run(false);
+    expect(partial.status).toBe('partial');
+    expect(partial.stats.items.processed).toBe(4);
+  });
 
   it('reads every stored item once, drafts the email job, packages the form job', async () => {
     const db = freshDb();

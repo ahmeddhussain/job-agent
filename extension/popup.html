@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        width: 320px;
+        margin: 0;
+        padding: 14px;
+        font:
+          14px/1.45 system-ui,
+          sans-serif;
+        color: #111;
+        background: #fff;
+      }
+      select,
+      button,
+      input {
+        font: inherit;
+      }
+      select {
+        width: 100%;
+        padding: 6px;
+        margin: 4px 0 10px;
+      }
+      button {
+        width: 100%;
+        padding: 9px;
+        border: 0;
+        border-radius: 8px;
+        background: #0070f3;
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .muted {
+        color: #666;
+        font-size: 12px;
+      }
+      #msg {
+        margin-top: 10px;
+      }
+      #msg.error {
+        color: #b00020;
+      }
+      ul {
+        margin: 6px 0 0 18px;
+        padding: 0;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #16181d;
+          color: #eee;
+        }
+        .muted {
+          color: #9aa0a6;
+        }
+        #msg.error {
+          color: #ff8a80;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <label class="muted" for="job">Job</label>
+    <select id="job"></select>
+    <button id="go" disabled>Fill this form</button>
+    <div id="msg" role="status"></div>
+    <p class="muted">
+      Types into empty fields only. Never submits, ticks boxes or signs in. Check everything before
+      you submit.
+    </p>
+    <details class="muted">
+      <summary>Settings</summary>
+      Dashboard port
+      <input id="port" type="number" min="1" max="65535" style="width: 80px" /><br /><label
+        ><input id="learn" type="checkbox" /> Learn from what I type when I go on</label
+      >
+    </details>
+    <script src="popup.js"></script>
+  </body>
+</html>

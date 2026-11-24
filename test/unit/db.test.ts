@@ -20,6 +20,7 @@ describe('database', () => {
       '003_forms.sql',
       '004_dates_questions.sql',
       '005_search_channels.sql',
+      '006_learned_answers.sql',
     ]);
     expect(listTables(db)).toEqual([
       'applications',
@@ -29,6 +30,7 @@ describe('database', () => {
       'dismissed_suggestions',
       'form_questions',
       'jobs',
+      'learned_answers',
       'llm_calls',
       'raw_items',
       'runs',
@@ -48,6 +50,7 @@ describe('database', () => {
       '003_forms.sql',
       '004_dates_questions.sql',
       '005_search_channels.sql',
+      '006_learned_answers.sql',
     ]);
   });
 

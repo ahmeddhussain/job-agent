@@ -117,7 +117,7 @@ export async function testDraftCommand(cfg: Config, fixture: string, io: Io): Pr
   const dir = join(cfg.apply.output_dir, 'fixtures', fixture);
   if (!existsSync(dir))
     throw new Error(`${dir} not found: run  npm run agent -- tailor:fixtures ${fixture} --replay`);
-  const cv = readdirSync(dir).find((f) => f.includes('_CV_') && f.endsWith('.pdf'));
+  const cv = readdirSync(dir).find((f) => /(-CV|_CV_.*)\.pdf$/.test(f));
   if (!cv) throw new Error(`CV PDF missing in ${dir}`);
   const email = readFileSync(join(dir, 'email.txt'), 'utf8');
   const subject = /^Subject: (.*)$/m.exec(email)?.[1] ?? 'Application';

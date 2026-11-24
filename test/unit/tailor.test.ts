@@ -164,14 +164,9 @@ describe('render helpers', () => {
     expect(s.startsWith('Terraform')).toBe(true);
   });
 
-  it('names the CV {First}_{Last}_CV_{Company}_{Role}.pdf, sanitized, at most 80 chars', () => {
-    expect(fileName(profile, 'CV', 'Nilecode Systems', 'DevOps Engineer')).toBe(
-      'Ahmed_Khater_CV_Nilecode_Systems_DevOps_Engineer.pdf',
-    );
-    expect(fileName(profile, 'CV', null, 'IT / Support (Tier 1)')).toBe(
-      'Ahmed_Khater_CV_IT_Support_Tier_1.pdf',
-    );
-    expect(fileName(profile, 'CV', 'A'.repeat(60), 'B'.repeat(60)).length).toBeLessThanOrEqual(80);
+  it('names the CV {First}-{Last}-CV.pdf: no company or job title', () => {
+    expect(fileName(profile, 'CV')).toBe('Ahmed-Khater-CV.pdf');
+    expect(fileName(profile, 'Cover-Letter')).toBe('Ahmed-Khater-Cover-Letter.pdf');
   });
 });
 

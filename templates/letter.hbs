@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>{{name}} - Cover letter</title><style>{{{fontFaces}}}{{{css}}}html{--fs:{{fontPt}}pt}</style></head>
+<body>
+<h1>{{name}}</h1>
+<p class="contact">{{#each contact}}{{#if @index}} | {{/if}}{{#if href}}<a href="{{href}}">{{text}}</a>{{else}}<span class="item">{{text}}</span>{{/if}}{{/each}}</p>
+<section>
+{{#each paragraphs}}<p style="margin:0 0 0.9em 0;line-height:1.45">{{this}}</p>
+{{/each}}</section>
+</body>
+</html>

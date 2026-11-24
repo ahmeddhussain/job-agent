@@ -393,16 +393,15 @@ export function renderContextFor(
   };
 }
 
-/** `{First}_{Last}_CV_{Company}_{Role}.pdf`, sanitized, at most 80 characters. */
-export function fileName(p: Profile, kind: 'CV', company: string | null, role: string): string {
-  const clean = (s: string) =>
-    s
+/** `{First}-{Last}-CV.pdf`, the name a person would give it: no company, no job title (D52). */
+export function fileName(p: Profile, kind: 'CV' | 'Cover-Letter'): string {
+  const clean = (x: string) =>
+    x
       .normalize('NFKD')
-      .replace(/[^\w]+/g, '_')
-      .replace(/^_+|_+$/g, '');
-  const head = `${clean(p.candidate.first_name)}_${clean(p.candidate.last_name)}_${kind}`;
-  const tail = [company ? clean(company) : null, clean(role)].filter(Boolean).join('_');
-  return `${`${head}_${tail}`.slice(0, 76).replace(/_+$/, '')}.pdf`;
+      .replace(/[^\w]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  const name = `${clean(p.candidate.first_name)}-${clean(p.candidate.last_name)}`;
+  return `${name.slice(0, 60)}-${kind}.pdf`;
 }
 
 export function ensureDir(dir: string): string {

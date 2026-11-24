@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Job Agent form filler",
+  "version": "1.0.0",
+  "description": "Fills the application form you are on from your own job agent. Never submits.",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxGhgQf3G8tcxGulBfv8Dp4d18J9mY+CzCwYRK/o6u4AHYBR4XkuSza7pgTr2Ny5y8Y4oCc5+tUkuVoVyuY/5Oresoazgane+DUyjqiXzsN3wMZ5mRaRrSLDANWualypTPNPh4BXQhb6CSoAUIhdhVNAWX/O34n5fV3VfND8/3MJMXLXOPxhJRy38u2087pXaK8sUskkzr9kFK0KRzcI1xX9XaJE+mgo5/ZmX9exKHsGFkmOV6JT6zNTJnvS8XXZ2NijEzPeYbzBnB2ADNP01A7o4fKxcac0ci0w0R30pWMw1rYAFhAJcMjceIY4/mtt0HqihAuh8IyjUcBYe0HUJsQIDAQAB",
+  "permissions": ["activeTab", "scripting", "storage"],
+  "host_permissions": ["http://127.0.0.1/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "Fill this form (Job Agent)",
+    "default_popup": "popup.html"
+  }
+}

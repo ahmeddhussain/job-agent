@@ -15,6 +15,7 @@ import {
   validAnswer,
   type FormField,
 } from '../../src/apply/forms.js';
+import { openInOwnBrowser } from '../../src/apply/own-browser.js';
 import type { Prepared } from '../../src/apply/prepare.js';
 import { sendReviewedDrafts } from '../../src/apply/send.js';
 import { parseConfig, type Config } from '../../src/config.js';
@@ -128,6 +129,46 @@ describe('form filler (headless Chrome, local pages)', () => {
     );
     expect(r.screenshots.some((s) => s.endsWith('form-after-submit.png'))).toBe(true);
   }, 60_000);
+
+  it('opens a new window after the previous one was closed or crashed', async () => {
+    const f = new FormFiller({ cfg, profile, llm: fakeLlm({}), log });
+    try {
+      const closed = (await f.page()).browser();
+      await closed.close(); // the user closes the window
+      expect((await f.page()).url()).toBe('about:blank');
+      const killed = (await f.page()).browser();
+      killed.process()?.kill('SIGKILL'); // dies, and the handle may not know yet
+      expect((await f.page()).url()).toBe('about:blank');
+    } finally {
+      await f.close();
+    }
+  }, 60_000);
+
+  it('replaces text the site put in a field itself, instead of adding to it', async () => {
+    // Like Workable: it reads the uploaded CV and writes its own value while we type.
+    const html = `<form><label for="a">First name</label><input id="a" name="first" value="Old value">
+      <label for="b">Last name</label><input id="b" name="last">
+      <script>b.addEventListener('focus', () => setTimeout(() => { if (!window.did) { window.did = 1; b.value = 'Site' + b.value; } }, 5));
+      a.addEventListener('click', (e) => { a.setSelectionRange(9, 9); });</script></form>`;
+    const f = new FormFiller({ cfg, profile, llm: fakeLlm({}), log });
+    try {
+      const r = await f.run(job, dataUrl(html), docs(), { submit: false });
+      expect(await r.page.evaluate('[a.value, b.value]')).toEqual([
+        profile.candidate.first_name,
+        profile.candidate.last_name,
+      ]);
+    } finally {
+      await f.close();
+    }
+  }, 60_000);
+
+  it('opens only web pages in the own browser, and reports a failing opener', async () => {
+    expect(await openInOwnBrowser('https://example.com/job', 'true')).toBe(true);
+    expect(await openInOwnBrowser('https://example.com/job', 'false')).toBe(false);
+    expect(await openInOwnBrowser('https://example.com/job', 'no-such-opener')).toBe(false);
+    expect(await openInOwnBrowser('file:///etc/passwd', 'true')).toBe(false);
+    expect(await openInOwnBrowser('not a url', 'true')).toBe(false);
+  });
 
   it('never submits when a required question has no truthful answer', async () => {
     const extra = `<li class="application-question"><label><div class="application-label">Current salary *</div><input type="text" name="salary" required></label></li>`;

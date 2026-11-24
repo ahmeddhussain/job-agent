@@ -8,6 +8,9 @@
 // messages, no sendSeen); presence is only sent by sendPresenceAvailable, never called.
 import wweb from 'whatsapp-web.js';
 import type { Logger } from 'pino';
+import { noteDisconnect } from './crash-hint.js';
+import { WhatsAppNotLinkedError } from './retry.js';
+import { newestCachedVersion } from './web-version.js';
 
 const { Client, LocalAuth } = wweb;
 
@@ -75,17 +78,27 @@ export class ReadOnlyWhatsApp implements WhatsAppReader {
   private constructor(private readonly client: InstanceType<typeof Client>) {}
 
   static async start(o: ReadOnlyOptions): Promise<ReadOnlyWhatsApp> {
+    // Only linking needs the cached page (#35); a linked session loads the current one.
+    const pinned = o.onQr ? newestCachedVersion(o.webCachePath) : null;
     const client = new Client({
       authStrategy: new LocalAuth({ dataPath: o.sessionPath }),
       webVersionCache: { type: 'local', path: o.webCachePath },
+      ...(pinned ? { webVersion: pinned } : {}),
       authTimeoutMs: o.authTimeoutSeconds * 1000,
       puppeteer: { headless: true },
     });
+    // The library hooks ~18 event listeners into every frame. WhatsApp opens and closes a
+    // PDF-viewer frame at that moment; if it closes mid-hook the step throws inside the page
+    // and `ready` never comes (troubleshooting #36). This facade only reads on demand and
+    // uses none of those events, so they are not attached at all.
+    (client as unknown as { attachEventListeners: () => Promise<void> }).attachEventListeners =
+      () => Promise.resolve();
+    let timer: NodeJS.Timeout | undefined;
     const ready = new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => {
+      timer = setTimeout(() => {
         reject(
           new Error(
-            `WhatsApp not ready after ${String(o.readyTimeoutSeconds)} s (not linked, or WhatsApp Web stuck loading; run: agent wa:login)`,
+            `WhatsApp not ready after ${String(o.readyTimeoutSeconds)} s (not linked, or WhatsApp Web stuck loading; run: ./agent.sh whatsapp-login)`,
           ),
         );
       }, o.readyTimeoutSeconds * 1000);
@@ -93,7 +106,11 @@ export class ReadOnlyWhatsApp implements WhatsAppReader {
         if (o.onQr) o.onQr(qr);
         else {
           clearTimeout(timer);
-          reject(new Error('WhatsApp is not linked (QR requested). Run: agent wa:login'));
+          reject(
+            new WhatsAppNotLinkedError(
+              'WhatsApp is not linked (QR requested). Run: ./agent.sh whatsapp-login',
+            ),
+          );
         }
       });
       client.on('auth_failure', (msg: string) => {
@@ -121,6 +138,7 @@ export class ReadOnlyWhatsApp implements WhatsAppReader {
       o.log.info({ state }, 'whatsapp state');
     });
     client.on('disconnected', (reason: string) => {
+      noteDisconnect(reason);
       o.log.warn({ reason }, 'whatsapp disconnected');
     });
     const wa = new ReadOnlyWhatsApp(client);
@@ -151,7 +169,19 @@ export class ReadOnlyWhatsApp implements WhatsAppReader {
       return wa;
     } catch (err) {
       clearInterval(takeover);
+      clearTimeout(timer); // or a failed login keeps the process alive until the timeout
+      const atLogin = client.pupPage?.url().includes('/login') === true;
       await wa.destroy();
+      if (atLogin && !o.onQr)
+        throw new WhatsAppNotLinkedError(
+          'WhatsApp is not linked (it opened its login page). Run: ./agent.sh whatsapp-login',
+          { cause: err },
+        );
+      if (atLogin)
+        throw new Error(
+          'WhatsApp Web opened its new login page, which the WhatsApp library cannot read yet (docs/dev/troubleshooting.md #35)',
+          { cause: err },
+        );
       throw err;
     }
   }

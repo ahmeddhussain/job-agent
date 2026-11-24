@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // Entry point: `npm run agent -- <command>` (dev) or `agent <command>` (built).
+import { whatsAppCrashHint } from './collect/whatsapp/crash-hint.js';
 import { ConfigError } from './config.js';
 import { GmailAuthError } from './gmail/auth.js';
 import { buildProgram, NotImplementedError } from './cli/program.js';
@@ -9,6 +10,13 @@ import { logger } from './util/logger.js';
 process.stdout.on('error', (err: NodeJS.ErrnoException) => {
   if (err.code === 'EPIPE') process.exit(0);
   throw err;
+});
+
+// Says how to fix a crash from the WhatsApp library. The monitor only observes: the crash,
+// its stack trace and exit code 1 stay exactly as they are (troubleshooting #34).
+process.on('uncaughtExceptionMonitor', (err) => {
+  const hint = whatsAppCrashHint(err);
+  if (hint) process.stderr.write(`${hint}\n`);
 });
 
 const program = buildProgram({ out: (line) => process.stdout.write(`${line}\n`) });

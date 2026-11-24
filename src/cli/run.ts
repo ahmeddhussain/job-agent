@@ -178,6 +178,7 @@ export async function runCommand(cfg: Config, flags: RunFlags, io: Io): Promise<
     if (want('whatsapp') && cfg.whatsapp.enabled && cfg.whatsapp.groups.length > 0)
       sources.push({
         name: 'whatsapp',
+        required: cfg.whatsapp.required,
         collect: (runId) => collectWhatsAppForRun(cfg, db, runId, since),
       });
     const linkedinHttp = linkedinClient(cfg);

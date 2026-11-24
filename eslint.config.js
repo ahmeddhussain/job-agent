@@ -28,5 +28,16 @@ export default defineConfig(
     files: ['**/*.mjs'],
     languageOptions: { globals: { process: 'readonly' } },
   },
+  {
+    // The add-on runs in the browser.
+    files: ['extension/*.js'],
+    languageOptions: {
+      globals: Object.fromEntries(
+        'window document location chrome fetch setTimeout getComputedStyle atob URL Option Event ClipboardEvent DragEvent InputEvent FocusEvent KeyboardEvent MouseEvent PointerEvent DataTransfer File HTMLTextAreaElement HTMLInputElement HTMLSelectElement'
+          .split(' ')
+          .map((g) => [g, 'readonly']),
+      ),
+    },
+  },
   prettier,
 );

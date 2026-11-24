@@ -38,6 +38,8 @@ export const ConfigSchema = z.strictObject({
   whatsapp: z.strictObject({
     /** Optional source: off until the number is linked (./agent.sh whatsapp-login). */
     enabled: z.boolean(),
+    /** Stop the run when WhatsApp can't be read, instead of going on without it. */
+    required: z.boolean(),
     session_path: realString,
     groups: z.array(realString),
     fetch_limit: positiveInt,
@@ -189,8 +191,11 @@ export const ConfigSchema = z.strictObject({
     never_hosts: z.array(realString),
     timeout_seconds: positiveInt,
     max_pages: positiveInt,
-    /** Assisted mode's persistent browser profile (you sign in to LinkedIn there once). */
-    browser_profile: realString,
+    /** Command of the browser jobs open in (e.g. brave-browser); null = the default browser. */
+    browser: z
+      .string()
+      .regex(/^[\w./-]+$/, 'a command name or path, without arguments')
+      .nullable(),
   }),
   cv: z.strictObject({
     max_pages: z.literal(1), // R14: an applied CV is exactly one page; not configurable upward
