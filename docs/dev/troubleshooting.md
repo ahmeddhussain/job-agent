@@ -704,9 +704,9 @@ documents: ATS check failed: keyword coverage 50% < 70%     keywordsMissing: ["j
 ## 33. Private backup files were committed
 
 **Symptom.** After the D44 conversion (2026-11-23), `git log --stat` showed
-`config/config.yaml.pre-specialisms` (plus the example and titles copies) in 75dee22. Earlier
-settings backups `config/config.yaml.bak` and `config/titles.yaml.bak` were in a8f5ad6 and
-42011ee. They held the Gmail address, the WhatsApp group id and settings; no token and no
+`config/config.yaml.pre-specialisms` (plus the example and titles copies) in the D44 commit. Earlier
+settings backups `config/config.yaml.bak` and `config/titles.yaml.bak` were in two
+commits before it. They held the Gmail address, the WhatsApp group id and settings; no token and no
 blocklisted number.
 
 **Diagnosis.**
@@ -714,9 +714,10 @@ blocklisted number.
 - **Staging gap:** the commits staged everything, without a look at the file list first.
 
 **Fix.**
-- **Removed** the files from the tree (f961742, b52ad0d).
-- **Blocked** `*.bak`, `*.bak-*` and `*.pre-*` in `.gitignore` and in the secrets scan's forbidden paths, and with D45, every `profiles/<name>/` except `profiles/example/`, with tests (a4a00c1).
-- **Not yet fixed:** the files are still in git history. Purging them needs a history rewrite and a force push, which is the owner's decision.
+- **Removed** the files from the tree (85f7528).
+- **Blocked** `*.bak`, `*.bak-*` and `*.pre-*` in `.gitignore` and in the secrets scan's forbidden paths, and with D45, every `profiles/<name>/` except `profiles/example/`, with tests (0f6f962).
+- **Purged from history** (2026-11-24, owner's decision): the five paths were removed from every commit with `git filter-branch --index-filter`, checked in a copy (same final tree, no remaining path, no group id), then force-pushed. Commit ids from 2026-11-23 on changed. GitHub can still serve an old commit to someone who has its id until it cleans up unreachable objects; its support can do that on request.
+- **Lesson:** look at the staged file list before every commit; a file that was public for a day should be treated as seen.
 
 ---
 
