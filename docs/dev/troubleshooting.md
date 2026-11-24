@@ -802,3 +802,14 @@ exceeded` from `whatsapp-web.js/src/Client.js:139`, exit code 1. Nothing was col
 **Diagnosis.** The answer typed was the profile's. The other text was already in the field, and the triple click meant to select it didn't. Probably the site wrote it from the uploaded CV (not proven).
 
 **Fix.** Select everything before typing; if the field still holds more than the answer afterwards, select and type once more.
+
+---
+
+## 40. The add-on attached no CV on a Phenom form
+
+**Symptom.** 2026-11-24, an Electrolux Group form (Phenom): the fields were filled, the CV was not attached.
+
+**Diagnosis.** The form has two hidden file inputs without a label. "Upload Resume" is the text of a button next to the first, "Upload Attachments" names the second. With no words of its own for either, and two to choose from, the add-on attached to neither. It also listed the site's job search boxes as form fields.
+
+**Fix.** An upload box without a label takes the words and names of the boxes around it, never as far as another upload box. Search, menu, header and footer boxes are skipped. After attaching, the add-on waits for the page to settle and finds redrawn fields again. Checked on the form itself: the site started its own upload (blocked in the test).
+

@@ -60,6 +60,30 @@
     }
     return el.getAttribute('placeholder') || el.name || '';
   }
+  // Upload boxes are often bare: the words are on a button next to the hidden input, or only
+  // in the names of the boxes around it. Never as far out as another upload box.
+  function uploadLabel(el) {
+    const own = labelFor(el);
+    const names = [];
+    let label = own;
+    let box = el.parentElement;
+    for (let up = 0; box && up < 6; up++, box = box.parentElement) {
+      if (box.querySelectorAll('input[type=file]').length > 1) break;
+      if (up < 3) names.push(String(box.className || ''), box.id || '');
+      if (!label) {
+        const c = box.cloneNode(true);
+        for (const x of c.querySelectorAll('script, style, svg')) x.remove();
+        label = txt(c).slice(0, 200);
+      }
+    }
+    return {
+      label,
+      hint: `${el.name || el.id || ''} ${names.join(' ')}`.replace(/\s+/g, ' ').trim(),
+    };
+  }
+  // The site's own job search, menus and newsletter boxes are not the application.
+  const SITE =
+    'header, nav, footer, [role=search], [class*="global-search"], [class*="search-block"], [class*="job-search"], [class*="jobsearch"], [class*="site-search"]';
   const isRequired = (el, label) =>
     !!el.required || el.getAttribute('aria-required') === 'true' || /^\s*[*✱]|[*✱]\s*$/.test(label);
 
@@ -220,7 +244,10 @@
           continue;
         }
       }
-      const label = labelFor(el).slice(0, 400);
+      if (type !== 'file' && el.closest(SITE)) continue;
+      const upload = type === 'file' ? uploadLabel(el) : null;
+      const label = (upload ? upload.label : labelFor(el)).slice(0, 400);
+      if (/^(search|find) /i.test(label)) continue;
       const f = {
         id: `f${n++}`,
         kind:
@@ -232,7 +259,7 @@
                 ? 'file'
                 : 'text',
         inputType: type.slice(0, 30),
-        name,
+        name: upload ? upload.hint.slice(0, 200) : name,
         label,
         required: isRequired(el, label),
       };
@@ -415,6 +442,23 @@
   );
   document.addEventListener('submit', sendLearned, true);
 
+  // Some sites read the CV and fill the form themselves: wait until it stops changing.
+  async function settled() {
+    const look = () =>
+      [...walk(document)]
+        .filter((e) => /^(INPUT|SELECT|TEXTAREA)$/.test(e.tagName) && e.type !== 'password')
+        .map((e) => `${e.name}=${String(e.value).length}`)
+        .join();
+    let before = look();
+    let quiet = 0;
+    for (let t = 0; t < 8000 && (t < 2000 || quiet < 1000); t += 250) {
+      await sleep(250);
+      const now = look();
+      quiet = now === before ? quiet + 250 : 0;
+      before = now;
+    }
+  }
+
   async function fill({ answers, files, jobId, fields }) {
     let filled = 0;
     let attached = 0;
@@ -429,7 +473,20 @@
         failed.push(file.name);
       }
     }
-    if (attached) await sleep(1500);
+    if (attached) {
+      await settled();
+      // The site may redraw the form after reading the CV: find the same fields again.
+      const now = [...walk(document)];
+      for (const [id, ref] of refs) {
+        if (Array.isArray(ref) || ref.isConnected || !(ref.id || ref.name)) continue;
+        const twins = now.filter(
+          (e) => e.tagName === ref.tagName && e.id === ref.id && e.name === ref.name,
+        );
+        if (twins.length !== 1) continue;
+        if (pickers.has(ref)) pickers.set(twins[0], pickers.get(ref));
+        refs.set(id, twins[0]);
+      }
+    }
     for (const [id, a] of Object.entries(answers)) {
       const ref = refs.get(id);
       if (!ref) continue;

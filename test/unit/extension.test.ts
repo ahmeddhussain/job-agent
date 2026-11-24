@@ -34,7 +34,9 @@ const FORM = `<!doctype html><title>Apply</title><h1>Cloud Engineer</h1>
  <label for="rs">Do you have Linux experience? *</label><div class="rs__control"><span id="rsv"></span><input id="rs" role="combobox" aria-autocomplete="list" aria-controls="rsl"></div><div id="rsl" role="listbox"></div>
  <div aria-hidden="true"><input id="twin" required tabindex="-1" aria-label="Do you have Linux experience?"></div>
  <div class="q"><div>Can you work nights?✱</div><div><label><input type="radio" name="nights" value="1">Yes</label><label><input type="radio" name="nights" value="0">No</label></div></div>
- <label for="cv">Resume *</label><input id="cv" type="file" required>
+ <div class="resume-upload-wrapper"><button type="button">Upload Resume</button><div><input id="cv" type="file" style="display:none"></div></div>
+ <ul><li><label>Upload Attachments<input id="att" type="file" style="display:none"></label></li></ul>
+ <header><input id="site" placeholder="Enter location"></header><label for="js">Search for Job Title</label><input id="js">
  <label for="cl">Cover letter</label><input id="cl" type="file">
  <label for="lg">Login name</label><input id="lg" name="login"><input type="password" name="pw">
  <label><input type="checkbox" id="terms"> I accept the terms</label>
@@ -167,7 +169,7 @@ describe('the add-on in a browser', () => {
       fn: fn.value, mid: mid.value, ln: ln.value, em: em.value, ad: ad.value, sal: sal.value,
       np: np.value, co: co.value, reloc: document.querySelector('[name=reloc]:checked')?.value ?? null,
       agree: document.querySelector('[name=agree]:checked')?.value ?? null, city: city.value, rs: rsv.textContent, twin: twin.value, nights: document.querySelector('[name=nights]:checked')?.value ?? null,
-      cv: cv.files[0]?.name ?? null, cl: cl.files[0]?.name ?? null, lg: lg.value, terms: terms.checked,
+      cv: cv.files[0]?.name ?? null, att: att.files.length, site: site.value, js: js.value, cl: cl.files[0]?.name ?? null, lg: lg.value, terms: terms.checked,
       trap: document.querySelector('[name=trap]').value, mo: host.shadowRoot.getElementById('mo').value,
       submitted: !!window.submitted, seenFn: window.seen.fn })`)) as Record<string, unknown>;
     const p = loadProfile(cfg.paths.profile).candidate;
@@ -186,7 +188,10 @@ describe('the add-on in a browser', () => {
       rs: 'Yes', // a custom dropdown, from its own choices
       twin: '', // its hidden copy
       nights: '0',
-      cv: 'CV.pdf',
+      cv: 'CV.pdf', // a bare hidden input, named only by what is around it
+      att: 0, // another upload box
+      site: '',
+      js: '',
       cl: 'Ahmed-Khater-Cover-Letter.pdf',
       lg: '',
       terms: false,
@@ -236,7 +241,7 @@ describe('learning from the user', () => {
     await page.type('#mid', 'Mohamed');
     await page.type('#lg', 'my-login');
     await page.select('#np', 'b'); // corrects what the add-on chose
-    await page.click('button');
+    await page.click('button:not([type])');
     await vi.waitFor(
       () => {
         expect(db.prepare('SELECT count(*) FROM learned_answers').pluck().get()).toBeGreaterThan(0);
