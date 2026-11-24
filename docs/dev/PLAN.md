@@ -419,7 +419,7 @@ Input: the job JSON, `angle`, `fit_reasons`, and the master profile (cached syst
 - ATS-friendly: single column; standard headings (Summary, Skills, Experience, Projects, Education, Certifications); no tables, icons, photos or text in images; real text; 10.5–11 pt body; links written out (GitHub, LinkedIn).
 - Mirror the job's exact keywords **only where the profile backs them** (e.g. the post says "CI/CD pipelines" and the profile has Jenkins/GitHub Actions → use "CI/CD pipelines (Jenkins, GitHub Actions)").
 - Networking-angle jobs follow Ahmed's one-page networking CV shape (Nexora, Linux System Administration Lab, CI/CD Pipeline Engineering, Packet Tracer network design, plus HCIA-Datacom and the CCNA curriculum **as studied, not certified**).
-- File names: `{First}_{Last}_CV_{Company}_{Role}.pdf`, `{First}_{Last}_Cover_Letter_{Company}_{Role}.pdf` (sanitized, ≤ 80 chars), under `output/<YYYY-MM-DD>/<job_id>/`.
+- File names: `{First}-{Last}-CV.pdf`, `{First}-{Last}-Cover-Letter.pdf` (D52)
 
 ### 8.4 Cover letter rules
 - 180–250 words, 3 paragraphs: (1) the role + where he saw it + a one-line pitch; (2) two of the job's specific requirements, each mapped to a concrete piece of evidence (project + tech + result); (3) why this company/role + call to action.

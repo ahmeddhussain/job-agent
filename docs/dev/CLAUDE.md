@@ -1,6 +1,6 @@
 # CLAUDE.md — job-agent
 
-Read `docs/dev/PLAN.md` before writing code: the original spec (requirements, data model, build phases). Decisions since then are in `docs/dev/decisions.md` (D1–D45); user docs are in `docs/`.
+Read `docs/dev/PLAN.md` before writing code: the original spec (requirements, data model, build phases). Decisions since then are in `docs/dev/decisions.md` (D1–D52); user docs are in `docs/`.
 
 ## How to work with Ahmed
 
@@ -15,7 +15,7 @@ Read `docs/dev/PLAN.md` before writing code: the original spec (requirements, da
 
 ## Hard rules for this project
 
-1. **WhatsApp is read-only.** Use only `getChats`, `fetchMessages` and `destroy` (text posts only; no media), through the `ReadOnlyWhatsApp` facade. Never call `sendMessage`, `sendSeen`, `react`, any `join*`, `setStatus`, or `logout`. A grep test enforces this.
+1. **WhatsApp is read-only.** Use only `getChats`, `fetchMessages` and `destroy` (text posts only; no media), through the `ReadOnlyWhatsApp` facade. Never call `sendMessage`, `sendSeen`, `react`, any `join*`, `setStatus`, or `logout`. A grep test enforces this. Applications on WhatsApp are prepared in the user's own browser by the add-on, and the user presses Send (D51).
 2. **No invented CV content.** The profile's `profile.yaml` (`profiles/<name>/`) is the only source of facts. The validator (PLAN.md 8.1) must pass before any CV or cover letter is saved or emailed. Never weaken the validator to make a test pass.
 3. **Default `apply.mode` is `draft`.** Never send email unless the config says `send` and every send guard passes.
 4. **Never commit personal data or secrets:** everything in `profiles/<name>/` except the fictional `profiles/example/` (config, profile, `.env`, `secrets/`, `data/` with the WhatsApp session, `output/`), and backup files (`*.bak`, `*.pre-*`). `scripts/check-secrets.sh` (pre-commit hook and tests) enforces it.

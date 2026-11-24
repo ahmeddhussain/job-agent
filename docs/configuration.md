@@ -53,6 +53,7 @@ Relative paths in config are **inside your profile folder** (`data/agent.db` mea
 ```yaml
 whatsapp:
   enabled: true
+  required: true                 # stop the run if WhatsApp can't be read (default: go on)
   groups: [ "Some jobs group" ]   # names or ids from ./agent.sh whatsapp-groups
 gmail:
   enabled: true                   # after ./agent.sh gmail-auth

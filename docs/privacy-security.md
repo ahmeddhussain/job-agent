@@ -44,6 +44,7 @@ is set, and checks `apiKeySource=none` before each run.
   joining. A test fails if the code calls any of those.
 - **Never signs in to job boards or LinkedIn for you**, and never clicks Easy Apply. Those
   jobs are prepared and handed to you.
+- **The add-on** sees a page only after you click it there, talks only to your dashboard on `127.0.0.1`, fills empty fields only, and never submits, sends, ticks boxes or signs in. It remembers short general answers you type (never contact details, sign-ins, long numbers or sensitive data), and you can remove them.
 - **Never solves or bypasses captchas.** A form with a captcha goes to "Apply yourself".
 - **Never sends email in the default mode.** `apply.mode: draft` only creates drafts; you
   send them. `send` mode exists, with score, priority and daily-cap guards, and you switch
@@ -69,7 +70,6 @@ is set, and checks `apiKeySource=none` before each run.
 |---|---|
 | Gmail | <https://myaccount.google.com/permissions> → job-agent → Remove access; delete `secrets/gmail_token.json`; set `gmail.enabled: false` |
 | WhatsApp | Phone → Linked devices → log out the agent; delete `data/wa-session` |
-| LinkedIn (the apply browser) | delete `data/browser-profile` |
 | Claude token (if you used one) | revoke it in your Claude account; remove it from `.env` |
 | Everything | delete the profile folder `profiles/<name>/` |
 

@@ -504,3 +504,48 @@ repo, commit 1769845).
   - The profile is marked `.review-pending`, and runs refuse it until `./agent.sh reviewed` validates it. Every CV the agent sends is built from these facts, so a human checks them first.
 - **Dashboard:** Profile → "Edit profile files" edits `profile.yaml` and `titles.yaml` in place. The server validates exactly like a run, keeps a `.bak` and writes atomically. Settings now write the profile's `config.yaml` (only changed keys, validated merged over the defaults).
 - **Migration:** `scripts/migrate-to-profile.sh <name>` moves the old single-user layout into a profile. It copies the database first, keeps leftovers in `archive/` and reduces the old full config to the keys that differ from the defaults. It refuses to write if the reduced config doesn't reproduce the old one exactly. It was rehearsed on a copy of Ahmed's setup: 37 applications, all CV and package paths resolve.
+
+---
+
+## D46: Jobs open in the user's own browser (Ahmed, 2026-11-24)
+- **Decision:** every "apply yourself" job opens in the user's own browser (`forms.browser`, null = the default one; Ahmed uses `brave-browser`). The visible controlled Chrome of D33 and D43 is gone.
+- **Why:** Cloudflare's check and Google's sign-in refuse software-controlled browsers even when a person uses them.
+- **Alternative:** disguise the controlled browser (stealth plugins). Rejected: it bypasses a bot check, against the project's rules.
+- **Unchanged:** CV rendering, the hidden form filler a run uses (D33) and the WhatsApp reader keep puppeteer's pinned Chrome. They need a controlled browser, and the CV layout is tested against that version.
+
+---
+
+## D47, D48: Filling through the Claude extension, and a bookmark (tried and removed, 2026-11-24)
+- **Tried:** `claude -p --chrome` filling the form in the user's browser behind a hook that allowed no clicks, and a bookmark to hand over the form behind a board's Apply button. Both worked (job 298 on Workable: 7 fields and the CV in 28 s).
+- **Removed** for D49: a new tab per form, about half a minute, a model call per action, no yes/no choices, an unofficial browser for that extension, and on one form it overwrote values the user had already entered.
+
+---
+
+## D49: Our own form-filling add-on (Ahmed, 2026-11-24)
+- **Decision:** `extension/` (Manifest V3, loaded unpacked). One click on the company's form: it lists the empty fields, the dashboard answers them (standard fields directly, the rest by one model call through the same validator as D33), and it types them, attaches the CV and the cover letter (rendered to PDF on demand). Unanswered required questions are recorded once (D35).
+- **Why:** the Claude extension (D47) was slow and overwrote values. The add-on fills the page the user is on, in about 10 seconds.
+- **Limits:** empty fields only; never submits; no checkboxes, agreements, sign-in fields or human checks (neither filled nor sent to the model); existing values are never read out; boards refused; a monthly salary never answers a yearly question.
+- **Access:** `activeTab` (a page only after a click on it) and `127.0.0.1`. The server answers `/api/ext/*` only to the add-on's fixed origin (the manifest's public `key`), and that origin can reach nothing else.
+- **Tested:** the real add-on in Chrome against a local form (shadow DOM, custom dropdown, hidden twins, radios, uploads, existing values); its scanning and typing on live Workable, Ashby, Greenhouse and Lever forms with made-up data and every write request blocked; answers with the real model (7 s).
+- **Alternatives:** a ready-made autofill extension (a third party gets the data; not the tailored CV); trusted key events through `chrome.debugger` (a controlled browser again).
+
+---
+
+## D50: The add-on learns from the user's answers (Ahmed, 2026-11-24)
+- **Decision:** when the user goes on (a real click on Next, Save or Submit, or the form's submission), the fields the add-on had listed are read once: what the user typed or corrected, and what they left as typed. Next time the same question is answered from there first, without a model call; the model also sees them for other wordings. The latest answer wins. Listed in Profile → Learned from your forms (Forget, Save to profile); can be switched off in the add-on.
+- **Never learned:** long texts, contact and identity details, sign-in fields, secrets, numbers of 9 digits or more, agreements, sensitive data (gender, birth, nationality, health), and answers about one job or company. Fields that already had a value are still never read.
+- **Only the add-on uses them**, on forms the user reviews. Automatic submissions use the profile alone.
+- **Alternatives:** writing them straight into the profile (one hasty answer would reach automatic submissions); learning every field (company-specific answers would be reused wrongly).
+
+---
+
+## D51: WhatsApp applications from the user's browser (Ahmed, 2026-11-24)
+- **Decision:** **Message on WhatsApp** opens the chat in the user's browser (only the number is in the address). One click on the add-on there puts in the CV and a message under it; **the user presses Send**. The message is the letter's own paragraphs, as many as fit WhatsApp's 1,000 or so characters for a caption.
+- **Rule kept:** the agent's own WhatsApp connection stays read-only (hard rule 1). The add-on never presses Send or Enter, refuses a chat whose number isn't the job's, and refuses a box that already has text.
+- **Alternatives:** sending through whatsapp-web.js (breaks the rule, and risks the account); the message in the address (it would stay in the browser's history).
+- **Not verified:** the real WhatsApp Web (needs the user's linked browser); tested on a mock of the chat page, by paste and by drop. A saved contact or business shows a name, so its number can't be checked: the add-on says which chat it is.
+
+---
+
+## D52: Plain file names (Ahmed, 2026-11-24)
+- **Decision:** `{First}-{Last}-CV.pdf` and `{First}-{Last}-Cover-Letter.pdf`, no company or job title: a name a person would give it. Each application has its own folder, so names don't collide.

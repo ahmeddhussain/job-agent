@@ -717,3 +717,87 @@ blocklisted number.
 - **Removed** the files from the tree (f961742, b52ad0d).
 - **Blocked** `*.bak`, `*.bak-*` and `*.pre-*` in `.gitignore` and in the secrets scan's forbidden paths, and with D45, every `profiles/<name>/` except `profiles/example/`, with tests (a4a00c1).
 - **Not yet fixed:** the files are still in git history. Purging them needs a history rewrite and a force push, which is the owner's decision.
+
+---
+
+## 34. WhatsApp logged out and the run crashed
+
+**Symptom.** 2026-11-24, the first run after the profile migration: `whatsapp conflict screen:
+clicked "Use here"`, `whatsapp disconnected`, then `TimeoutError: Waiting failed: 60000ms
+exceeded` from `whatsapp-web.js/src/Client.js:139`, exit code 1. Nothing was collected.
+
+**Diagnosis.**
+- **Logged out:** `data/wa-session/session` was recreated 22 s after WhatsApp started. The library deletes that folder only in its logout handler, so WhatsApp Web had logged this device out.
+- **The crash:** after a logout the library injects itself into the new page from an event handler nobody awaits (`Client.js:564`). That wait never succeeds on WhatsApp's new logged-out page (#35), so it timed out after 60 s, and the unhandled rejection ended the process. The per-source isolation in the orchestrator can't catch it.
+- **Not established:** why WhatsApp logged the device out. It happened on the first start from the moved session folder and right after "Use here"; neither is proven to be the cause.
+
+**Fix.**
+- **Now:** link again with `./agent.sh whatsapp-login` (this failed too at first: #35), then run again. The stale `run.lock` and `wa.lock` are replaced automatically.
+- **Next time:** the output says so. An `uncaughtExceptionMonitor` prints the fix before the stack trace; it only observes, so the run still stops with exit code 1.
+- **Alternative not taken (owner's choice):** catching the rejection so the run continues without WhatsApp.
+
+---
+
+## 35. The WhatsApp QR code never appeared
+
+**Symptom.** 2026-11-24, `./agent.sh whatsapp-login` (after #34): no QR code, then `error: Waiting failed: 60000ms exceeded`, and the command didn't exit.
+
+**Diagnosis.**
+- **The page changed:** web.whatsapp.com answers a browser that isn't linked with `302 /login/`. In a throwaway profile that page drew its QR code, but `WAWebSocketModel`, which whatsapp-web.js waits for, stayed unresolved for 70 s.
+- **Upstream:** wwebjs/whatsapp-web.js issue 201988 (open, from 2026-11-23). 1.34.8 is the newest stable release and has the same code; the proposed fix (PR 201990) has a report against it.
+- **The cache was never used:** `web_cache_path` was documented as pinning the version that worked, but `webVersion` was never set.
+- **The hang:** the login timeout timer wasn't cleared on failure.
+
+**Fix.**
+- **Pin** the newest version in `web_cache_path` for linking only (`src/collect/whatsapp/web-version.ts`); a linked session loads the current page, which also refreshes the cache.
+- **Clear** the timer on failure, and name the cause when the page is `/login/`.
+- **Alternatives:** wait for upstream (WhatsApp stays off until then); apply the unmerged patch or `2.0.0-alpha.0` (unproven); download old pages from a third party (untrusted code in a logged-in session).
+- **Limits:** WhatsApp may refuse the cached version one day. A profile with an empty cache can't link until upstream is fixed. Remove the pin when it is.
+
+---
+
+## 36. WhatsApp authenticated but never became ready
+
+**Symptom.** 2026-11-24, after #35: `whatsapp-groups` and run 7 showed `authenticated`, then `WhatsApp not ready after 120 s`. Run 7 went on without WhatsApp. A dry run 10 minutes earlier had worked.
+
+**Diagnosis.**
+- **Not slow:** the page was connected and synced within 10 s, and `ready` still never came.
+- **A race:** right after login WhatsApp opens `webtp.whatsapp.net/pdf-viewer` in a frame and closes it about 0.1 s later. `attachEventListeners` is hooking ~18 events into every frame then; when the frame closes mid-hook, `TargetCloseError` is thrown, swallowed inside the page, and `ready` is never emitted.
+- **Disproved:** the pinned version of #35 was suspected first; the unpinned page failed too (2 of 4 starts, against 1 of 1 measured with the pin).
+
+**Fix.**
+- **Not attached:** the facade reads on demand and uses none of those events, so they are skipped.
+- **Retry:** a failed start is tried 3 times, except when the account isn't linked.
+- **`whatsapp.required`** (default false): true stops the run when WhatsApp can't be read, so it isn't skipped quietly.
+- **Alternatives:** a longer timeout (no help: it never becomes ready); retry alone (it fails about half the time); patching puppeteer (a fork to maintain).
+
+---
+
+## 37. "Connection closed." when opening a job to apply (window since removed: D46)
+
+**Symptom.** 2026-11-24, dashboard → "Open pre-filled": `Connection closed.`, every time.
+
+**Diagnosis.** The dashboard keeps one `FormFiller` for its lifetime, and `page()` only checked that a browser had been started, not that it was still open. The apply window is the user's to close; after that each call used the dead handle. Reproduced by closing the browser in a test.
+
+**Fix.** `page()` starts a new browser when the old one is gone, and retries once if it closes at that moment. `close()` tolerates a browser that is already closed.
+**Alternative:** a new browser for every job (slower, and it would close a window still in use).
+
+---
+
+## 38. Cloudflare's "verify you are human" and Google sign-in fail in the apply window
+
+**Symptom.** 2026-11-24: ticking Cloudflare's box never moved on, and "Sign in with Google" was refused, in the window opened by "Open pre-filled".
+
+**Diagnosis.** That window is Chrome controlled by software, which both services refuse whoever is using it. The Workable form (job 298) loads `challenges.cloudflare.com/turnstile`. Its automatic submission had not gone through either: the screenshot shows the form still open, with no confirmation.
+
+**Fix.** D46: every job opens in the user's own browser; the add-on fills it there (D49).
+
+---
+
+## 39. A form field held two answers run together
+
+**Symptom.** 2026-11-24, job 298 (not submitted): Address held two values run together, like `City A, CountryDistrict B, City B`.
+
+**Diagnosis.** The answer typed was the profile's. The other text was already in the field, and the triple click meant to select it didn't. Probably the site wrote it from the uploaded CV (not proven).
+
+**Fix.** Select everything before typing; if the field still holds more than the answer afterwards, select and type once more.

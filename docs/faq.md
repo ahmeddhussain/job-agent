@@ -20,8 +20,8 @@ Partly, and only where it's safe:
 |---|---|
 | Email | Writes the email with your CV attached as a **Gmail draft** (you review and send, or `./agent.sh send` sends all reviewed drafts). Without Gmail it writes the email out for you |
 | A company form without a captcha | Fills it, uploads the CV and **submits** it (switch off with `forms.auto_submit: false`) |
-| A form with a captcha, a sign-in, LinkedIn Easy Apply, Wuzzuf, Bayt, Indeed | Prepares everything; `./agent.sh apply` opens each one pre-filled and you submit |
-| WhatsApp | Prepares the CV and message; you send it from your phone |
+| A form with a captcha, a sign-in, LinkedIn Easy Apply, Wuzzuf, Bayt, Indeed | Prepares everything; **Open to apply** opens it in your own browser; the add-on fills it, you submit |
+| WhatsApp | Prepares the CV and message; the add-on puts them in the chat, you press Send |
 
 ### Will it lie on my CV?
 

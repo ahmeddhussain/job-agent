@@ -19,7 +19,7 @@ cd ~/job-agent
 | 2 | `./agent.sh dashboard` | Opens the tracker at http://127.0.0.1:8080. Two sections at the top: **Apply yourself** and **Email drafts waiting** |
 | 3 | Gmail → Drafts | Read each application draft; edit or delete any you don't want (without Gmail: **Write the email** on each one in the dashboard) |
 | 4 | `./agent.sh send` | Lists the drafts still in Gmail, asks once, sends them all (your edits are kept). Needs Gmail |
-| 5 | `./agent.sh apply` | Opens each "apply yourself" job in a Chrome window, pre-filled. Check it, solve the captcha if one appears, click Submit, press Enter in the terminal |
+| 5 | `./agent.sh apply` | Opens each job in your own browser; click the add-on there (section 7), check, submit, press Enter in the terminal |
 | 6 (weekly) | `./agent.sh skipped 7` | What the agent skipped and why, with links. Rescue anything it missed (section 4) |
 
 The run takes a while when there are many new posts (each job needs a few Claude calls).
@@ -43,10 +43,10 @@ Next: ./agent.sh dashboard (review), ./agent.sh apply (finish the rest), ./agent
 |---|---|---|
 | Email ("send your CV to hr@…") | With Gmail: a **draft** (the cover letter is the body, the CV attached, the required subject used). Without Gmail: **Apply yourself** with the email written out | With Gmail: review in Gmail, then `./agent.sh send`. Without: **Write the email** in the dashboard opens your mail app with it filled in; attach the CV |
 | Company form without a captcha (Google Forms, many careers pages) | Fills it, uploads the CV, **submits**, checks the confirmation, keeps screenshots | Nothing: the job shows as Applied |
-| Company form with a captcha (Greenhouse, Lever, Ashby) | Tries; if the site doesn't confirm, the job goes to **Apply yourself** | `./agent.sh apply`: the form opens pre-filled; you submit |
+| Company form with a captcha (Greenhouse, Lever, Ashby) | Tries; if the site doesn't confirm, the job goes to **Apply yourself** | `./agent.sh apply`: opens in your browser; the add-on fills it, you submit |
 | A required question your profile can't answer (e.g. current salary) | Does not guess; **Apply yourself** with the question named | Answer it in the window, or answer it in the dashboard (Needs action → Questions) so it's saved to your profile and used next time |
-| LinkedIn Easy Apply, Wuzzuf, Bayt, Indeed | Prepares the CV and letter; **Apply yourself** | `./agent.sh apply` opens the job (signed in as you), the letter is on the clipboard: click Easy Apply, attach the CV |
-| WhatsApp ("send your CV on WhatsApp") | Prepares the CV and the letter; a wa.me link | Send it from your phone (the agent never sends WhatsApp messages) |
+| LinkedIn Easy Apply, Wuzzuf, Bayt, Indeed | Prepares the CV and letter; **Apply yourself** | `./agent.sh apply` opens the job in your own browser, the letter is on the clipboard: click Easy Apply, attach the CV |
+| WhatsApp ("send your CV on WhatsApp") | Prepares the CV and the message | **Message on WhatsApp**: the add-on puts both in the chat; you press Send |
 
 Every application uses a CV that is exactly one page, passed the ATS check, and contains only
 facts from your profile.
@@ -61,7 +61,7 @@ Only reachable from this machine (127.0.0.1). Click any job for its detail panel
 - **Top bar:**
   - **▶ Run** menu: run, process the queue only, dry run, retry waiting forms, recheck dates. It shows live output and a desktop notification at the end.
   - **Send all drafts:** confirm once, then the reviewed drafts are sent.
-  - **Apply next:** opens the next "apply yourself" job pre-filled on your desktop; after Mark applied (or Skip / Not a fit) the next one opens.
+  - **Apply next:** opens the next "apply yourself" job in your browser; after Mark applied (or Skip / Not a fit) the next one opens.
   - **＋ Add a job:** paste a post.
 - **Keyboard:** `?` lists the shortcuts.
 
@@ -122,7 +122,6 @@ the next run prepares it.
 |---|---|---|
 | Every 6 days (Gmail app in Testing mode) | `./agent.sh gmail-auth` | Google expires Testing tokens after 7 days. `./agent.sh run` warns a day before |
 | If WhatsApp shows "logged out" | `./agent.sh whatsapp-login` | Scan the QR again (WhatsApp → Linked devices) |
-| First `./agent.sh apply` | Sign in to LinkedIn in the window that opens | It remembers you in `data/browser-profile` (inside your profile folder) |
 | A form question you just answered in the dashboard | `./agent.sh retry` | Submits the forms that waited only for it (the next run does it anyway) |
 | Jobs prepared before the age check existed | `./agent.sh recheck` | Reads their real posting dates; moves those older than 30 days to Skipped |
 | A job the agent shouldn't have brought | Dashboard → job → **Not a fit** + reason | After a couple of the same kind, Settings suggests a rule (exclude a title word, block a company) |
@@ -147,3 +146,20 @@ the next run prepares it.
 | A good job was skipped | `./agent.sh skipped` | `./agent.sh redo <id>`; if it keeps happening, tell the scoring (config `scoring.thresholds`) |
 
 Every real problem and its fix: `docs/dev/troubleshooting.md`.
+
+---
+
+## 7. Apply with the add-on
+
+**Once:** in Brave or Chrome open `brave://extensions`, turn on **Developer mode**, press **Load unpacked** and choose this repository's `extension` folder, then pin it. After an update, press its reload arrow there. To use a browser other than your default one, set `forms.browser` (for example `brave-browser`) in your `config.yaml`.
+
+| Job | Do this |
+|---|---|
+| A company form | **Open to apply**, then click the add-on. It fills the empty fields and attaches the CV and letter. Check, finish what it lists, submit |
+| LinkedIn, Indeed, Wuzzuf, Bayt | **Open to apply**, press the board's own Apply button, then click the add-on on the company's form. Easy Apply stays by hand |
+| A form with several steps | Click the add-on again on each step |
+| WhatsApp | **Message on WhatsApp**; when the chat has loaded, click the add-on. Check the chat and the message, press Send |
+
+Press **Mark applied** afterwards. The first time, WhatsApp Web asks you to link this browser (WhatsApp → Linked devices).
+
+**It learns:** what you type or correct is remembered when you go on, and used on the next form. See and remove it in Profile → Learned from your forms; the switch is in the add-on's settings.

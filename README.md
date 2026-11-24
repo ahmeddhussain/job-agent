@@ -35,7 +35,7 @@ All it needs is a **Claude subscription** (Pro or Max). Built with **TypeScript 
 
 - what it already submitted;
 - the email drafts waiting for your review;
-- a short list of jobs to finish yourself, each one pre-filled.
+- a short list of jobs to finish yourself, each one ready to fill with the browser add-on.
 
 | Component                 | What it does                                                                                                                                                                                                 | Where                                          |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------- |
@@ -46,8 +46,9 @@ All it needs is a **Claude subscription** (Pro or Max). Built with **TypeScript 
 | Score                     | Skills fit (every match must cite your profile) and experience (in code), against your title tiers                                                                                                           | `src/pipeline/score.ts`                        |
 | Tailor                    | Claude Sonnet picks and rewrites only your true facts; a validator rejects any number, tool or claim not in your profile                                                                                     | `src/tailor/`                                  |
 | Render and ATS check      | A PDF of exactly one page, then parsed the way an applicant tracking system reads it                                                                                                                         | `src/render/`                                  |
-| Apply                     | Web forms submitted when confirmed, Gmail drafts (or ready-to-send emails without Gmail), everything else pre-filled                                                                                         | `src/apply/`                                   |
+| Apply                     | Web forms submitted when confirmed, Gmail drafts (or ready-to-send emails without Gmail), everything else ready for the add-on                                                                               | `src/apply/`                                   |
 | Dashboard                 | A local tracker: what to do, what was sent, every job and why; settings and a profile editor                                                                                                                 | `src/dashboard/`, `dashboard/index.html`       |
+| Form filler               | A browser add-on: fills the form you are on, or the WhatsApp message, with the CV; you submit or send. Learns your answers                                                                                   | `extension/`, `src/dashboard/ext.ts`           |
 | `install.sh`, `agent.sh`  | Setup checks, and every command you need                                                                                                                                                                     | repo root                                      |
 
 |                                                                                                          |                                                                                                              |
@@ -154,7 +155,7 @@ flowchart LR
   PDF --> AP{Apply}
   AP -->|form| FM[Fill + submit<br/>confirmed?]
   FM -->|yes| APPLIED[Applied]
-  FM -->|captcha · sign-in · open question| AY[Apply yourself<br/>pre-filled]
+  FM -->|captcha · sign-in · open question| AY[Apply yourself<br/>in your browser]
   AP -->|email| DR[Gmail draft, or<br/>ready-to-send email]
   AP -->|Easy Apply · boards · WhatsApp| AY
   RAW & TQ & AP --> DB[(SQLite)] --> DASH[Dashboard<br/>127.0.0.1:8080]
@@ -290,14 +291,14 @@ npm run agent -- tailor:fixtures --replay
 
 **What and why.** The agent does the searching, the writing and the form filling. You review emails and click where a site requires a human (D33).
 
-| Channel                                                                     | Agent                                                           | You                                                                          |
-| --------------------------------------------------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Email, with Gmail                                                           | Gmail **draft** (letter as body, CV attached, required subject) | Review, then `./agent.sh send` sends them all                                |
-| Email, without Gmail                                                        | The email written out, in **Apply yourself**                    | **Write the email** opens your mail app filled in; attach the CV             |
-| Web form, no captcha                                                        | Fills, uploads the CV, **submits**, checks the confirmation     | Nothing                                                                      |
-| Web form with a captcha, a sign-in, or a question your profile can't answer | Tries; if not confirmed → **Apply yourself**, with the reason   | `./agent.sh apply`: the form opens pre-filled; submit                        |
-| LinkedIn Easy Apply, Wuzzuf, Bayt, Indeed                                   | CV and letter ready → **Apply yourself**                        | `./agent.sh apply` opens the job (signed in as you), letter on the clipboard |
-| WhatsApp                                                                    | CV and letter, wa.me link                                       | Send from your phone                                                         |
+| Channel                                                                     | Agent                                                           | You                                                                       |
+| --------------------------------------------------------------------------- | --------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Email, with Gmail                                                           | Gmail **draft** (letter as body, CV attached, required subject) | Review, then `./agent.sh send` sends them all                             |
+| Email, without Gmail                                                        | The email written out, in **Apply yourself**                    | **Write the email** opens your mail app filled in; attach the CV          |
+| Web form, no captcha                                                        | Fills, uploads the CV, **submits**, checks the confirmation     | Nothing                                                                   |
+| Web form with a captcha, a sign-in, or a question your profile can't answer | Tries; if not confirmed → **Apply yourself**, with the reason   | `./agent.sh apply`: it opens in your browser; submit                      |
+| LinkedIn Easy Apply, Wuzzuf, Bayt, Indeed                                   | CV and letter ready → **Apply yourself**                        | `./agent.sh apply` opens the job in your browser, letter on the clipboard |
+| WhatsApp                                                                    | CV and message, put in the chat by the add-on; you press Send   | Press Send in your browser                                                |
 
 The agent never solves or bypasses a captcha, never logs in to your accounts, never sends WhatsApp messages, and never sends email without your command.
 
@@ -317,7 +318,7 @@ The agent never solves or bypasses a captcha, never logs in to your accounts, ne
   - Profile, Settings, and a detail panel per job.
 - **Actions:**
   - ▶ Run: run, queue only, dry run, retry forms, recheck dates;
-  - Send all drafts, Apply next (pre-filled on your desktop), quick add;
+  - Send all drafts, Apply next (in your browser), quick add;
   - "Not a fit" with reasons, favorite and blocked companies, follow-up drafts, interview prep, a CV preview.
 - **Profile:** ready form answers, questions forms asked that your profile doesn't answer, and an editor for `profile.yaml` and `titles.yaml`. The editor validates exactly like a run, keeps a `.bak` and writes atomically.
 - **Settings** are written back to your `config.yaml` and `titles.yaml`, comments kept.
@@ -383,7 +384,6 @@ npm run lint && npm run typecheck && npm test
 | Stop the agent                 | Nothing runs in the background; the dashboard stops with Ctrl-C                                                |
 | Gmail access                   | <https://myaccount.google.com/permissions> → remove the app; delete `secrets/gmail_token.json` in your profile |
 | WhatsApp                       | Phone → Linked devices → log out the agent; delete `data/wa-session` in your profile                           |
-| The apply window's sign-ins    | Delete `data/browser-profile` in your profile                                                                  |
 | Claude token (if you used one) | Revoke it in your Claude account; remove it from the profile's `.env`                                          |
 | All personal data              | Delete `profiles/<name>/`                                                                                      |
 
