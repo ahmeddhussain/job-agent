@@ -549,3 +549,22 @@ repo, commit 1769845).
 
 ## D52: Plain file names (Ahmed, 2026-11-24)
 - **Decision:** `{First}-{Last}-CV.pdf` and `{First}-{Last}-Cover-Letter.pdf`, no company or job title: a name a person would give it. Each application has its own folder, so names don't collide.
+
+---
+
+## D53: Application emails, read in live runs (Ahmed, 2026-11-25)
+- **Asked for:** add jobs applied to without the agent, and update ongoing applications, from Gmail, only in a live run.
+- **Decision:** `src/track/`. A full live run searches Gmail (after the sync, before collecting, so a job already applied to isn't prepared again), parses LinkedIn's and Indeed's notices by code, gives the rest to the extract model in batches of 6, matches each email to a job and moves its status. An application no stored job fits becomes a job (`application_mail`, mode `external`).
+- **Statuses now change by themselves** (before: only a "reply" mark). It is what was asked; the guards are: a literal quote as evidence, company and title only if they are in the email, forward moves only, a later choice of the user stands, no guess between several applications, Undo on every change.
+- **Same level:** a job not applied to is matched only at the same seniority (the trial matched "Cloud Engineer" to a skipped "Senior Cloud Engineer").
+- **Privacy:** off by default for other users. Mail from a private address is read only if it was applied to; unrelated mail leaves only its id. `docs/consent/privacy.html` says so.
+- **Trial (2026-11-25, on a copy of the database):** 90 days, 381 emails, 42 model calls, 8 minutes: 194 applications added, 32 statuses moved; friends' replies were not read by the model. Checked by hand: the first pass had a wrong match, a duplicate, a test taken for a job title, re-applications merged and 14 sent CVs missed; all fixed and tested. A few emails name no role or company and stay that way.
+- **Not counted as a source, no follow-up reminders** for these applications.
+- **Alternatives:** a Gmail label and filter kept by hand (misses most; work for the user); rules only, no model (hundreds of wordings); one model call per email (6 times the calls); reading all mail (private).
+
+---
+
+## D54: Deleting skipped jobs hides them (Ahmed, 2026-11-25)
+- **Decision:** Delete sets `jobs.deleted_at`; lists leave the job out, "show deleted" restores it. Only skipped jobs. Funnel and source numbers still count it.
+- **Why not remove the row:** dedupe compares new posts with stored jobs, so a removed job would come back with the next alert, be scored again and use the model again.
+- A deleted job that turns out to be applied to (D53) comes back.

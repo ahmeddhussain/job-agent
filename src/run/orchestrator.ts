@@ -16,6 +16,7 @@ import type { Db } from '../db/index.js';
 import { insertJob, rowToCheckedJob, updateJobStatus, type JobRow } from '../db/jobs.js';
 import type { GmailReader, GmailWriter } from '../gmail/client.js';
 import { syncGmail } from '../gmail/sync.js';
+import { trackApplications } from '../track/track.js';
 import type { FitResult } from '../llm/schemas.js';
 import { LlmError, UsageLimitError, type Llm, type LlmCallRecord } from '../llm/types.js';
 import { buildDigest, type Digest } from '../pipeline/digest.js';
@@ -50,6 +51,8 @@ export interface RunDeps {
   /** null in dry runs: no drafts, no sync writes, no digest email. */
   gmailWrite: GmailWriter | null;
   sources: SourceRun[];
+  /** Read application emails (D53): a live run over every source, with Gmail. */
+  trackMail?: boolean;
   http: PoliteHttp;
   probeHttp?: PoliteHttp;
   linkedinHttp: PoliteHttp;
@@ -100,6 +103,8 @@ export interface RunStats {
     left: number;
   };
   companies_discovered: number;
+  /** Application emails (D53); absent when they weren't read. */
+  mail?: { read: number; added: number; updated: number };
   llm: { calls: number; failed: number; output_tokens: number };
 }
 
@@ -139,6 +144,7 @@ export async function runAgent(d: RunDeps): Promise<RunReport> {
   // Set inside stopOn (a closure), so kept in an object TypeScript doesn't narrow.
   const halt: { reason: string | null } = { reason: null };
   let error: string | null = null;
+  const mailLines: string[] = [];
   const stopOn = (err: unknown): never => {
     if (err instanceof UsageLimitError) {
       halt.reason = `usage limit reached: ${err.message}`;
@@ -162,6 +168,39 @@ export async function runAgent(d: RunDeps): Promise<RunReport> {
       } catch (err) {
         d.out(`sync FAILED: ${String(err)}`);
         stats.sources.push({ name: 'sync', ok: false, inserted: 0, detail: String(err) });
+      }
+    }
+
+    // 2b. Application emails: jobs applied to without the agent, and companies' answers (D53).
+    // Before collecting, so a job already applied to isn't prepared again.
+    if (d.trackMail && d.gmailWrite && !d.dryRun) {
+      try {
+        const t = await trackApplications({
+          db,
+          cfg,
+          gmail: d.gmailWrite,
+          llm: d.llm,
+          now: d.now(),
+          runId,
+          log: d.log,
+          out: d.out,
+          paceMs: 300,
+        });
+        stats.mail = { read: t.read, added: t.added, updated: t.updated };
+        mailLines.push(...t.lines);
+        d.out(
+          `application mail: ${String(t.read)} emails looked at, ${String(t.added)} applications added, ${String(t.updated)} updated${t.complete ? '' : ' (the rest on the next run)'}`,
+        );
+        for (const l of t.lines) d.out(`  ${l}`);
+      } catch (err) {
+        if (err instanceof UsageLimitError) stopOn(err);
+        d.out(`application mail FAILED: ${String(err)}`);
+        stats.sources.push({
+          name: 'application mail',
+          ok: false,
+          inserted: 0,
+          detail: String(err),
+        });
       }
     }
 
@@ -318,6 +357,9 @@ export async function runAgent(d: RunDeps): Promise<RunReport> {
     : [];
   const digest = buildDigest(db, started.toISOString(), started.toISOString().slice(0, 10), error, [
     ...questionLines,
+    ...(mailLines.length
+      ? ['From your application emails:', ...mailLines.map((l) => `- ${l}`), '']
+      : []),
     ...healthLines(stats, halt.reason),
   ]);
   if (d.sendDigest && cfg.digest.enabled) {

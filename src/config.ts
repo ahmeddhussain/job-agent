@@ -74,6 +74,16 @@ export const ConfigSchema = z.strictObject({
     fetch_linkedin_public_page: z.boolean(),
     linkedin_min_interval_seconds: z.number().min(5),
   }),
+  /** D53: application emails, read only in live runs. */
+  tracking: z.strictObject({
+    enabled: z.boolean(),
+    first_run_days: positiveInt,
+    max_emails_per_run: positiveInt,
+    body_chars: positiveInt,
+    batch: z.number().int().min(1).max(10),
+    news_days: positiveInt,
+    skip_from: z.array(z.string().min(3)),
+  }),
   search: z.strictObject({
     /** D38: LinkedIn's public job search, one search per title and location per run. */
     linkedin: z.strictObject({

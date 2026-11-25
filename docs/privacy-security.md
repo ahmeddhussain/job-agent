@@ -24,6 +24,7 @@ only and loads nothing from the internet.
 | To | What | When |
 |---|---|---|
 | **Claude** (Anthropic, through the `claude` CLI on your subscription) | Job-post text; your profile's facts (experience, projects, skills) **without** your email and phone, which are added to the CV in code; application-form questions | Every run: reading, scoring, writing |
+| **Claude** | Emails about your applications: sender, subject and the first part of the text ([sources.md](sources.md#application-emails)) | Only if you switch on `tracking`; in full live runs |
 | **Claude** | Your CV's full text, contact details included | Once, during `./agent.sh init` |
 | **LinkedIn** | Logged-out search requests and job pages, like a browser without cookies | Every run, if LinkedIn search is on |
 | **Company job boards** | Public feed requests | Every run, if company boards are on |

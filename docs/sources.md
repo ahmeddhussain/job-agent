@@ -138,3 +138,25 @@ An old post, a forwarded email, a screenshot's text:
 
 Or paste it in the dashboard (**+ Add**). It is processed by the next run like any other
 post.
+
+## Application emails
+
+With Gmail connected, a run can read the emails about your applications. It **adds the jobs
+you applied to without the agent** and **updates the ones being tracked**: received, viewed,
+assessment, interview, offer, rejected.
+
+```yaml
+gmail:
+  enabled: true
+tracking:
+  enabled: true
+```
+
+Or Settings → **Application emails**. No new Gmail permission is needed.
+
+- **When:** only in a full live run (`./agent.sh run` or ▶ Run). Not in a dry run, "Process the queue only", or a run of one source. The first run looks 90 days back (`tracking.first_run_days`); the next ones look at what is new.
+- **What is read:** emails with application words, CVs you sent as attachments, and mail from the people and companies you applied to. Mail from a private address (Gmail, Outlook…) is read only if you applied to that address, and promotions are left out. Add a sender to `tracking.skip_from` to never read it.
+- **What is kept:** for an email about an application, the sender, subject, date and the one sentence that says what happened. For any other email, only its id.
+- **What changes:** a status only moves forward, and a status you set after the email stays. Every change needs a sentence that really is in the email. If several applications fit, none is changed.
+- **Where you see it:** Needs action → **Answers from companies**, the job panel → **Emails about this application**, the run's output and the digest. Each has **Open in Gmail** and **Undo** (or **Not my application**).
+- **Gmail itself is never changed:** nothing is sent, moved, labelled or marked as read.

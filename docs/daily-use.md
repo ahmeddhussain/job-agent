@@ -68,14 +68,14 @@ Only reachable from this machine (127.0.0.1). Click any job for its detail panel
 | Section | What it's for |
 |---|---|
 | **Today** | What needs you, rules learned from your "Not a fit" choices, tiles, last-run health, the funnel, applications per day |
-| **Needs action** | In order: questions forms asked (answer once), email drafts to send, **Apply yourself**, **follow-ups due** (a week without a reply: one click drafts a follow-up in the same Gmail thread), needs review, queued |
-| **Applied** | A board: drag a card to Interview, Offer or Rejected |
-| **Skipped** | Grouped by reason (not a fit, too old, low fit, too many years…). **Prepare anyway** queues a job |
+| **Needs action** | In order: questions forms asked (answer once), email drafts to send, **answers from companies** (found in your Gmail, if application emails are on), **Apply yourself**, **follow-ups due** (a week without a reply: one click drafts a follow-up in the same Gmail thread), needs review, queued |
+| **Applied** | A board, newest first, with a search: drag a card to Interview, Offer or Rejected. With application emails on, a run moves the cards and adds the jobs you applied to yourself |
+| **Skipped** | Grouped by reason (not a fit, too old, low fit, too many years…). **Prepare anyway** queues a job. Search, filter by reason and sort; **Select all** takes what is shown, or tick one group; **Delete** hides them (**show deleted** restores them) |
 | **All jobs** | Search (`/`), filter, sort; tick rows for **bulk actions** (prepare, mark applied, skip, not a fit) |
 | **Sources** | Which group, channel, search title, alert or board leads to applications and replies |
 | **Companies / Runs** | Boards polled; every run with its numbers |
 | **Profile** | Your facts, **ready answers** (edit, add, remove), questions waiting |
-| **Settings** | **LinkedIn search titles** and locations, source switches (channels, alerts, boards), job age, years, fit thresholds, excluded titles, **favorite** and **blocked** companies, and the learned rules to apply |
+| **Settings** | **LinkedIn search titles** and locations, source switches (channels, alerts, boards, application emails), job age, years, fit thresholds, excluded titles, **favorite** and **blocked** companies, and the learned rules to apply |
 
 The job panel shows:
 

@@ -27,7 +27,7 @@ if one differs, look for the closest match.
    - Why: apps left in "Testing" get refresh tokens that **expire after 7 days**, which would silently break the daily run.
    - "In production" without Google's verification is fine for your own account. You'll see a "Google hasn't verified this app" warning when you authorize; that's expected.
 3. **Data access** (or "Scopes"): add exactly these two:
-   - `https://www.googleapis.com/auth/gmail.readonly` (read alert emails, check Sent)
+   - `https://www.googleapis.com/auth/gmail.readonly` (read alert emails, check Sent; emails about your applications if you switch on `tracking`)
    - `https://www.googleapis.com/auth/gmail.compose` (create drafts; send only when you switch `apply.mode` to `send`)
 
 ## 3. Desktop OAuth client

@@ -222,7 +222,26 @@ export function dismissSuggestion(db: Db, key: string): void {
   ).run(key, new Date().toISOString());
 }
 
-export type BulkAction = 'prepare' | 'skip' | 'applied' | 'discard';
+export type BulkAction = 'prepare' | 'skip' | 'applied' | 'discard' | 'delete' | 'restore';
+
+/**
+ * Deletes a skipped job from the dashboard (D54). The row stays, hidden: it is what keeps the
+ * next run from collecting the same job again.
+ */
+export function deleteSkipped(db: Db, id: number): void {
+  const status = db.prepare('SELECT status FROM jobs WHERE id = ?').pluck().get(id);
+  if (status === undefined) throw new Error('job not found');
+  if (status !== 'skipped') throw new Error('only skipped jobs can be deleted');
+  db.prepare('UPDATE jobs SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL').run(
+    new Date().toISOString(),
+    id,
+  );
+}
+
+export function restoreDeleted(db: Db, id: number): void {
+  const r = db.prepare('UPDATE jobs SET deleted_at = NULL WHERE id = ?').run(id);
+  if (r.changes === 0) throw new Error('job not found');
+}
 
 export async function bulk(
   db: Db,
@@ -233,7 +252,7 @@ export async function bulk(
 ): Promise<{ done: number; failed: string[] }> {
   const failed: string[] = [];
   let done = 0;
-  const to: Record<Exclude<BulkAction, 'discard'>, Status> = {
+  const to: Record<Exclude<BulkAction, 'discard' | 'delete' | 'restore'>, Status> = {
     prepare: 'new',
     skip: 'skipped',
     applied: 'applied',
@@ -241,6 +260,8 @@ export async function bulk(
   for (const id of ids) {
     try {
       if (action === 'discard') await discardJob(db, gmail, id, reason, null);
+      else if (action === 'delete') deleteSkipped(db, id);
+      else if (action === 'restore') restoreDeleted(db, id);
       else updateJobStatus(db, id, to[action], 'ahmed', new Date().toISOString());
       done++;
     } catch (err) {
@@ -268,7 +289,7 @@ export function followupsDue(db: Db, cfg: Config, now = new Date()): FollowupDue
       .prepare(
         `SELECT j.id AS job_id, j.title, j.company, a.to_email AS "to", a.sent_at
          FROM applications a JOIN jobs j ON j.id = a.job_id
-         WHERE a.channel = 'email' AND a.sent_at IS NOT NULL AND a.sent_at <= ?
+         WHERE a.channel = 'email' AND a.mode <> 'external' AND a.sent_at IS NOT NULL AND a.sent_at <= ?
            AND a.followup_at IS NULL AND j.has_reply = 0 AND j.status = 'applied'
          ORDER BY a.sent_at`,
       )
@@ -390,7 +411,8 @@ export function sourceScoreboard(db: Db): SourceRow[] {
   const rows = db
     .prepare(
       `SELECT r.source, r.source_name, j.status, j.has_reply
-       FROM jobs j JOIN raw_items r ON r.id = j.raw_item_id WHERE j.duplicate_of IS NULL`,
+       FROM jobs j JOIN raw_items r ON r.id = j.raw_item_id
+       WHERE j.duplicate_of IS NULL AND r.source <> 'application_mail'`,
     )
     .all() as { source: string; source_name: string | null; status: string; has_reply: number }[];
   const label = (s: string, n: string | null) => {

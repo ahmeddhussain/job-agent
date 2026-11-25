@@ -112,3 +112,27 @@ export const InterviewPrepSchema = z.strictObject({
   questions_to_ask: z.array(z.string().max(250)).max(5),
 });
 export type InterviewPrep = z.infer<typeof InterviewPrepSchema>;
+
+export const MAIL_KINDS = [
+  'none',
+  'applied',
+  'viewed',
+  'assessment',
+  'interview',
+  'offer',
+  'rejected',
+  'other',
+] as const;
+export const ApplicationMailSchema = z.strictObject({
+  mails: z
+    .array(
+      z.strictObject({
+        id: z.number().int(),
+        kind: z.enum(MAIL_KINDS),
+        company: z.string().max(120).nullable().describe('The hiring company, as written'),
+        title: z.string().max(160).nullable().describe('The job title applied to, as written'),
+        quote: z.string().max(300).describe('One sentence or phrase copied exactly from the email'),
+      }),
+    )
+    .max(12),
+});

@@ -37,7 +37,8 @@ export type RawSource =
   | 'html'
   | 'whatsapp_export'
   | 'manual'
-  | 'linkedin';
+  | 'linkedin'
+  | 'application_mail';
 
 export interface RawItemInput {
   source: RawSource;

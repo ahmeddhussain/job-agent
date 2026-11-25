@@ -95,6 +95,8 @@ export function updateJobStatus(
       at,
       jobId,
     );
+  // A deleted job that gets a status again (rescued, or found to be applied to) is back.
+  if (to !== 'skipped') db.prepare('UPDATE jobs SET deleted_at = NULL WHERE id = ?').run(jobId);
   if (from !== to) {
     db.prepare(
       `INSERT INTO status_history (job_id, from_status, to_status, by, at) VALUES (?, ?, ?, ?, ?)`,

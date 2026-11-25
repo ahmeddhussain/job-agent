@@ -813,3 +813,12 @@ exceeded` from `whatsapp-web.js/src/Client.js:139`, exit code 1. Nothing was col
 
 **Fix.** An upload box without a label takes the words and names of the boxes around it, never as far as another upload box. Search, menu, header and footer boxes are skipped. After attaching, the add-on waits for the page to settle and finds redrawn fields again. Checked on the form itself: the site started its own upload (blocked in the test).
 
+---
+
+## 41. Gmail: "Quota exceeded … Units per minute per user"
+
+**Symptom.** 2026-11-25, reading about 100 emails in half a minute: HTTP 403, `Quota exceeded for quota metric 'Total Query Cost'`.
+
+**Diagnosis.** The limit is 6,000 units a minute per user (from the error itself). Reading whole emails fast uses it up, and a 403 looks like a lost permission.
+
+**Fix.** Reads in the Gmail facade wait 20 seconds and try again (5 times) on a quota error only. The tracker also pauses 0.3 s between emails. 381 emails were then read without a failure.

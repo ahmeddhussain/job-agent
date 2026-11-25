@@ -137,6 +137,7 @@ describe('migration 002', () => {
       '004_dates_questions.sql',
       '005_search_channels.sql',
       '006_learned_answers.sql',
+      '007_mail_tracking.sql',
     ]);
     expect(
       db.prepare('SELECT count(*) FROM raw_items WHERE processed_at IS NULL').pluck().get(),

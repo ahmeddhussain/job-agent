@@ -39,6 +39,7 @@ import {
   suggestions,
 } from './actions.js';
 import { RunManager } from './runner.js';
+import { mailUrl, markSeen, undoMail, unseenNews } from '../track/track.js';
 import { AssistSession } from './assist.js';
 import { forget, learnedAnswers } from '../apply/learned.js';
 import {
@@ -71,6 +72,8 @@ const JobsQuery = z.object({
   priority: z.coerce.number().int().min(1).max(3).optional(),
   q: z.string().max(200).optional(),
   include_duplicates: z.enum(['true', 'false']).optional(),
+  /** true: only the deleted jobs; otherwise they are left out (D54). */
+  deleted: z.enum(['true', 'false']).optional(),
 });
 const Patch = z
   .strictObject({
@@ -270,6 +273,7 @@ const SettingsBody = z
     channels_follow_all: z.boolean(),
     channels_exclude: z.array(z.string().min(1).max(120)).max(100),
     alerts_enabled: z.boolean(),
+    tracking_enabled: z.boolean(),
     ats_enabled: z.boolean(),
     max_job_age_days: z.number().int().min(1).max(365),
     max_years_required: z.number().int().min(0).max(20),
@@ -290,10 +294,11 @@ const DiscardBody = z.strictObject({
   note: z.string().max(500).optional(),
 });
 const BulkBody = z.strictObject({
-  ids: z.array(z.number().int().positive()).min(1).max(500),
-  action: z.enum(['prepare', 'skip', 'applied', 'discard']),
+  ids: z.array(z.number().int().positive()).min(1).max(2000),
+  action: z.enum(['prepare', 'skip', 'applied', 'discard', 'delete', 'restore']),
   reason: z.enum(DISCARD_REASONS).optional(),
 });
+const NewsBody = z.strictObject({ ids: z.array(z.string().min(1).max(64)).max(500).optional() });
 const KeyBody = z.strictObject({ key: z.string().min(3).max(200) });
 const AddBody = z.strictObject({
   text: z.string().min(40).max(20_000),
@@ -435,6 +440,23 @@ export function buildDashboard(cfg: Config, db: Db, opts: DashboardOptions = {})
   });
   app.get('/api/sources', (_req, reply) => reply.send({ sources: sourceScoreboard(db) }));
 
+  // ------------------------------------------------------------------ application mail (D53)
+  app.get('/api/news', (_req, reply) => reply.send({ news: unseenNews(db) }));
+  app.post('/api/news/seen', (req, reply) => {
+    const b = NewsBody.safeParse(req.body);
+    if (!b.success) return reply.code(400).send({ error: 'bad request' });
+    return reply.send({ ok: true, done: markSeen(db, b.data.ids ?? null) });
+  });
+  app.post('/api/news/undo', (req, reply) => {
+    const b = z.strictObject({ id: z.string().min(1).max(64) }).safeParse(req.body);
+    if (!b.success) return reply.code(400).send({ error: 'bad request' });
+    try {
+      return reply.send({ ok: true, ...undoMail(db, b.data.id) });
+    } catch (err) {
+      return reply.code(409).send({ error: err instanceof Error ? err.message : String(err) });
+    }
+  });
+
   // ------------------------------------------------------------------ quick add, undo
   app.post('/api/add', (req, reply) => {
     const b = AddBody.safeParse(req.body);
@@ -539,6 +561,7 @@ export function buildDashboard(cfg: Config, db: Db, opts: DashboardOptions = {})
     if (!q.success) return reply.code(400).send({ error: z.prettifyError(q.error) });
     const where: string[] = [];
     const args: Record<string, unknown> = {};
+    where.push(q.data.deleted === 'true' ? 'j.deleted_at IS NOT NULL' : 'j.deleted_at IS NULL');
     if (q.data.include_duplicates !== 'true') where.push('j.duplicate_of IS NULL');
     if (q.data.status) {
       where.push('j.status = @status');
@@ -583,7 +606,24 @@ export function buildDashboard(cfg: Config, db: Db, opts: DashboardOptions = {})
       l.push({ to: h.to_status, by: h.by, at: h.at });
       hist.set(h.job_id, l);
     }
-    return reply.send({ jobs: rows.map((r) => ({ ...toJob(r), history: hist.get(r.id) ?? [] })) });
+    const mail = new Map<number, Record<string, unknown>[]>();
+    for (const m of db
+      .prepare(
+        `SELECT job_id, message_id, kind, at, quote, subject, sender, to_status FROM application_mail
+         WHERE job_id IS NOT NULL ORDER BY at`,
+      )
+      .all() as { job_id: number; message_id: string }[]) {
+      const l = mail.get(m.job_id) ?? [];
+      l.push({ ...m, url: mailUrl(m.message_id) });
+      mail.set(m.job_id, l);
+    }
+    return reply.send({
+      jobs: rows.map((r) => ({
+        ...toJob(r),
+        history: hist.get(r.id) ?? [],
+        mail: mail.get(r.id) ?? [],
+      })),
+    });
   });
 
   app.get('/api/stats', (_req, reply) => {
@@ -604,12 +644,22 @@ export function buildDashboard(cfg: Config, db: Db, opts: DashboardOptions = {})
       | undefined;
     const byStatus = Object.fromEntries(
       (
-        db.prepare('SELECT status, count(*) n FROM jobs WHERE duplicate_of IS NULL GROUP BY status').all() as {
+        db
+          .prepare(
+            'SELECT status, count(*) n FROM jobs WHERE duplicate_of IS NULL AND deleted_at IS NULL GROUP BY status',
+          )
+          .all() as {
           status: string;
           n: number;
         }[]
       ).map((r) => [r.status, r.n]),
     );
+    // Deleted jobs still count as seen (the funnel), just not in the lists.
+    const deleted = db.prepare('SELECT count(*) FROM jobs WHERE deleted_at IS NOT NULL').pluck().get() as number;
+    const deletedUnique = db
+      .prepare('SELECT count(*) FROM jobs WHERE deleted_at IS NOT NULL AND duplicate_of IS NULL')
+      .pluck()
+      .get() as number;
     // Applied per day: status changes to applied (by sync, send mode or Ahmed), last 14 days.
     const days: { date: string; count: number }[] = [];
     const today = new Date();
@@ -651,7 +701,7 @@ export function buildDashboard(cfg: Config, db: Db, opts: DashboardOptions = {})
           }
         : null,
       stale_run_hours: cfg.dashboard.stale_run_hours,
-      counts: { by_status: byStatus },
+      counts: { by_status: byStatus, deleted, deleted_unique: deletedUnique },
       applied_per_day: days,
       companies,
       unread_items: queue,

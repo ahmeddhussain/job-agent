@@ -59,6 +59,8 @@ gmail:
   enabled: true                   # after ./agent.sh gmail-auth
 alerts:
   enabled: true                   # job-alert emails in Gmail (needs gmail)
+tracking:
+  enabled: true                   # live runs read emails about your applications (needs gmail)
 digest:
   enabled: true                   # a summary email after each run (needs gmail)
   to: you@gmail.com

@@ -108,7 +108,7 @@ function depsFor(
   io: Io,
   extra: Pick<
     RunDeps,
-    'gmailRead' | 'gmailWrite' | 'sources' | 'dryRun' | 'sendDigest' | 'forms'
+    'gmailRead' | 'gmailWrite' | 'sources' | 'dryRun' | 'sendDigest' | 'forms' | 'trackMail'
   > & {
     linkedinHttp?: PoliteHttp;
     calls: LlmCallRecord[];
@@ -128,6 +128,7 @@ function depsFor(
     gmailRead: extra.gmailRead,
     gmailWrite: extra.gmailWrite,
     sources: extra.sources,
+    trackMail: extra.trackMail ?? false,
     http: new PoliteHttp({
       userAgent: cfg.ats.user_agent,
       minIntervalMs: cfg.enrich.min_interval_seconds * 1000,
@@ -265,6 +266,8 @@ export async function runCommand(cfg: Config, flags: RunFlags, io: Io): Promise<
         gmailRead: g,
         gmailWrite: dryRun ? null : g,
         sources,
+        // Only a full live run reads application emails (D53): not a dry run, the queue, or one source.
+        trackMail: cfg.tracking.enabled && !dryRun && flags.collect !== false && !flags.source,
         dryRun,
         outputRoot: dryRun ? join(cfg.apply.output_dir, 'dry-run') : cfg.apply.output_dir,
         sendDigest: !dryRun && g ? (dg) => sendDigest(g, cfg, dg) : null,

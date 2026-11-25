@@ -54,6 +54,7 @@ export interface Settings {
   channels_follow_all: boolean;
   channels_exclude: string[];
   alerts_enabled: boolean;
+  tracking_enabled: boolean;
   ats_enabled: boolean;
   max_job_age_days: number;
   max_years_required: number;
@@ -74,6 +75,7 @@ export function readSettings(cfg: Config): Settings {
     channels_follow_all: cfg.whatsapp.channels.follow_all,
     channels_exclude: cfg.whatsapp.channels.exclude,
     alerts_enabled: cfg.alerts.enabled,
+    tracking_enabled: cfg.tracking.enabled,
     ats_enabled: cfg.ats.enabled,
     max_job_age_days: cfg.filters.max_job_age_days,
     max_years_required: cfg.filters.max_years_required,
@@ -93,6 +95,7 @@ const PATHS: Record<Exclude<keyof Settings, 'excluded_titles' | 'thresholds'>, s
   channels_follow_all: ['whatsapp', 'channels', 'follow_all'],
   channels_exclude: ['whatsapp', 'channels', 'exclude'],
   alerts_enabled: ['alerts', 'enabled'],
+  tracking_enabled: ['tracking', 'enabled'],
   ats_enabled: ['ats', 'enabled'],
   max_job_age_days: ['filters', 'max_job_age_days'],
   max_years_required: ['filters', 'max_years_required'],

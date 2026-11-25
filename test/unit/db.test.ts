@@ -21,8 +21,10 @@ describe('database', () => {
       '004_dates_questions.sql',
       '005_search_channels.sql',
       '006_learned_answers.sql',
+      '007_mail_tracking.sql',
     ]);
     expect(listTables(db)).toEqual([
+      'application_mail',
       'applications',
       'companies',
       'company_probes',
@@ -51,6 +53,7 @@ describe('database', () => {
       '004_dates_questions.sql',
       '005_search_channels.sql',
       '006_learned_answers.sql',
+      '007_mail_tracking.sql',
     ]);
   });
 

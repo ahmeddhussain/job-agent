@@ -23,6 +23,12 @@ Partly, and only where it's safe:
 | A form with a captcha, a sign-in, LinkedIn Easy Apply, Wuzzuf, Bayt, Indeed | Prepares everything; **Open to apply** opens it in your own browser; the add-on fills it, you submit |
 | WhatsApp | Prepares the CV and message; the add-on puts them in the chat, you press Send |
 
+### Does it notice jobs I applied to myself, and what companies answer?
+
+Yes, if you connect Gmail and switch on **Application emails**
+([sources.md](sources.md#application-emails)). Each full run then adds those jobs and moves
+the ones being tracked.
+
 ### Will it lie on my CV?
 
 No. Every CV, letter and answer is checked against your `profile.yaml`: no skill, number,

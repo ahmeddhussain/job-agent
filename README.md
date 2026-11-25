@@ -47,6 +47,7 @@ All it needs is a **Claude subscription** (Pro or Max). Built with **TypeScript 
 | Tailor                    | Claude Sonnet picks and rewrites only your true facts; a validator rejects any number, tool or claim not in your profile                                                                                     | `src/tailor/`                                  |
 | Render and ATS check      | A PDF of exactly one page, then parsed the way an applicant tracking system reads it                                                                                                                         | `src/render/`                                  |
 | Apply                     | Web forms submitted when confirmed, Gmail drafts (or ready-to-send emails without Gmail), everything else ready for the add-on                                                                               | `src/apply/`                                   |
+| Track                     | Optional: a live run reads the emails about your applications, adds the ones you made yourself and updates the others, each change with its quote and Undo                                                   | `src/track/`                                   |
 | Dashboard                 | A local tracker: what to do, what was sent, every job and why; settings and a profile editor                                                                                                                 | `src/dashboard/`, `dashboard/index.html`       |
 | Form filler               | A browser add-on: fills the form you are on, or the WhatsApp message, with the CV; you submit or send. Learns your answers                                                                                   | `extension/`, `src/dashboard/ext.ts`           |
 | `install.sh`, `agent.sh`  | Setup checks, and every command you need                                                                                                                                                                     | repo root                                      |
@@ -313,7 +314,7 @@ The agent never solves or bypasses a captcha, never logs in to your accounts, ne
 **How it's wired** (D32, D36, D39–D43, D45): Fastify on `127.0.0.1:8080` serves `dashboard/index.html` and a small JSON API.
 
 - **Pages:**
-  - Today, Needs action, Applied (a drag-and-drop board), Skipped (by reason, with "Prepare anyway");
+  - Today, Needs action, Applied (a drag-and-drop board), Skipped (search, sort, by reason, "Prepare anyway", delete);
   - All jobs (filters, bulk actions), Sources (a scoreboard), Companies, Runs;
   - Profile, Settings, and a detail panel per job.
 - **Actions:**

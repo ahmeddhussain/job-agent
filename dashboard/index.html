@@ -312,6 +312,7 @@
     skipped: { label: "Skipped", color: "var(--muted-2)" },
   };
   const SKIP = {
+    not_an_application: ["Not my application", "You removed a job an email had added."],
     discarded: ["Not a fit (you)", "Jobs you marked as not a fit."],
     stale: ["Too old", "Posted longer ago than your age limit."],
     low_fit: ["Low fit", "Your skills score was below the threshold for this kind of title."],
@@ -327,12 +328,13 @@
     other: ["Other", ""],
   };
   const REASONS = { wrong_field: "Wrong field", too_senior: "Too senior", company: "The company", location: "Location", already_applied: "Already applied myself", other: "Other" };
-  const SOURCE = { whatsapp: "WhatsApp group", whatsapp_channel: "WhatsApp channel", whatsapp_export: "WhatsApp", alert_email: "Job alert", linkedin: "LinkedIn search", ats: "Company board", html: "Careers page", manual: "Added by hand" };
+  const SOURCE = { whatsapp: "WhatsApp group", whatsapp_channel: "WhatsApp channel", whatsapp_export: "WhatsApp", alert_email: "Job alert", linkedin: "LinkedIn search", ats: "Company board", html: "Careers page", manual: "Added by hand", application_mail: "Applied without the agent" };
+  const MAIL = { applied: ["Received", ""], viewed: ["Viewed", ""], assessment: ["Assessment", "warn"], interview: ["Interview", "good"], offer: ["Offer", "good"], rejected: ["Rejected", "bad"], other: ["Reply", "accent"] };
   const CHANNEL = { email: "Email", form: "Web form", whatsapp_dm: "WhatsApp", unknown: "Unknown" };
   const RUNS = { run: "Run", queue: "Process the queue", dry_run: "Dry run", send: "Send reviewed drafts", retry: "Retry waiting forms", recheck: "Recheck posting dates" };
 
   const state = { pfiles: null, pfilesLoading: false, pfile: "profile", pdraft: {}, pfileErr: "", jobs: [], dup: [], stats: null, profile: null, runs: [], settings: null, editable: false, sugg: [], sources: [], follow: [], run: null,
-    tab: "today", q: "", status: "", source: "", mode: "", channel: "", within: "", minfit: 0, sort: { k: "posted", d: -1 }, showDup: false, open: null, dtab: "overview", sel: new Set(), cv: false, kf: -1, applyQueue: false, assistOpen: null };
+    tab: "today", q: "", status: "", source: "", mode: "", channel: "", within: "", minfit: 0, sort: { k: "posted", d: -1 }, showDup: false, deleted: [], news: [], aq: "", sk: { q: "", reason: "", sort: "posted", group: true, deleted: false }, openGroups: null, open: null, dtab: "overview", sel: new Set(), cv: false, kf: -1, applyQueue: false, assistOpen: null };
 
   // ---------------------------------------------------------------- helpers
   const rel = (iso) => {
@@ -354,6 +356,7 @@
     t.innerHTML = `${esc(msg)}${undo ? `<span class="undo" id="undo">Undo</span>` : ""}`;
     t.classList.add("show"); clearTimeout(t._h); t._h = setTimeout(() => { t.classList.remove("show"); undoFn = null; }, undo ? 6000 : 3200);
   };
+  const findJob = (id) => state.jobs.find((x) => x.id === id) || state.dup.find((x) => x.id === id) || state.deleted.find((x) => x.id === id);
   const by = (s) => state.jobs.filter((j) => j.status === s);
   const isManual = (j) => j.status === "ready" && (j.app_mode === "manual" || j.app_mode === "package");
   const isDraft = (j) => j.status === "ready" && j.apply_channel === "email";
@@ -378,11 +381,15 @@
 
   async function load() {
     try {
-      const [j, d, s, p, r, st, sg, so, fu, run] = await Promise.all([
+      const [j, d, s, p, r, st, sg, so, fu, run, del, nw] = await Promise.all([
         api("/api/jobs"), api("/api/jobs?include_duplicates=true&status=skipped"), api("/api/stats"), api("/api/profile"), api("/api/runs"),
         api("/api/settings"), api("/api/suggestions"), api("/api/sources"), api("/api/followups"), api("/api/run"),
+        api("/api/jobs?deleted=true&include_duplicates=true"), api("/api/news"),
       ]);
-      Object.assign(state, { jobs: j.jobs, dup: d.jobs.filter((x) => x.skip_reason === "duplicate"), stats: s, profile: p, runs: r.runs, settings: st.settings, editable: st.editable, sugg: sg.suggestions, sources: so.sources, follow: fu.due, run });
+      Object.assign(state, { jobs: j.jobs, dup: d.jobs.filter((x) => x.skip_reason === "duplicate"), stats: s, profile: p, runs: r.runs, settings: st.settings, editable: st.editable, sugg: sg.suggestions, sources: so.sources, follow: fu.due, run, deleted: del.jobs, news: nw.news });
+      // A selection only holds jobs that are still listed.
+      const ids = new Set([...state.jobs, ...state.dup, ...state.deleted].map((x) => x.id));
+      for (const id of [...state.sel]) if (!ids.has(id)) state.sel.delete(id);
       $("banner").classList.remove("show");
     } catch (e) {
       $("banner").textContent = `The agent's API isn't reachable (${e.message}). Start it with ./agent.sh dashboard.`;
@@ -392,7 +399,7 @@
   }
 
   async function setStatus(id, status, msg) {
-    const j = state.jobs.find((x) => x.id === id) || state.dup.find((x) => x.id === id);
+    const j = findJob(id);
     const prev = j?.status;
     try {
       await api(`/api/jobs/${id}`, { method: "PATCH", body: JSON.stringify({ status }) });
@@ -405,7 +412,7 @@
   async function patch(id, body, msg) {
     try {
       const r = await api(`/api/jobs/${id}`, { method: "PATCH", body: JSON.stringify(body) });
-      const j = state.jobs.find((x) => x.id === id) || state.dup.find((x) => x.id === id);
+      const j = findJob(id);
       if (j) Object.assign(j, body);
       toast(r.note || msg || "Saved"); render(); if (state.open === id) openDrawer(id);
     } catch (e) { toast(`Not saved: ${e.message}`); }
@@ -414,7 +421,7 @@
   // ---------------------------------------------------------------- nav + counts
   function counts() {
     const qs = state.profile?.questions?.length || 0;
-    const action = state.jobs.filter((j) => isManual(j) || isDraft(j) || j.status === "needs_review").length + qs + state.follow.length;
+    const action = state.jobs.filter((j) => isManual(j) || isDraft(j) || j.status === "needs_review").length + qs + state.follow.length + state.news.length;
     const set = (id, n, hot) => { const el = $(id); el.textContent = n ? n : ""; el.classList.toggle("hot", !!hot && n > 0); };
     set("c-action", action, true); set("c-applied", appliedSet().length); set("c-skipped", by("skipped").length);
     set("c-all", state.jobs.length); set("c-profile", qs, true); set("c-settings", state.sugg.length, true);
@@ -535,7 +542,7 @@
       ["New · 24 h", fresh, "matches", "all"],
     ];
     const sources = (stats.sources || []).map((x) => `<span class="chip ${x.ok ? "good" : "bad"}">${esc(x.name)} · ${x.ok ? esc(String(x.inserted)) + " new" : "failed"}</span>`).join("");
-    const steps = [["Jobs seen", J.length + state.dup.length], ["Unique", J.length], ["Matched", J.filter((j) => j.status !== "skipped").length], ["Prepared", J.filter((j) => ["ready", "applied", "interview", "offer", "rejected"].includes(j.status)).length], ["Applied", ap.length], ["Interview+", interviews]];
+    const steps = [["Jobs seen", J.length + state.dup.length + (state.stats?.counts?.deleted || 0)], ["Unique", J.length + (state.stats?.counts?.deleted_unique || 0)], ["Matched", J.filter((j) => j.status !== "skipped").length], ["Prepared", J.filter((j) => ["ready", "applied", "interview", "offer", "rejected"].includes(j.status)).length], ["Applied", ap.length], ["Interview+", interviews]];
     const max = Math.max(1, steps[0][1]);
     const parts = [qs.length && `${qs.length} question${qs.length > 1 ? "s" : ""} to answer`, drafts.length && `${drafts.length} draft${drafts.length > 1 ? "s" : ""} to send`, manual.length && `${manual.length} to apply yourself`, review.length && `${review.length} to review`, state.follow.length && `${state.follow.length} follow-up${state.follow.length > 1 ? "s" : ""} due`].filter(Boolean).join(" · ");
     const hour = new Date().getHours();
@@ -590,6 +597,7 @@
     const fol = state.follow;
     return `<div class="page-h"><h2>Needs action</h2><div class="hint">Everything that waits for you, in the order to do it.</div></div>
       ${qs.length ? `<div class="panel"><h3>Questions forms asked that your profile doesn't answer</h3><div class="sub">Answer once: saved to your profile, and the waiting forms are retried on the next run.</div>${questionRows(qs)}</div>` : ""}
+      ${state.news.length ? `<div class="section-title"><h3>Answers from companies</h3><span class="count hot">${state.news.length}</span><button class="btn small" data-seen="all">Mark all as read</button></div><div class="section-hint">Found in your Gmail by the last run. The quote is the email's own sentence; “Undo” takes back what it changed here.</div><div class="cards">${state.news.map(newsCard).join("")}</div>` : ""}
       ${sec("Email drafts to send", "Read them in Gmail Drafts; edit or delete any; then send all at once.", drafts, (j) => jobCard(j, `<div class="reason">To ${esc(j.apply_email)}</div>`, `${link(j.gmail_draft_url, "Open draft", "btn small primary")}${docs(j)}<button class="btn small good" data-status="${j.id}:applied">Mark sent</button>${notFit(j.id)}`), drafts.length ? `<button class="btn small primary" data-act="sendall">Send all ${drafts.length}</button>` : "")}
       ${sec("Apply yourself", "Prepared but not submitted: a captcha, a sign-in, Easy Apply or an open question. “Open to apply” opens it in your browser; click the form-filler add-on on the company's form or the WhatsApp chat, check it, then submit or send.", manual, (j) => jobCard(j, `<div class="reason">${esc(j.manual_reason || "apply on the site")}</div>`, `${j.mailto ? mailLink(j.mailto, "Write the email", "btn small primary") : j.apply_channel === "whatsapp_dm" ? `<button class="btn small primary" data-assist="${j.id}">Message on WhatsApp</button>` : `<button class="btn small primary" data-assist="${j.id}">${state.assistOpen === j.id ? "Reopen" : "Open to apply"}</button>`}${docs(j)}<button class="btn small good" data-status="${j.id}:applied">Mark applied</button>${notFit(j.id)}`), manual.length ? `<button class="btn small primary" data-act="applyall">Apply all, one by one</button>` : "")}
       ${fol.length ? `<div class="section-title"><h3>Follow-ups due</h3><span class="count">${fol.length}</span></div><div class="section-hint">Email applications with no reply after a week. One click drafts a short follow-up in the same Gmail thread; you send it.</div>
@@ -598,26 +606,78 @@
       ${queued.length ? sec("Queued", "Prepared by the next run, or now with ▶ Run → Process the queue only.", queued, (j) => jobCard(j, `<div class="faint">job ${j.id}</div>`, `<button class="btn small" data-status="${j.id}:skipped">Unqueue</button>`), `<button class="btn small primary" data-run="queue">Process the queue now</button>`) : ""}`;
   }
 
+  const mailChip = (k) => `<span class="chip ${(MAIL[k] || ["", ""])[1]}">${esc((MAIL[k] || [k])[0])}</span>`;
+  const mailChange = (n) => n.to_status ? n.created_job ? `added as ${STATUS[n.to_status]?.label || n.to_status}` : `moved from ${STATUS[n.from_status]?.label || n.from_status} to ${STATUS[n.to_status]?.label || n.to_status}` : "";
+  const newsCard = (n) => `<div class="card"><div class="top"><div><div class="title" ${n.job_id ? `data-open="${n.job_id}"` : ""}>${esc(n.job_title || n.title || n.subject)}</div><div class="muted">${esc(n.job_company || n.company || n.sender || "")} · ${esc(rel(n.at))}</div></div><div>${mailChip(n.kind)}</div></div>
+      <div class="reason">“${esc(n.quote)}”</div>${mailChange(n) ? `<div class="faint">${esc(mailChange(n))}</div>` : n.job_id ? "" : `<div class="faint">no tracked application matches this email</div>`}
+      <div class="row-actions">${link(n.url, "Open in Gmail", "btn small primary")}<button class="btn small" data-seen="${esc(n.message_id)}">Mark as read</button>${n.to_status ? `<button class="btn small" data-mailundo="${esc(n.message_id)}">${n.created_job ? "Not my application" : "Undo"}</button>` : ""}</div></div>`;
+
   // ---------------------------------------------------------------- Applied board
+  const lastMail = (j) => (j.mail || []).filter((m) => m.kind !== "applied").at(-1);
   function applied() {
     const cols = [["applied", "Applied"], ["interview", "Interview"], ["offer", "Offer"], ["rejected", "Rejected by the company"]];
     const card = (j) => `<div class="mini" draggable="true" data-drag="${j.id}"><div class="title" data-open="${j.id}" style="font-size:13.5px">${esc(j.title)}</div><div class="faint">${company(j)}</div>
-      <div class="faint" style="margin-top:4px">${j.has_reply ? `<span class="chip good">● reply</span>` : ""}${esc(j.app_mode === "submitted" ? "form submitted" : CHANNEL[j.apply_channel] || "applied")} · ${esc(rel(appliedAt(j) || j.posted_at))}</div></div>`;
-    return `<div class="page-h"><h2>Applied</h2><div class="hint">Drag a card when a company answers. Replies to your emails are detected on every run.</div></div>
-      <div class="board">${cols.map(([k, l]) => { const list = state.jobs.filter((j) => j.status === k && (k !== "rejected" || everApplied(j))); return `<div class="col" data-col="${k}"><h4>${l}<span class="count">${list.length || ""}</span></h4>${list.map(card).join("") || `<div class="faint" style="padding:6px">Drop cards here</div>`}</div>`; }).join("")}</div>`;
+      <div class="faint" style="margin-top:4px">${lastMail(j) ? mailChip(lastMail(j).kind) : j.has_reply ? `<span class="chip good">● reply</span>` : ""}${esc(j.app_mode === "submitted" ? "form submitted" : j.app_mode === "external" ? "applied yourself" : CHANNEL[j.apply_channel] || "applied")} · ${esc(rel(appliedAt(j) || j.posted_at))}</div></div>`;
+    const words = state.aq.toLowerCase().split(/\s+/).filter(Boolean);
+    const match = (j) => words.every((w) => [j.title, j.company, j.apply_email, j.notes, j.app_mode === "external" ? "without the agent" : ""].join(" ").toLowerCase().includes(w));
+    const when = (j) => String(lastMail(j)?.at || appliedAt(j) || j.posted_at || "");
+    return `<div class="page-h"><h2>Applied</h2><div class="hint">Newest first. ${state.settings?.tracking_enabled ? "Every run reads your application emails: answers move the cards, and jobs you applied to yourself are added." : "Replies to your emails are detected on every run."} Drag a card to move it yourself.</div></div>
+      <div class="filters"><input type="search" id="aq" placeholder="Search title, company, email, notes…" value="${esc(state.aq)}"></div>
+      <div class="board">${cols.map(([k, l]) => { const list = state.jobs.filter((j) => j.status === k && (k !== "rejected" || everApplied(j)) && match(j)).sort((a, b) => when(b).localeCompare(when(a))); return `<div class="col" data-col="${k}"><h4>${l}<span class="count">${list.length || ""}</span></h4>${list.map(card).join("") || `<div class="faint" style="padding:6px">Drop cards here</div>`}</div>`; }).join("")}</div>`;
   }
 
   // ---------------------------------------------------------------- Skipped
+  const SK_SORT = {
+    posted: ["Newest posted", (a, b) => String(postedOf(b) || "").localeCompare(String(postedOf(a) || ""))],
+    oldest: ["Oldest posted", (a, b) => String(postedOf(a) || "").localeCompare(String(postedOf(b) || ""))],
+    fit: ["Best fit", (a, b) => (b.fit_score ?? -1) - (a.fit_score ?? -1)],
+    fitlow: ["Lowest fit", (a, b) => (a.fit_score ?? -1) - (b.fit_score ?? -1)],
+    title: ["Title A–Z", (a, b) => a.title.localeCompare(b.title)],
+    company: ["Company A–Z", (a, b) => (a.company || "￿").localeCompare(b.company || "￿")],
+    years: ["Most years asked", (a, b) => (b.years_min ?? -1) - (a.years_min ?? -1)],
+  };
+  const skippedPool = () => state.sk.deleted ? state.deleted : by("skipped").concat(state.showDup ? state.dup : []);
+  function skippedRows() {
+    const k = state.sk, words = k.q.toLowerCase().split(/\s+/).filter(Boolean);
+    return skippedPool().filter((j) => (!k.reason || skipKey(j) === k.reason)
+      && words.every((w) => [j.title, j.company, j.location, j.source_name, SOURCE[j.source], (SKIP[skipKey(j)] || [skipKey(j)])[0], REASONS[j.discard_reason], j.notes].join(" ").toLowerCase().includes(w)))
+      .sort(SK_SORT[k.sort][1]);
+  }
   function skipped() {
-    const list = by("skipped").concat(state.showDup ? state.dup : []);
-    const groups = {};
+    const k = state.sk, list = skippedRows(), pool = skippedPool(), groups = {}, all = {};
     for (const j of list) (groups[skipKey(j)] ||= []).push(j);
-    const order = Object.keys(SKIP).filter((k) => groups[k]).concat(Object.keys(groups).filter((k) => !SKIP[k]));
-    return `<div class="page-h"><h2>Skipped</h2><div class="hint">What the agent didn't apply to, and why. Rescue anything it missed: "Prepare anyway" queues it.</div></div>
-      <div class="filters"><label class="faint"><input type="checkbox" id="showdup" ${state.showDup ? "checked" : ""}> show duplicates (${state.dup.length})</label></div>
-      ${order.length ? order.map((k) => `<details class="group glass" ${k === "low_fit" ? "open" : ""}><summary><b style="font-family:var(--display)">${esc((SKIP[k] || [k])[0])}</b><span class="count">${groups[k].length}</span><span class="what">${esc((SKIP[k] || ["", ""])[1])}</span></summary>
-        ${groups[k].sort((a, b) => (b.fit_score ?? -1) - (a.fit_score ?? -1)).map((j) => `<div class="li">${check(j)}<div><span class="title" data-open="${j.id}" style="font-size:14px">${esc(j.title)}</span> <span class="muted">${company(j)}</span><div class="faint">${fit(j)} · posted ${esc(rel(postedOf(j)))} · ${esc(SOURCE[j.source] || j.source)}${j.years_min != null ? ` · ${j.years_min}+ yrs` : ""}${j.discard_reason ? ` · ${esc(REASONS[j.discard_reason] || j.discard_reason)}` : ""}</div></div>
-          <div class="row-actions">${link(j.apply_url_direct || j.apply_url, "Listing")}${j.discard_reason ? `<button class="btn small" data-undiscard="${j.id}">Undo</button>` : j.skip_reason !== "duplicate" ? `<button class="btn small primary" data-status="${j.id}:new">Prepare anyway</button>` : ""}</div></div>`).join("")}</details>`).join("") : `<div class="empty">Nothing skipped.</div>`}`;
+    for (const j of pool) all[skipKey(j)] = (all[skipKey(j)] || 0) + 1;
+    const known = (o) => Object.keys(SKIP).filter((x) => o[x]).concat(Object.keys(o).filter((x) => !SKIP[x]));
+    const opt = (v, l, cur) => `<option value="${esc(v)}" ${cur === v ? "selected" : ""}>${esc(l)}</option>`;
+    const shownSel = list.filter((j) => state.sel.has(j.id)).length, allSel = list.length > 0 && shownSel === list.length;
+    const row = (j, why) => `<div class="li">${check(j)}<div><span class="title" data-open="${j.id}" style="font-size:14px">${esc(j.title)}</span> <span class="muted">${company(j)}</span><div class="faint">${fit(j)} · posted ${esc(rel(postedOf(j)))} · ${esc(SOURCE[j.source] || j.source)}${j.years_min != null ? ` · ${j.years_min}+ yrs` : ""}${why ? ` · ${esc((SKIP[skipKey(j)] || [skipKey(j)])[0])}` : ""}${j.discard_reason ? ` · ${esc(REASONS[j.discard_reason] || j.discard_reason)}` : ""}</div></div>
+          <div class="row-actions">${link(j.apply_url_direct || j.apply_url, "Listing")}${k.deleted ? `<button class="btn small" data-restore="${j.id}">Restore</button>` : `${j.discard_reason ? `<button class="btn small" data-undiscard="${j.id}">Undo</button>` : j.skip_reason !== "duplicate" ? `<button class="btn small primary" data-status="${j.id}:new">Prepare anyway</button>` : ""}<button class="btn small danger" data-delete="${j.id}">Delete</button>`}</div></div>`;
+    const open = (x) => state.openGroups ? state.openGroups.has(x) : x === "low_fit";
+    const grouped = k.group && !k.reason;
+    return `<div class="page-h"><h2>${k.deleted ? "Deleted" : "Skipped"}</h2><div class="hint">${k.deleted ? "Hidden from the dashboard, kept so the same jobs aren't collected again. Restore puts one back under Skipped." : "What the agent didn't apply to, and why. Rescue anything it missed: “Prepare anyway” queues it."}</div></div>
+      <div class="filters"><input type="search" id="skq" placeholder="Search title, company, source, reason…" value="${esc(k.q)}">
+        <select id="skreason" aria-label="Reason">${opt("", "Any reason", k.reason)}${known(all).map((x) => opt(x, `${(SKIP[x] || [x])[0]} (${all[x]})`, k.reason)).join("")}</select>
+        <select id="sksort" aria-label="Sort">${Object.entries(SK_SORT).map(([x, v]) => opt(x, v[0], k.sort)).join("")}</select>
+        <label class="faint"><input type="checkbox" id="skgroup" ${k.group ? "checked" : ""}> group by reason</label>
+        ${k.deleted ? "" : `<label class="faint"><input type="checkbox" id="showdup" ${state.showDup ? "checked" : ""}> show duplicates (${state.dup.length})</label>`}
+        <label class="faint"><input type="checkbox" id="skdeleted" ${k.deleted ? "checked" : ""}> show deleted (${state.deleted.length})</label></div>
+      <div class="filters"><button class="btn small" type="button" id="skall" ${list.length ? "" : "disabled"}>${allSel ? "Unselect all" : `Select all ${list.length}`}</button>
+        ${shownSel ? k.deleted ? `<button class="btn small primary" type="button" id="skrestore">Restore ${shownSel}</button>` : `<button class="btn small danger" type="button" id="skdelete">Delete ${shownSel}</button>` : ""}
+        ${k.q || k.reason ? `<button class="btn small" id="skclear" type="button">Clear filters</button>` : ""}<span class="faint">${list.length === pool.length ? `${list.length} jobs` : `${list.length} of ${pool.length} jobs`}</span></div>
+      ${!list.length ? `<div class="empty">${k.q || k.reason ? "No jobs match." : k.deleted ? "Nothing deleted." : "Nothing skipped."}</div>`
+        : !grouped ? `<div class="glass" style="border-radius:var(--radius)">${list.map((j) => row(j, true)).join("")}</div>`
+        : known(groups).map((x) => `<details class="group glass" data-group="${esc(x)}" ${k.q || open(x) ? "open" : ""}><summary><input type="checkbox" data-selgroup="${esc(x)}" ${groups[x].every((j) => state.sel.has(j.id)) ? "checked" : ""} aria-label="Select all in this group"><b style="font-family:var(--display)">${esc((SKIP[x] || [x])[0])}</b><span class="count">${groups[x].length}</span><span class="what">${esc((SKIP[x] || ["", ""])[1])}</span></summary>${groups[x].map((j) => row(j, false)).join("")}</details>`).join("")}`;
+  }
+  // Only jobs listed in this view are deleted or restored, whatever else is selected.
+  function deleteModal(ids) {
+    modal(`<h3>Delete ${ids.length} skipped job${ids.length > 1 ? "s" : ""}?</h3><div class="sub muted">They disappear from the dashboard. The agent still remembers them, so a run doesn't bring them back. You can restore them under “show deleted”.</div>
+      <div class="row-actions" style="justify-content:flex-end;margin-top:14px"><button class="btn" data-close>Cancel</button><button class="btn primary" id="confirmdelete" data-ids="${ids.join(",")}">Delete ${ids.length}</button></div>`);
+  }
+  async function bulkIds(ids, action, msg, undo) {
+    const r = await post("/api/jobs/bulk", { ids, action });
+    if (!r) return;
+    ids.forEach((id) => state.sel.delete(id)); await load();
+    toast(`${r.done} ${msg}${r.failed.length ? `, ${r.failed.length} failed` : ""}`, undo ? () => bulkIds(ids, undo, undo === "restore" ? "restored" : "deleted") : null);
   }
 
   // ---------------------------------------------------------------- All jobs
@@ -656,7 +716,8 @@
   function renderBulk() {
     const n = state.sel.size;
     $("bulkbar").classList.toggle("show", n > 0);
-    $("bulkbar").innerHTML = n ? `<b>${n} selected</b><button class="btn small primary" data-bulk="prepare">Prepare</button><button class="btn small good" data-bulk="applied">Mark applied</button><button class="btn small" data-bulk="skip">Skip</button>
+    if (n && [...state.sel].every((id) => state.deleted.some((x) => x.id === id))) { $("bulkbar").innerHTML = `<b>${n} selected</b><button class="btn small primary" data-bulk="restore">Restore</button><button class="btn small" data-bulk="clear">Clear</button>`; return; }
+    $("bulkbar").innerHTML = n ? `<b>${n} selected</b><button class="btn small primary" data-bulk="prepare">Prepare</button><button class="btn small good" data-bulk="applied">Mark applied</button><button class="btn small" data-bulk="skip">Skip</button>${[...state.sel].every((id) => findJob(id)?.status === "skipped") ? `<button class="btn small danger" data-bulk="delete">Delete</button>` : ""}
       <span class="menu" data-menu><button class="btn small danger" type="button" data-menu-open>Not a fit ▾</button><span class="items" style="bottom:calc(100% + 4px);top:auto">${Object.entries(REASONS).map(([k, v]) => `<button type="button" data-bulk="discard:${k}">${esc(v)}</button>`).join("")}</span></span>
       <button class="btn small" data-bulk="clear">Clear</button>` : "";
   }
@@ -744,6 +805,7 @@
         <div class="setrow"><div class="lbl"><b>WhatsApp channels</b><span class="faint">Every channel you follow</span></div><div>${sw("channels_follow_all", s.channels_follow_all)}</div></div>
         <div class="setrow"><div class="lbl"><b>Channels to leave out</b><span class="faint">Names or ids</span></div>${chipEditor("channels_exclude", s.channels_exclude, "Channel name")}</div>
         <div class="setrow"><div class="lbl"><b>Job-alert emails</b><span class="faint">Indeed, Wuzzuf, Bayt (LinkedIn's are skipped)</span></div><div>${sw("alerts_enabled", s.alerts_enabled)}</div></div>
+        <div class="setrow"><div class="lbl"><b>Application emails</b><span class="faint">A full run reads emails about your applications: adds the ones you made yourself, updates the others</span></div><div>${sw("tracking_enabled", s.tracking_enabled)}</div></div>
         <div class="setrow"><div class="lbl"><b>Company boards</b><span class="faint">Configured and discovered</span></div><div>${sw("ats_enabled", s.ats_enabled)}</div></div></div>
       <div class="panel"><h3>Filters and scoring</h3>
         <div class="setrow"><div class="lbl"><b>Maximum job age</b><span class="faint">Days since posted</span></div>${num("max_job_age_days", s.max_job_age_days, 1, 365)}</div>
@@ -783,7 +845,7 @@
       ${(p.questions_to_ask || []).length ? `<h4>Ask them</h4><ul style="margin:4px 0 0 18px;padding:0">${p.questions_to_ask.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : ""}`;
   }
   function openDrawer(id, tab) {
-    const j = state.jobs.find((x) => x.id === id) || state.dup.find((x) => x.id === id); if (!j) return;
+    const j = findJob(id); if (!j) return;
     if (state.open !== id) { state.dtab = tab || "overview"; state.cv = false; } else if (tab) state.dtab = tab;
     state.open = id;
     const chips = (arr, cls) => (arr || []).map((x) => `<span class="chip ${cls}">${esc(x)}</span>`).join("");
@@ -811,7 +873,8 @@
         ${j.why_this_role ? `<h4>Why this role · your interview line</h4><div class="reason">${esc(j.why_this_role)}</div>` : ""}
         ${j.fit_summary ? `<h4>Fit</h4><div>${esc(j.fit_summary)}</div>` : ""}
         ${(j.matched || []).length || (j.missing || []).length ? `<h4>Requirements</h4><div>${chips(j.matched, "good")}${chips(j.missing, "bad")}</div>` : (j.requirements || []).length ? `<h4>Requirements</h4><div>${chips(j.requirements, "")}</div>` : ""}
-        <h4>Timeline</h4><div class="timeline">${(j.history || []).map((h) => `<div><b>${esc(STATUS[h.to]?.label || h.to)}</b> <span class="faint">by ${esc(h.by === "ahmed" ? "you" : h.by)} · ${esc(new Date(h.at).toLocaleString())}</span></div>`).join("") || `<div class="faint">—</div>`}</div>
+        ${(j.mail || []).length ? `<h4>Emails about this application</h4>${j.mail.map((m) => `<div class="reason">${mailChip(m.kind)} <span class="faint">${esc(new Date(m.at).toLocaleDateString())} · ${esc(m.sender)}</span><div><b>${esc(m.subject)}</b></div>${m.quote && m.quote !== m.subject ? `<div>“${esc(m.quote)}”</div>` : ""}<div class="row-actions" style="margin-top:4px">${link(m.url, "Open in Gmail")}${m.to_status ? `<button class="btn small" data-mailundo="${esc(m.message_id)}">Undo its change</button>` : ""}</div></div>`).join("")}` : ""}
+        <h4>Timeline</h4><div class="timeline">${(j.history || []).map((h) => `<div><b>${esc(STATUS[h.to]?.label || h.to)}</b> <span class="faint">by ${esc(h.by === "ahmed" ? "you" : h.by === "sync" ? "Gmail" : h.by)} · ${esc(new Date(h.at).toLocaleString())}</span></div>`).join("") || `<div class="faint">—</div>`}</div>
         <h4>Notes</h4><textarea id="dnotes" rows="3" placeholder="Interview date, contact, follow-up…" aria-label="Notes">${esc(j.notes || "")}</textarea><div style="margin-top:6px"><button class="btn small" id="dsavenotes">Save notes</button></div>`,
       application: () => `
         <div class="row-actions" style="margin-bottom:10px">${docs(j)}${j.files?.cv ? `<button class="btn small" id="dcv">${state.cv ? "Hide CV" : "Preview CV"}</button>` : ""}${j.files?.cv_md ? link(j.files.cv_md, "CV text") : ""}${j.ats_keywords != null ? `<span class="faint">CV covers ${Math.round(j.ats_keywords * 100)}% of the job's backed keywords</span>` : ""}</div>
@@ -895,11 +958,21 @@
     const bk = t.closest("[data-bulk]");
     if (bk) {
       const a = bk.dataset.bulk; if (a === "clear") { state.sel.clear(); return render(false); }
+      if (a === "delete") return deleteModal([...state.sel]);
       const [action, reason] = a.split(":");
       const r = await post("/api/jobs/bulk", { ids: [...state.sel], action, ...(reason ? { reason } : {}) }, (x) => `${x.done} updated${x.failed.length ? `, ${x.failed.length} failed` : ""}`);
       if (r) { state.sel.clear(); await load(); }
       return;
     }
+    if (t.id === "skall") { const l = skippedRows(), on = l.every((j) => state.sel.has(j.id)); l.forEach((j) => on ? state.sel.delete(j.id) : state.sel.add(j.id)); return render(false); }
+    if (t.id === "skdelete") return deleteModal(skippedRows().filter((j) => state.sel.has(j.id)).map((j) => j.id));
+    if (t.id === "skrestore") return bulkIds(skippedRows().filter((j) => state.sel.has(j.id)).map((j) => j.id), "restore", "restored", "delete");
+    if (t.id === "skclear") { Object.assign(state.sk, { q: "", reason: "" }); return render(false); }
+    if (t.id === "confirmdelete") { closeModal(); return bulkIds(t.dataset.ids.split(",").map(Number), "delete", "deleted", "restore"); }
+    const dl = t.closest("[data-delete]"); if (dl) return bulkIds([+dl.dataset.delete], "delete", "deleted", "restore");
+    const rs = t.closest("[data-restore]"); if (rs) return bulkIds([+rs.dataset.restore], "restore", "restored", "delete");
+    const ns = t.closest("[data-seen]"); if (ns) { const ids = ns.dataset.seen === "all" ? {} : { ids: [ns.dataset.seen] }; if (await post("/api/news/seen", ids)) await load(); return; }
+    const nu = t.closest("[data-mailundo]"); if (nu) { const r = await post("/api/news/undo", { id: nu.dataset.mailundo }, (x) => x.removed ? "Removed: not an application of yours" : `Undone: back to ${STATUS[x.status]?.label || x.status}`); if (r) { await load(); if (state.open) { if (r.removed) closeDrawer(); else openDrawer(state.open); } } return; }
     if (t.id === "selall") { filteredRows().forEach((j) => state.sel.add(j.id)); return render(false); }
     if (t.id === "clearf") { Object.assign(state, { q: "", status: "", source: "", mode: "", channel: "", within: "", minfit: 0 }); return render(false); }
     const op = t.closest("[data-open]"); if (op && !t.closest("a, button, select, input")) { openDrawer(+op.dataset.open); return; }
@@ -931,10 +1004,15 @@
   });
   document.addEventListener("change", (e) => {
     const t = e.target;
-    if (t.dataset.sel) { const id = +t.dataset.sel; t.checked ? state.sel.add(id) : state.sel.delete(id); return renderBulk(); }
+    if (t.dataset.sel) { const id = +t.dataset.sel; t.checked ? state.sel.add(id) : state.sel.delete(id); return state.tab === "skipped" ? render(false) : renderBulk(); }
     if (t.id === "dstatus") return setStatus(state.open, t.value);
     const f = { fstatus: "status", fsource: "source", fmode: "mode", fchannel: "channel" }[t.id]; if (f) { state[f] = t.value; return render(false); }
     if (t.id === "minfit") { state.minfit = +t.value; return render(false); }
+    if (t.dataset.selgroup) { skippedRows().filter((j) => skipKey(j) === t.dataset.selgroup).forEach((j) => t.checked ? state.sel.add(j.id) : state.sel.delete(j.id)); return render(false); }
+    if (t.id === "skreason") { state.sk.reason = t.value; return render(false); }
+    if (t.id === "sksort") { state.sk.sort = t.value; return render(false); }
+    if (t.id === "skgroup") { state.sk.group = t.checked; return render(false); }
+    if (t.id === "skdeleted") { state.sk.deleted = t.checked; state.sk.reason = ""; state.sel.clear(); return render(false); }
     if (t.id === "showdup") { state.showDup = t.checked; return render(false); }
     if (t.dataset.switch) return saveSettings({ [t.dataset.switch]: t.checked });
     if (t.dataset.num) { const v = +t.value; const [a, b] = t.dataset.num.split("."); return saveSettings(b ? { thresholds: { ...state.settings.thresholds, [b]: v } } : { [a]: v }); }
@@ -947,9 +1025,11 @@
       for (const id of ["pfilesave", "pfilereset"]) { const b = $(id); if (b) b.disabled = !changed; }
       return;
     }
-    if (e.target.id !== "q") return;
-    state.q = e.target.value; state.kf = -1; const pos = e.target.selectionStart; render(false);
-    const q = $("q"); q.focus(); q.setSelectionRange(pos, pos);
+    const id = e.target.id;
+    if (!["q", "skq", "aq"].includes(id)) return;
+    if (id === "q") { state.q = e.target.value; state.kf = -1; } else if (id === "skq") state.sk.q = e.target.value; else state.aq = e.target.value;
+    const pos = e.target.selectionStart; render(false);
+    const q = $(id); q.focus(); q.setSelectionRange(pos, pos);
   });
   document.addEventListener("keydown", (e) => {
     const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
@@ -957,7 +1037,7 @@
     if (e.key === "Enter" && e.target.dataset?.qinput) { document.querySelector(`[data-answer="${e.target.dataset.qinput}"]`)?.click(); return; }
     if (e.key === "Enter" && e.target.dataset?.chipadd) { const f = e.target.dataset.chipadd, v = e.target.value.trim(); if (v) saveSettings({ [f]: [...(state.settings[f] || []), v] }, `Added "${v}"`); return; }
     if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
-    if (e.key === "/") { e.preventDefault(); location.hash = "all"; setTimeout(() => $("q")?.focus(), 0); return; }
+    if (e.key === "/") { e.preventDefault(); const own = $("skq") || $("aq"); if (own) return own.focus(); location.hash = "all"; setTimeout(() => $("q")?.focus(), 0); return; }
     if (e.key === "?") return keysModal();
     if (e.key === "r") return load().then(() => toast("Refreshed"));
     if (/^[1-9]$/.test(e.key)) { location.hash = TABS[+e.key - 1]; return; }
@@ -973,6 +1053,10 @@
   document.addEventListener("dragleave", (e) => { e.target.closest?.("[data-col]")?.classList.remove("drop"); });
   document.addEventListener("drop", (e) => { const col = e.target.closest?.("[data-col]"); if (!col) return; e.preventDefault(); col.classList.remove("drop"); const id = +e.dataTransfer.getData("text/plain"); if (id) setStatus(id, col.dataset.col); });
 
+  document.addEventListener("toggle", (e) => {
+    const g = e.target.dataset?.group; if (!g || state.sk.q) return;
+    state.openGroups = new Set([...document.querySelectorAll("details[data-group]")].filter((x) => x.open).map((x) => x.dataset.group));
+  }, true);
   function route() { state.tab = (location.hash || "#today").slice(1) || "today"; state.kf = -1; closeDrawer(); render(); window.scrollTo(0, 0); }
   window.addEventListener("hashchange", route);
   $("scrim").addEventListener("click", closeDrawer);

@@ -58,6 +58,17 @@ alerts:
   fetch_linkedin_public_page: true # logged-out, no cookies, ≤ 1 req / 5 s
   linkedin_min_interval_seconds: 5
 
+tracking:
+  # D53: live runs read emails about your applications (needs Gmail): jobs you applied to
+  # yourself are added, and company answers update the ones being tracked
+  enabled: false
+  first_run_days: 90 # how far back the first run looks
+  max_emails_per_run: 600 # the rest continues on the next run
+  body_chars: 2500 # of each email, sent to the model
+  batch: 6 # emails per model call
+  news_days: 14 # older answers update the job but aren't shown as news
+  skip_from: [] # senders never read, e.g. someone@example.com
+
 search:
   linkedin:
     # D38: public job search, logged out (edit titles in the dashboard: Settings)

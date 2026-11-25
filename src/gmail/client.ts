@@ -44,6 +44,13 @@ export interface GmailWriter extends GmailReader {
   sendDraft(draftId: string): Promise<{ messageId: string; threadId: string }>;
 }
 
+/** Gmail's per-minute quota ("Quota exceeded … Units per minute per user"), not a lost permission. */
+export function isQuotaError(err: unknown): boolean {
+  const e = err as { code?: number | string; status?: number; message?: string };
+  const status = Number(e.status ?? e.code ?? 0);
+  return status === 429 || (status === 403 && /quota exceeded|rate limit/i.test(e.message ?? ''));
+}
+
 const header = (h: gmail_v1.Schema$MessagePartHeader[] | undefined, name: string) =>
   h?.find((x) => x.name?.toLowerCase() === name.toLowerCase())?.value ?? '';
 
@@ -69,8 +76,23 @@ export class GmailFacade implements GmailWriter {
   private readonly api: gmail_v1.Gmail;
   private address: string | null = null;
 
-  constructor(auth: OAuth2Client) {
+  constructor(
+    auth: OAuth2Client,
+    private readonly quotaWaitMs = 20_000,
+  ) {
     this.api = gmail({ version: 'v1', auth });
+  }
+
+  /** Reading many emails runs into the per-minute quota: wait for it and go on (D53). */
+  private async read<T>(call: () => Promise<T>): Promise<T> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        return await call();
+      } catch (err) {
+        if (!isQuotaError(err) || attempt >= 5) return explainGmailError(err);
+        await new Promise((r) => setTimeout(r, this.quotaWaitMs));
+      }
+    }
   }
 
   async myAddress(): Promise<string> {
@@ -84,14 +106,14 @@ export class GmailFacade implements GmailWriter {
     const ids: string[] = [];
     let pageToken: string | undefined;
     do {
-      const r = await this.api.users.messages
-        .list({
+      const r = await this.read(() =>
+        this.api.users.messages.list({
           userId: 'me',
           q: query,
           maxResults: Math.min(100, max),
           ...(pageToken ? { pageToken } : {}),
-        })
-        .catch(explainGmailError);
+        }),
+      );
       for (const m of r.data.messages ?? []) if (m.id) ids.push(m.id);
       pageToken = r.data.nextPageToken ?? undefined;
     } while (pageToken && ids.length < max);
@@ -99,9 +121,9 @@ export class GmailFacade implements GmailWriter {
   }
 
   async getMessage(id: string): Promise<MailSummary> {
-    const r = await this.api.users.messages
-      .get({ userId: 'me', id, format: 'full' })
-      .catch(explainGmailError);
+    const r = await this.read(() =>
+      this.api.users.messages.get({ userId: 'me', id, format: 'full' }),
+    );
     const m = r.data;
     const h = m.payload?.headers;
     const b = bodies(m.payload, { html: null, text: null });
@@ -150,14 +172,14 @@ export class GmailFacade implements GmailWriter {
   }
 
   async threadMessages(threadId: string) {
-    const r = await this.api.users.threads
-      .get({
+    const r = await this.read(() =>
+      this.api.users.threads.get({
         userId: 'me',
         id: threadId,
         format: 'metadata',
         metadataHeaders: ['From'],
-      })
-      .catch(explainGmailError);
+      }),
+    );
     return (r.data.messages ?? []).map((m) => ({
       id: m.id ?? '',
       labelIds: m.labelIds ?? [],

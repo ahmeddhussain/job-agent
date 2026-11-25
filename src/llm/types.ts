@@ -1,7 +1,7 @@
 import type { z } from 'zod';
 
 export type LlmPurpose =
-  'preflight' | 'extract' | 'score' | 'tailor' | 'form' | 'interview' | 'init';
+  'preflight' | 'extract' | 'score' | 'tailor' | 'form' | 'interview' | 'init' | 'mail';
 
 export interface LlmRequest<T> {
   purpose: LlmPurpose;
